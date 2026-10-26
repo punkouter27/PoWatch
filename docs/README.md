@@ -206,7 +206,7 @@ SDK (`RecapAi`): Gemini with an AI Studio key (Key Vault secret `Gemini--ApiKey`
 offline). Azure OpenAI signs in with the app's Entra
 identity when `AzureOpenAi:ApiKey` is empty (Development uses `gpt-5.4-nano` via the az CLI login;
 Production stays on Template until the web app's identity has *Cognitive Services OpenAI User* on
-`po-aiservices-shared`). Replies are cached by prompt, so reopening a day or its PDF costs nothing.
+`po-aiservices-shared2`). Replies are cached by prompt, so reopening a day or its PDF costs nothing.
 The model answers in a JSON schema (summary + highlights), so there is nothing to parse. Captions,
 moment text and names reach the prompt as fenced data with control characters and the fence removed,
 and the ingest validator caps their length. History paints the template recap first and swaps in

@@ -1,10 +1,10 @@
 {
-  "webAppName": "app-powatch-win",
+  "webAppName": "app-powatch-win2",
   "planName": "asp-PoWatch-f1",
-  "storageAccountName": "powatchsa",
+  "storageAccountName": "powatchsa2",
   "solutionResourceGroupName": "PoWatch",
   "sharedResourceGroupName": "PoShared",
   "location": "westus2",
   "appInsightsName": "poappideinsights8f9c9a4e",
-  "keyVaultName": "kv-poshared"
+  "keyVaultName": "kv-poshared2"
 }
