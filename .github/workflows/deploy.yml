@@ -111,15 +111,29 @@ jobs:
           path: publish
       - uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       - run: cd publish && zip -r ../webapp.zip . && cd ..
       - uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           resource-group-name: ${{ env.AZURE_RESOURCE_GROUP }}
           package: webapp.zip
+      # Same gate in every Po web repo: the process is up (/health/live) and its dependencies answer (/health).
+      - name: Health gate (/health/live, /health)
+        shell: bash
+        run: |
+          base="https://${{ vars.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          for path in /health/live /health; do
+            for attempt in $(seq 1 60); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$base$path" || echo 000)
+              [ "$code" = "200" ] && { echo "$path -> 200 (attempt $attempt)"; break; }
+              [ "$attempt" = "60" ] && { echo "::error::$path never returned 200 (last: $code)"; exit 1; }
+              sleep 15
+            done
+          done
+
       - name: Verify deployment (health + boot readiness gate)
         run: |
           BASE="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
