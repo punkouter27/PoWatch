@@ -57,7 +57,7 @@ public static class RecapReportRenderer
             page.Size(1200, 630, Unit.Point);
             page.Margin(56);
             page.PageColor("#0d1014");
-            page.DefaultTextStyle(ts => ts.FontFamily("Arial").FontColor(Ink));
+            page.DefaultTextStyle(ts => ts.FontColor(Ink));
             page.Content().Column(col =>
             {
                 col.Item().Text("POWATCH · DAY RECAP").FontSize(20).Bold().FontColor(Amber).LetterSpacing(0.08f);
@@ -88,7 +88,7 @@ public static class RecapReportRenderer
         {
             page.Size(PageSizes.A4);
             page.Margin(2, Unit.Centimetre);
-            page.DefaultTextStyle(ts => ts.FontSize(10).FontFamily("Arial"));
+            page.DefaultTextStyle(ts => ts.FontSize(10));
 
             page.Header().Column(col =>
             {

@@ -37,7 +37,7 @@ public sealed class PlaywrightFixture : IAsyncLifetime, IAsyncDisposable
     {
         if (BaseUrl is null && Environment.GetEnvironmentVariable("E2E_LOCAL") == "1")
         {
-            _azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest").Build();
+            _azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest").WithCommand("--skipApiVersionCheck").Build();
             await _azurite.StartAsync();
             _localFactory = new LocalUiApplicationFactory(_azurite.GetConnectionString());
             _localFactory.UseKestrel(0);

@@ -12,6 +12,7 @@ namespace PoWatch.E2EAPI;
 public sealed class ApiE2EFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly AzuriteContainer _azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
+        .WithCommand("--skipApiVersionCheck")
         .Build();
 
     async Task IAsyncLifetime.InitializeAsync() => await _azurite.StartAsync();

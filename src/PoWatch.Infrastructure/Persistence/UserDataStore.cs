@@ -1,4 +1,5 @@
 using Azure.Data.Tables;
+using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Options;
 using PoWatch.Application.Contracts;
 using PoWatch.Application.Options;
@@ -19,7 +20,7 @@ public sealed class AzureUserDataStore(AzureStorageClients clients, IOptions<Azu
         await TableDeletes.DeleteWhereAsync(shares, TableClient.CreateQueryFilter($"UserId eq {userId}"), cancellationToken);
 
         var snapshots = clients.BlobService.GetBlobContainerClient(options.Value.SnapshotsContainer);
-        await foreach (var blob in snapshots.GetBlobsAsync(prefix: AzureSnapshotStore.Prefix(userId), cancellationToken: cancellationToken))
+        await foreach (var blob in snapshots.GetBlobsAsync(BlobTraits.None, BlobStates.None, AzureSnapshotStore.Prefix(userId), cancellationToken))
             await snapshots.DeleteBlobIfExistsAsync(blob.Name, cancellationToken: cancellationToken);
     }
 }

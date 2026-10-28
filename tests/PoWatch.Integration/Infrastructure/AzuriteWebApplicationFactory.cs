@@ -13,6 +13,7 @@ namespace PoWatch.Integration;
 public sealed class AzuriteWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly AzuriteContainer _azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
+        .WithCommand("--skipApiVersionCheck")
         .Build();
 
     /// <summary>The running Azurite container's connection string, for tests that build stores directly.</summary>

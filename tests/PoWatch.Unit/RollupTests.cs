@@ -37,7 +37,7 @@ public sealed class RollupTests
         };
 
     private static readonly Gen<SceneEvent> GenEvent =
-        from kind in Gen.OneOfConst(SceneEventKind.TrackEnter, SceneEventKind.TrackExit, SceneEventKind.Caption)
+        from kind in Gen.OneOf<SceneEventKind>(Gen.Const(SceneEventKind.TrackEnter), Gen.Const(SceneEventKind.TrackExit), Gen.Const(SceneEventKind.Caption))
         from edge in Gen.Enum<FrameEdge>()
         from dwell in Gen.Double[0, 5_000]
         from offset in Gen.Int[0, 100_000]

@@ -29,7 +29,7 @@ public sealed class AzureSnapshotStore(AzureStorageClients clients, IOptions<Azu
         var prefix = $"{Prefix(userId)}{localDay.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}/";
 
         var count = 0;
-        await foreach (var _ in _container.GetBlobsAsync(prefix: prefix, cancellationToken: cancellationToken))
+        await foreach (var _ in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix, cancellationToken))
         {
             if (++count >= ISnapshotStore.DailyCap) return null;
         }
@@ -79,7 +79,7 @@ public sealed class AzureSnapshotStore(AzureStorageClients clients, IOptions<Azu
         var prefix = Prefix(userId);
         var bound = firstKeptDay.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         var removed = 0;
-        await foreach (var blob in _container.GetBlobsAsync(prefix: prefix, cancellationToken: cancellationToken))
+        await foreach (var blob in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix, cancellationToken))
         {
             var day = blob.Name.AsSpan(prefix.Length);
             if (day.Length < 8 || day[..8].CompareTo(bound, StringComparison.Ordinal) >= 0) continue;
