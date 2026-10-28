@@ -97,6 +97,14 @@ builder.AddPoWatchAuthentication(featureFlags);
 
 var app = builder.Build();
 
+// X-Commit lets the deploy confirm which build is answering (`curl -sI /health/live`).
+var commit = PoPlatform.Version.Split('+') is [_, var sha] ? sha : "unknown";
+app.Use((context, next) =>
+{
+    context.Response.Headers["X-Commit"] = commit;
+    return next(context);
+});
+
 // The API reference is a development aid: /openapi/v1.json and the Scalar UI at /scalar/v1.
 if (app.Environment.IsDevelopment())
 {
