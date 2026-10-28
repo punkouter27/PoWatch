@@ -23,7 +23,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.13" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.13" />
     <!-- Pin transitive Microsoft.OpenApi (GHSA-v5pm-xwqc-g5wc, high-severity DoS in 2.0.0); AspNetCore.OpenApi 10.0.13 needs >= 2.12.2 -->
-    <PackageVersion Include="Microsoft.OpenApi" Version="2.12.2" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="3.11.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
