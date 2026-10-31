@@ -103,6 +103,8 @@ public static class PlaywrightPageExtensions
     public static async Task AssertNoBlazorErrorAsync(this IPage page)
     {
         await Assertions.Expect(page.Locator(".po-error-panel")).Not.ToBeVisibleAsync();
+        // A single panel's retry box (TerminalPanel's boundary) is an error too, even with the page up.
+        await Assertions.Expect(page.Locator("[data-test=panel-error]")).ToHaveCountAsync(0);
         var errorUi = page.Locator("#blazor-error-ui");
         if (await errorUi.IsVisibleAsync())
         {

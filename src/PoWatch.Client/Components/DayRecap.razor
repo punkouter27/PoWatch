@@ -9,7 +9,14 @@
 
 @if (Recap is null || Presence is not { SecondsObserved: > 0 })
 {
-    <p class="term-empty">@(Loaded ? "No recap: nothing was observed on this day." : "Loading…")</p>
+    @if (Loaded)
+    {
+        <p class="term-empty">No recap: nothing was observed on this day.</p>
+    }
+    else
+    {
+        <Skeleton Heights="@([90, 220])" Span="term-span-4" />
+    }
 }
 else
 {

@@ -141,6 +141,7 @@ public sealed class ViewportFitE2ETests
         // (reached from Settings) shows the frame rate this browser is sampling at.
         await page.OpenSettingsAsync();
         await page.GetByTestId("nav-system").ClickAsync();
+        await page.OpenSystemTabAsync("Pipeline");
         await Assertions.Expect(page.GetByTestId("stat-pixel-hz")).Not.ToContainTextAsync("0.0", new() { Timeout = 30_000 });
         await page.GetByTestId("nav-live").ClickAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("OBSERVING");

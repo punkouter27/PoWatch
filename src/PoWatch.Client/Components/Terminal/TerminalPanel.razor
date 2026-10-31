@@ -8,12 +8,24 @@
         }
     </header>
     <div class="term-panel-body @(Flush ? "term-panel-body--flush" : string.Empty)">
-        @ChildContent
+        @* One failing panel shows a retry box; the rest of the page keeps working. *@
+        <ErrorBoundary @ref="_boundary">
+            <ChildContent>
+                @ChildContent
+            </ChildContent>
+            <ErrorContent>
+                <div class="panel-error" role="alert" data-test="panel-error">
+                    <span>This panel hit an error.</span>
+                    <button type="button" class="term-button" @onclick="() => _boundary?.Recover()">Retry</button>
+                </div>
+            </ErrorContent>
+        </ErrorBoundary>
     </div>
 </section>
 
 @code {
     private readonly string _headingId = $"panel-{Guid.NewGuid():N}";
+    private ErrorBoundary? _boundary;
 
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
     [Parameter] public RenderFragment? Aside { get; set; }

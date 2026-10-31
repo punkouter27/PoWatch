@@ -1116,27 +1116,13 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .regulars-bar input[type="search"], .regulars-merge select { min-height: 32px; padding: 0 8px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: var(--fs-sm) var(--term-mono); }
 .regulars-bar input[type="search"] { width: min(220px, 100%); }
 .regulars-merge {
-    position: fixed;
-    z-index: 35;
-    left: 0;
-    right: 0;
-    bottom: calc(16px + var(--term-bottom-bar));
-    margin: 0 auto;
-    width: max-content;
-    max-width: calc(100vw - 24px);
-    box-sizing: border-box;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 6px 8px;
-    padding: 8px 10px;
-    background: var(--term-glass);
-    -webkit-backdrop-filter: var(--term-glass-blur);
-    backdrop-filter: var(--term-glass-blur);
-    border: 1px solid var(--term-accent);
-    border-radius: var(--term-radius);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-    font: var(--fs-sm) var(--term-mono);
+    margin-left: auto;
+    padding: 2px 8px;
+    border-left: 2px solid var(--term-accent);
     animation: fx-pop 0.35s var(--spring);
 }
 .regulars-merge .term-button { min-height: 32px; padding: 0 10px; }
@@ -1220,6 +1206,64 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .regulars-bar input[type="search"], .regulars-merge select, .regular-name input, .stats-ask input,
     .rule-form select, .rule-form input, .name-prompt input, .settings-search input, .history-share input { min-height: 44px; }
     .regular-card input[type="checkbox"] { width: 24px; height: 24px; }
+}
+
+/* ── Safety nets, first run, build stamp ──────────────────────────────── */
+
+/* A panel whose content threw: a small retry box in place of its content, the rest of the page untouched. */
+.panel-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; color: var(--term-red); font: var(--fs-sm) var(--term-mono); }
+
+/* The first-run tour: a card in the corner, never over the whole page. */
+.tour {
+    position: fixed;
+    z-index: 40;
+    left: 12px;
+    bottom: calc(12px + var(--term-bottom-bar));
+    width: min(330px, calc(100vw - 24px));
+    box-sizing: border-box;
+    padding: 12px 14px;
+    background: var(--term-glass);
+    -webkit-backdrop-filter: var(--term-glass-blur);
+    backdrop-filter: var(--term-glass-blur);
+    border: 1px solid var(--term-accent);
+    border-radius: var(--term-radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    font: var(--fs-sm) var(--term-mono);
+    animation: fx-pop 0.35s var(--spring);
+}
+.tour-count { margin: 0; color: var(--term-dim); font-size: var(--fs-xs); letter-spacing: 0.1em; }
+.tour-title { margin: 4px 0 6px; color: var(--term-accent); font: 600 var(--fs-md) var(--term-mono); }
+.tour-text { margin: 0 0 10px; line-height: 1.45; color: var(--term-text); }
+.tour-actions { display: flex; justify-content: flex-end; gap: 6px; }
+
+/* yyMMdd of this build, bottom-right, out of the way of anything clickable. */
+.build-stamp {
+    position: fixed;
+    z-index: 5;
+    right: 6px;
+    bottom: calc(2px + var(--term-bottom-bar));
+    color: var(--term-dim);
+    opacity: 0.6;
+    font: var(--fs-xs) var(--term-mono);
+    letter-spacing: 0.08em;
+    pointer-events: none;
+}
+
+.try-demo { margin-left: 8px; min-height: 28px; }
+
+/* Live's single-day picker, beside the range bar; lit while a day is the range. */
+.stats-day { display: inline-flex; align-items: center; gap: 4px; padding: 0 0 0 8px; border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-muted); font: 600 var(--fs-sm) var(--term-mono); letter-spacing: 0.04em; }
+.stats-day--on { border-color: var(--term-accent); color: var(--term-accent); }
+
+.history-skel-sessions { height: 96px !important; }
+
+/* Tables with data-label cells turn into one small card per row on a phone: no sideways scrolling. */
+@media (max-width: 719.98px) {
+    .term-table--cards thead { display: none; }
+    .term-table--cards tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; padding: 8px 10px; border-bottom: 1px solid var(--term-line); }
+    .term-table--cards td { padding: 0; border: 0; text-align: left; }
+    .term-table--cards td.r { text-align: left; }
+    .term-table--cards td[data-label]::before { content: attr(data-label); display: block; color: var(--term-dim); font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; }
 }
 
 /* ── Shared small parts ───────────────────────────────────────────────── */

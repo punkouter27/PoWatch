@@ -22,11 +22,17 @@
             <Items>
                 <RadzenSelectBarItem Text="SESSION" Value="@("session")" Disabled="@(_sessionId == Guid.Empty)" />
                 <RadzenSelectBarItem Text="TODAY" Value="@("today")" />
-                <RadzenSelectBarItem Text="7D" Value="@("7d")" />
-                <RadzenSelectBarItem Text="30D" Value="@("30d")" />
+                <RadzenSelectBarItem Text="WEEK" Value="@("7d")" />
+                <RadzenSelectBarItem Text="MONTH" Value="@("30d")" />
                 <RadzenSelectBarItem Text="ALL" Value="@("all")" />
             </Items>
         </RadzenSelectBar>
+        @* Any single day, minute by minute (?range=day&date=yyyy-MM-dd). *@
+        <span class="stats-day @(_range == "day" ? "stats-day--on" : null)" data-test="stats-day">
+            DAY
+            <RadzenDatePicker TValue="DateOnly" Value="@(_date ?? Today)" ValueChanged="@((DateOnly d) => PickDay(d))" ShowInput="false"
+                              Max="@Today.ToDateTime(TimeOnly.MinValue)" aria-label="Pick a day" title="Pick a day" />
+        </span>
 
         <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
 
@@ -167,7 +173,9 @@
     /// <summary>The phone strip's keys, in the order the panels appear.</summary>
     private static readonly string[] Pages = ["Grid", "Energy", "Space", "Curve", "Week", "Light", "Colour"];
 
+    private const string DayFormat = "yyyy-MM-dd";
     private string _range = "today";
+    private DateOnly? _date;
     private Guid _sessionId;
     private StatsQuery _query = StatsQuery.For("today");
     private string? _question;
@@ -198,12 +206,18 @@
 
     [SupplyParameterFromQuery(Name = "range")] public string? RangeParameter { get; set; }
 
+    /// <summary>The day for ?range=day, yyyy-MM-dd.</summary>
+    [SupplyParameterFromQuery(Name = "date")] public string? DateParameter { get; set; }
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
+
     /// <summary>A session to open straight away (History links each of its sessions here).</summary>
     [SupplyParameterFromQuery(Name = "session")] public Guid? SessionParameter { get; set; }
 
     private string WindowLabel => _range switch
     {
         "session" => $"Session {SessionDto.Tag(_sessionId)}, minute by minute",
+        "day" => $"{_date?.ToString("ddd d MMM yyyy", CultureInfo.CurrentCulture)}, minute by minute",
         "7d" => "Last 7 days, hour by hour",
         "30d" => "Last 30 days, hour by hour",
         "all" => "Everything, day by day",
@@ -226,11 +240,14 @@
     /// <summary>The URL is the state: the range control navigates, and this reads the result back.</summary>
     protected override void OnParametersSet()
     {
-        var range = SessionParameter is not null ? "session" : RangeParameter is { } r && Ranges.Contains(r) ? r : null;
+        DateOnly? date = RangeParameter == "day"
+            && DateOnly.TryParseExact(DateParameter, DayFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
+            && d <= Today ? d : null;
+        var range = SessionParameter is not null ? "session" : date is not null ? "day" : RangeParameter is { } r && Ranges.Contains(r) ? r : null;
         var session = SessionParameter ?? _sessionId;
-        if (range is null || (range == _range && session == _sessionId)) return;
+        if (range is null || (range == _range && session == _sessionId && date == _date)) return;
 
-        (_range, _sessionId) = (range, session);
+        (_range, _sessionId, _date) = (range, session, date);
         Apply();
         // Key metrics and the census follow the range too (the stat panels reload themselves).
         _ = RefreshStatsAsync();
@@ -242,8 +259,13 @@
         Navigation.NavigateTo($"?range={range}" + (range == "session" && _sessionId != Guid.Empty ? $"&session={_sessionId}" : string.Empty));
     }
 
+    private void PickDay(DateOnly day) =>
+        Navigation.NavigateTo($"?range=day&date={day.ToString(DayFormat, CultureInfo.InvariantCulture)}");
+
     private void Apply() =>
-        _query = StatsQuery.For(_range, _range == "session" && _sessionId != Guid.Empty ? _sessionId : null);
+        _query = _range == "day" && _date is { } day
+            ? StatsQuery.ForDay(day)
+            : StatsQuery.For(_range, _range == "session" && _sessionId != Guid.Empty ? _sessionId : null);
 
     private async Task AskAsync()
     {
@@ -377,7 +399,7 @@
         var objects = Api.GetObjectsAsync(query);
         await Task.WhenAll(presence, space, patterns, objects);
         // A newer range owns the panels now.
-        if (query.Range != _query.Range || query.SessionId != _query.SessionId) return;
+        if (query.Range != _query.Range || query.SessionId != _query.SessionId || query.Date != _query.Date) return;
         (_presence, _space, _patterns, _objects) = (presence.Result, space.Result, patterns.Result, objects.Result);
         // Derived once per refresh, not once per render.
         _occupancyTrend = _presence?.Series.Select(p => p.Occupancy).TakeLast(120).ToList() ?? [];

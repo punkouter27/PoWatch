@@ -1,0 +1,61 @@
+@inject IJSRuntime JS
+
+@* Three short cards the first time a browser opens PoWatch. Not modal: it sits in a corner and the
+   page under it keeps working. Skip or Done remembers it for this browser. *@
+@if (_step is { } step)
+{
+    <aside class="tour" role="dialog" aria-modal="false" aria-labelledby="tour-title" data-test="tour" @onkeydown="OnKey">
+        <p class="tour-count">@(step + 1) / @Steps.Length</p>
+        <h2 id="tour-title" class="tour-title">@Steps[step].Title</h2>
+        <p class="tour-text">@Steps[step].Text</p>
+        <div class="tour-actions">
+            <button type="button" class="term-button" @onclick="DoneAsync" data-test="tour-skip">Skip</button>
+            @if (step > 0)
+            {
+                <button type="button" class="term-button" @onclick="() => _step = step - 1">Back</button>
+            }
+            <button type="button" class="term-button term-button--primary" @onclick="NextAsync" data-test="tour-next">@(step == Steps.Length - 1 ? "Done" : "Next")</button>
+        </div>
+    </aside>
+}
+
+@code {
+    public const string Key = "powatch:tour";
+
+    private static readonly (string Title, string Text)[] Steps =
+    [
+        ("Point, press Start, walk away", "On Live, press Start camera. No camera? Try the demo. Everything is worked out in this browser; frames never leave it."),
+        ("Come back later", "History has every day: the year at a glance, the day's numbers, a written recap and a minute-by-minute replay."),
+        ("Make it yours", "The gear opens Settings: theme, sound, captions, and Advanced for the extras (Ask, 3D year, effects)."),
+    ];
+
+    private int? _step;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        if (await JS.TryInvokeAsync<string>("localStorage.getItem", Key) is null)
+        {
+            _step = 0;
+            StateHasChanged();
+        }
+    }
+
+    private Task NextAsync()
+    {
+        if (_step < Steps.Length - 1)
+        {
+            _step++;
+            return Task.CompletedTask;
+        }
+        return DoneAsync();
+    }
+
+    private async Task DoneAsync()
+    {
+        _step = null;
+        await JS.TryInvokeVoidAsync("localStorage.setItem", Key, "done");
+    }
+
+    private Task OnKey(KeyboardEventArgs e) => e.Key == "Escape" ? DoneAsync() : Task.CompletedTask;
+}

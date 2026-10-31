@@ -29,6 +29,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The yyMMdd build date in the corner of every page (Components/BuildStamp.razor). -->
+    <AssemblyMetadata Include="BuildDate" Value="$([System.DateTime]::UtcNow.ToString('yyMMdd'))" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\PoWatch.Shared\PoWatch.Shared.csproj" />
   </ItemGroup>
 

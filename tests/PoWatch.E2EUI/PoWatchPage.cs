@@ -41,6 +41,8 @@ internal static class PoWatchPage
 
         try
         {
+            // The first-run tour sits over a corner of the page; tests start as a returning browser.
+            await page.AddInitScriptAsync("localStorage.setItem('powatch:tour', 'done')");
             if (advanced) await page.AddInitScriptAsync("localStorage.setItem('powatch:advanced', 'on')");
 
             // BFF auth: sign in first to set the session cookie before returning to the app.
@@ -81,6 +83,10 @@ internal static class PoWatchPage
         await page.GotoAsync($"{PlaywrightFixture.BaseUrl}/system");
         await Assertions.Expect(page.GetByTestId("health-overall")).ToBeVisibleAsync(new() { Timeout = BootTimeoutMs });
     }
+
+    /// <summary>System is three tabs (Connections, Engine, Pipeline); this opens one by its label.</summary>
+    public static Task OpenSystemTabAsync(this IPage page, string tab) =>
+        page.Locator("[data-test=system-tabs] [role=tab]").Filter(new() { HasText = tab }).ClickAsync();
 
     /// <summary>The active key in the header names the section (there is no separate page title).</summary>
     public static Task ExpectSectionAsync(this IPage page, string section, int timeoutMs = 5_000) =>

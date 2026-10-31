@@ -7,7 +7,7 @@
 
 @* One card per regular, as many across as fit: filter by name, sort, rename in place (Enter or leaving
    the box saves), and tick two or more of the same kind to merge them — recognition goes by look, so a
-   change of clothes can make someone new. The merge bar floats at the bottom while anything is ticked. *@
+   change of clothes can make someone new. Filter, sort and merge share one toolbar. *@
 <TerminalPanel Title="Regulars" Test="regulars-board" Flush="true">
     <Aside>@_regulars.Count KNOWN · @_regulars.Count(r => r.IsNamed) NAMED</Aside>
     <ChildContent>
@@ -22,6 +22,28 @@
                     <RadzenSelectBarItem Text="NAME" Value="@("name")" />
                 </Items>
             </RadzenSelectBar>
+            @if (_selected.Count > 0)
+            {
+                @* Ticking a card turns the rest of this bar into the merge controls. *@
+                <div class="regulars-merge" role="group" aria-label="Merge" data-test="regulars-merge">
+                    @if (MergeBlocker is { } blocker)
+                    {
+                        <span class="term-stat-hint">@_selected.Count SELECTED · @blocker</span>
+                    }
+                    else
+                    {
+                        <label for="merge-into">Merge @_selected.Count into</label>
+                        <select id="merge-into" @bind="_primaryId">
+                            @foreach (var regular in Selected)
+                            {
+                                <option value="@regular.Id">@regular.DisplayName</option>
+                            }
+                        </select>
+                        <button class="term-button term-button--primary" @onclick="MergeAsync" disabled="@_busy" data-test="merge-selected">@(_busy ? "Merging…" : "Merge")</button>
+                    }
+                    <button class="term-button" @onclick="() => _selected.Clear()" disabled="@_busy">Clear</button>
+                </div>
+            }
             @if (_message is not null)
             {
                 <span class="@(_failed ? "live-error" : "term-stat-hint")" role="@(_failed ? "alert" : "status")" data-test="regulars-message">@_message</span>
@@ -34,7 +56,7 @@
         }
         else if (_regulars.Count == 0)
         {
-            <p class="term-empty">No regulars recognized yet. Class counts on Live and History are sightings, not identities; regulars need repeated appearances with visual signatures, which old aggregate history does not contain.</p>
+            <p class="term-empty">No regulars recognized yet. Class counts on Live and History are sightings, not identities; regulars need repeated appearances with visual signatures, which old aggregate history does not contain. <TryDemo /></p>
         }
         else
         {
@@ -70,28 +92,6 @@
         }
     </ChildContent>
 </TerminalPanel>
-
-@if (_selected.Count > 0)
-{
-    <div class="regulars-merge" role="region" aria-label="Merge" data-test="regulars-merge">
-        @if (MergeBlocker is { } blocker)
-        {
-            <span class="term-stat-hint">@_selected.Count SELECTED · @blocker</span>
-        }
-        else
-        {
-            <label for="merge-into">Merge @_selected.Count into</label>
-            <select id="merge-into" @bind="_primaryId">
-                @foreach (var regular in Selected)
-                {
-                    <option value="@regular.Id">@regular.DisplayName</option>
-                }
-            </select>
-            <button class="term-button term-button--primary" @onclick="MergeAsync" disabled="@_busy" data-test="merge-selected">@(_busy ? "Merging…" : "Merge")</button>
-        }
-        <button class="term-button" @onclick="() => _selected.Clear()" disabled="@_busy">Clear</button>
-    </div>
-}
 
 @code {
     private List<RegularDto> _regulars = [];

@@ -1,0 +1,8 @@
+@inject SensingSession Sensing
+
+@* An empty page's way forward: start the synthetic demo on Live (Live reads ?start=demo). Hidden while
+   something is already running, since there is nothing to start. *@
+@if (!Sensing.IsRunning)
+{
+    <a class="term-button try-demo" href="?start=demo" data-test="try-demo">Try the demo</a>
+}

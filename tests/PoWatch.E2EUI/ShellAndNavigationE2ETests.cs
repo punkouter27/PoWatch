@@ -132,4 +132,63 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         Assert.Contains("Skip to main content", focused, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Every in-app link opens a working page, and every harmless button on every page can be pressed
+    /// without an error or a sideways scroll; the pages settle without layout jumps (CLS).
+    /// </summary>
+    [Fact]
+    public async Task Every_link_and_button_works_without_errors_or_layout_jumps()
+    {
+        if (PlaywrightFixture.BaseUrl is null) return;
+        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
+        await page.AddInitScriptAsync("""
+            window.__cls = 0;
+            new PerformanceObserver(list => {
+                for (const e of list.getEntries()) if (!e.hadRecentInput) window.__cls += e.value;
+            }).observe({ type: 'layout-shift', buffered: true });
+            """);
+        // Buttons that start, stop, delete, merge, share, reset or sign out change state other tests rely on.
+        var unsafeLabel = new System.Text.RegularExpressions.Regex(
+            "start|stop|delete|merge|share|reset|sign out|keep|demo|clear|send|ask|save|remove|take down|download|explain|pdf",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        foreach (var route in new[] { "/", "/history", "/regulars", "/system" })
+        {
+            await page.GotoAsync($"{PlaywrightFixture.BaseUrl}{route}");
+            await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+            await page.WaitForTimeoutAsync(3_000);
+            var cls = await page.EvaluateAsync<double>("() => window.__cls");
+            Assert.True(cls < 0.25, $"{route} shifted its layout by {cls:0.000} while loading (CLS)");
+
+            var buttons = page.Locator("main button:visible");
+            var count = await buttons.CountAsync();
+            for (var i = 0; i < count; i++)
+            {
+                var button = buttons.Nth(i);
+                if (!await button.IsVisibleAsync() || !await button.IsEnabledAsync()) continue;
+                var label = $"{await button.InnerTextAsync()} {await button.GetAttributeAsync("aria-label")} {await button.GetAttributeAsync("title")}";
+                if (unsafeLabel.IsMatch(label)) continue;
+
+                await button.ClickAsync(new() { Timeout = 5_000 });
+                await page.Keyboard.PressAsync("Escape");
+                await page.AssertNoBlazorErrorAsync();
+                var sideways = await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth > window.innerWidth + 1");
+                Assert.False(sideways, $"{route}: pressing \"{label.Trim()}\" made the page scroll sideways");
+            }
+        }
+
+        var links = await page.EvaluateAsync<string[]>("""
+            () => [...new Set([...document.querySelectorAll('header a[href], nav a[href]')]
+                .map(a => a.getAttribute('href'))
+                .filter(h => h !== null && !h.startsWith('http') && !h.startsWith('#') && !h.includes('auth/') && !h.includes('/api/')))]
+            """);
+        Assert.NotEmpty(links);
+        foreach (var href in links)
+        {
+            await page.GotoAsync($"{PlaywrightFixture.BaseUrl}/{href.TrimStart('/')}");
+            await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+            await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Page not found" })).ToHaveCountAsync(0);
+            await page.AssertNoBlazorErrorAsync();
+        }
+    }
 }

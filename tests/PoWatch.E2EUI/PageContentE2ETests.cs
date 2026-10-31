@@ -68,6 +68,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         }
 
         await page.GoToSystemAsync();
+        await page.OpenSystemTabAsync("Pipeline");
         await Assertions.Expect(page.GetByTestId("stats-all-frames")).Not.ToContainTextAsync("—", new() { Timeout = 30_000 });
         await page.AssertNoBlazorErrorAsync();
     }

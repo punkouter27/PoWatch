@@ -64,7 +64,7 @@
                 }
                 else if (_presence is null || _presence.SecondsObserved == 0)
                 {
-                    <p class="term-empty" data-test="history-empty">Nothing was observed on this day.</p>
+                    <p class="term-empty" data-test="history-empty">Nothing was observed on this day. <TryDemo /></p>
                 }
                 else
                 {
@@ -116,22 +116,27 @@
         <TerminalPanel Title="Sessions" Class="history-sessions" Test="history-sessions" Flush="true">
             <Aside>@_sessions.Count ON THIS DAY</Aside>
             <ChildContent>
-                @if (_sessions.Count == 0)
+                @if (!_loaded)
                 {
-                    <p class="term-empty">@(_loaded ? "No sessions on this day." : "Loading…")</p>
+                    <Skeleton Heights="@([0])" Span="term-span-4 history-skel-sessions" />
+                }
+                else if (_sessions.Count == 0)
+                {
+                    <p class="term-empty">No sessions on this day.</p>
                 }
                 else
                 {
-                    <table class="term-table">
+                    @* A table on a desktop; on a phone each row becomes a small card (term-table--cards). *@
+                    <table class="term-table term-table--cards">
                         <thead><tr><th>Session</th><th>From</th><th>To</th><th class="r">Length</th><th></th></tr></thead>
                         <tbody>
                             @foreach (var s in _sessions)
                             {
                                 <tr>
-                                    <td>@SessionDto.Tag(s.Id)</td>
-                                    <td>@s.StartedUtc.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture)</td>
-                                    <td>@(s.EndedUtc?.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture) ?? "running")</td>
-                                    <td class="r">@DisplayText.Duration(s.DurationSeconds)</td>
+                                    <td data-label="Session">@SessionDto.Tag(s.Id)</td>
+                                    <td data-label="From">@s.StartedUtc.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture)</td>
+                                    <td data-label="To">@(s.EndedUtc?.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture) ?? "running")</td>
+                                    <td data-label="Length" class="r">@DisplayText.Duration(s.DurationSeconds)</td>
                                     <td class="r"><a class="term-link" href="?session=@s.Id" title="Open this session's stats on Live">stats →</a></td>
                                 </tr>
                             }

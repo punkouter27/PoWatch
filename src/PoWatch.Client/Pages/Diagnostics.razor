@@ -8,8 +8,12 @@
 
 <PageTitle>PoWatch | System</PageTitle>
 
-@* Everything operational on one page, refreshed on one timer: connections (what /health reports),
-   the server runtime, the on-device inference engine, and the pipeline counters. *@
+@* Everything operational on one page, refreshed on one timer, in three tabs so each fits one screen:
+   connections (what /health reports) with the server runtime, the on-device inference engine, and the
+   pipeline counters. *@
+<RadzenTabs @bind-SelectedIndex="_tab" RenderMode="TabRenderMode.Server" class="sys-tabs" data-test="system-tabs">
+    <Tabs>
+        <RadzenTabsItem Text="Connections">
 <div class="term-grid">
     <TerminalPanel Title="Connections" Class="term-span-2" Test="health-overall" Flush="true">
         <Aside>@(_lastRefreshed is { } at ? $"UPDATED {at:HH:mm:ss} · EVERY {RefreshInterval.TotalSeconds:0} S" : "CHECKING…")</Aside>
@@ -30,15 +34,15 @@
                     <b data-test="health-overall-status">@FriendlyStatus(_health.Status)</b>
                     <span class="term-stat-hint">@_health.Checks.Count checked in @_health.DurationMs.ToString("0", CultureInfo.CurrentCulture) ms</span>
                 </p>
-                <table class="term-table" data-test="health-check-list">
+                <table class="term-table term-table--cards" data-test="health-check-list">
                     <tbody>
                         @foreach (var check in _health.Checks)
                         {
                             <tr data-test="health-check">
-                                <td><span class="term-dot @Dot(check.Status)"></span> @FriendlyName(check.Name)</td>
-                                <td class="term-stat-hint">@check.Description</td>
-                                <td>@FriendlyCheckStatus(check.Status)</td>
-                                <td class="r">@check.DurationMs.ToString("0", CultureInfo.CurrentCulture) ms</td>
+                                <td data-label="Service"><span class="term-dot @Dot(check.Status)"></span> @FriendlyName(check.Name)</td>
+                                <td data-label="Detail" class="term-stat-hint">@check.Description</td>
+                                <td data-label="State">@FriendlyCheckStatus(check.Status)</td>
+                                <td data-label="Time" class="r">@check.DurationMs.ToString("0", CultureInfo.CurrentCulture) ms</td>
                             </tr>
                         }
                     </tbody>
@@ -48,7 +52,11 @@
     </TerminalPanel>
 
     <TerminalPanel Title="Server" Class="term-span-2">
-        @if (_snapshot is null)
+        @if (!_snapshotLoaded)
+        {
+            <Skeleton Heights="@([110])" Span="term-span-4" />
+        }
+        else if (_snapshot is null)
         {
             <p class="term-empty">Server runtime details are unavailable in this environment.</p>
         }
@@ -64,7 +72,11 @@
             </div>
         }
     </TerminalPanel>
+</div>
+        </RadzenTabsItem>
 
+        <RadzenTabsItem Text="Engine">
+<div class="term-grid">
     <TerminalPanel Title="Inference engine" Class="term-span-4">
         @if (_inference is { } inf)
         {
@@ -107,13 +119,20 @@
         }
     </TerminalPanel>
 </div>
+        </RadzenTabsItem>
 
-<PipelineTab Query="@_pipelineQuery" />
+        <RadzenTabsItem Text="Pipeline">
+            <PipelineTab Query="@_pipelineQuery" />
+        </RadzenTabsItem>
+    </Tabs>
+</RadzenTabs>
 
 @code {
     private HealthReportDto? _health;
     private string? _healthError;
     private DiagnosticsSnapshotDto? _snapshot;
+    private bool _snapshotLoaded;
+    private int _tab;
     private InferenceDiagnosticsDto? _inference;
     private StatsQuery _pipelineQuery = StatsQuery.For("today");
     private DateTime? _lastRefreshed;
@@ -165,7 +184,11 @@
         _healthError = _health is null ? "The server did not answer with a health document." : null;
     }
 
-    private async Task LoadSnapshotAsync() => _snapshot = await ApiClient.GetDiagnosticsAsync();
+    private async Task LoadSnapshotAsync()
+    {
+        _snapshot = await ApiClient.GetDiagnosticsAsync();
+        _snapshotLoaded = true;
+    }
 
     private async Task RefreshInferenceDiagnosticsAsync() =>
         _inference = await JS.TryInvokeAsync<InferenceDiagnosticsDto>("powatchInference.getInferenceDiagnostics");
