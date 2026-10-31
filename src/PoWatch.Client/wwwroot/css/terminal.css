@@ -186,7 +186,7 @@ main:focus { outline: none; }
     box-sizing: border-box;
 }
 
-/* AI selectors use the middle of the header, wrapping below the chrome on narrow screens. */
+/* One row: brand and section keys at the left, status and controls at the right. */
 .term-header {
     position: relative;
     display: flex;
@@ -234,48 +234,31 @@ main:focus { outline: none; }
 .term-status--live { border-color: var(--term-green); color: var(--term-green); }
 .term-status--demo { border-color: var(--term-cyan); color: var(--term-cyan); }
 
-.header-ai {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-    padding: 3px 0;
-    position: relative;
-}
-
-.header-ai-control { display: grid; gap: 2px; min-width: 0; max-width: 240px; flex: 1; }
-.header-ai-control label { color: var(--term-accent); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.06em; }
-.header-ai-control select {
+/* The model choices, in Settings → Recording: one labelled select each, stacked. */
+.ai-models { display: grid; gap: 12px; padding: 12px 12px 4px; position: relative; }
+.ai-model { display: grid; gap: 4px; min-width: 0; }
+.ai-model label { color: var(--term-text); font: var(--fs-sm) var(--term-font); }
+.ai-model label i { font-style: normal; color: var(--term-dim); margin-left: 6px; }
+.ai-model select {
     width: 100%;
     min-width: 0;
-    min-height: 30px;
-    border: 1px solid var(--term-muted);
+    min-height: 36px;
+    border: 1px solid var(--term-line);
     border-radius: var(--term-radius);
-    padding: 3px 6px;
+    padding: 4px 8px;
     color: var(--term-text);
     background: var(--term-surface);
     font: 600 var(--fs-sm) var(--term-mono);
     text-overflow: ellipsis;
     cursor: pointer;
 }
-.header-ai-control select:hover { border-color: var(--term-accent); }
-.header-ai-control select:disabled { cursor: wait; opacity: 0.6; }
-.header-ai-status { color: var(--term-muted); font: var(--fs-xs) var(--term-mono); text-decoration: none; }
-.header-ai-error { position: absolute; top: 100%; left: 0; right: 0; padding: 8px; z-index: 30; background: var(--term-surface); color: var(--term-red); border: 1px solid var(--term-red); }
-
-@media (min-width: 721px) and (max-width: 1200px) {
-    .term-header { flex-wrap: wrap; }
-    .header-ai { order: 10; flex-basis: 100%; }
-    .term-header .term-status { margin-left: auto; }
-}
-
-@media (max-width: 720px) {
-    .term-header { flex-wrap: wrap; }
-    .header-ai { order: 10; flex-basis: 100%; gap: 8px; }
-    .header-ai-control { max-width: none; }
-    .header-ai-control select { min-height: 44px; }
-}
+.ai-model select:hover { border-color: var(--term-accent); }
+@media (max-width: 720px) { .ai-model select { min-height: 44px; } }
+.ai-model select:disabled { cursor: wait; opacity: 0.6; }
+.ai-model-status { color: var(--term-muted); font: var(--fs-xs) var(--term-mono); text-decoration: none; }
+.ai-models-error { padding: 8px; color: var(--term-red); border: 1px solid var(--term-red); border-radius: var(--term-radius); }
+/* The status chip starts the right-hand group: Start/Stop, bell, gear. */
+.term-header .term-status { margin-left: auto; }
 
 .term-button {
     min-height: 36px;
@@ -687,7 +670,25 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 /* ── While you were away ───────────────────────────────────────────────── */
 
-.away-card { margin-bottom: var(--term-gap); border-color: var(--term-accent); }
+/* The recap card floats over the page (top right, under the header), so Live's grid keeps the whole
+   screen; it scrolls inside itself when the story is long. */
+.away-card {
+    position: fixed;
+    z-index: 45;
+    top: 56px;
+    right: 12px;
+    width: min(560px, calc(100vw - 24px));
+    max-height: calc(100vh - 72px - var(--term-bottom-bar));
+    border-color: var(--term-accent);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+.away-card .term-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Solid, not glass: it floats over panels whose charts would show through. (Beats the dark theme's panel glass.) */
+:root .term-panel.away-card, :root:not([data-theme="light"]) .term-panel.away-card {
+    background: linear-gradient(180deg, rgba(110, 190, 255, 0.08), rgba(110, 190, 255, 0.02)), var(--term-surface);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
 .away-card .term-panel-head .term-icon-button { min-width: 28px; min-height: 28px; }
 
 .away-moments {
@@ -760,9 +761,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .session-story-chapters summary { cursor: pointer; color: var(--term-dim); font: var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; }
 .session-story-chapters ol { margin: 8px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; font: var(--fs-sm) var(--term-mono); color: var(--term-muted); line-height: 1.45; }
 .session-story-chapters .num { color: var(--term-accent); margin-right: 6px; }
-/* The story row wraps (the session cells do not), and on a phone, where rows become cards, spans the card. */
-.history-sessions .term-table .history-story-row td { padding-top: 0; white-space: normal; grid-column: 1 / -1; }
-.history-story-row .session-story { margin-top: 4px; }
 
 @media (prefers-reduced-motion: reduce) {
     .fx-type { animation: none; }
@@ -1123,10 +1121,15 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .history-page { display: grid; gap: var(--term-gap); align-content: start; }
 /* The story views read as one centred column, like an article; the day view keeps the full width. */
 .history-page--feed > * { width: min(100%, 980px); justify-self: center; }
-.history-tabbar { display: flex; gap: 4px; border-bottom: 1px solid var(--term-line); overflow-x: auto; scrollbar-width: none; }
-.history-tab { padding: 10px 16px 9px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--term-muted); text-decoration: none; font: 600 var(--fs-sm) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
-.history-tab:hover { color: var(--term-text); }
-.history-tab--on { color: var(--term-accent); border-bottom-color: var(--term-accent); }
+/* Tabs (Stories, Settings): text with an underline on the open one, a rule under the whole strip. */
+.term-tabbar { display: flex; gap: 4px; border-bottom: 1px solid var(--term-line); overflow-x: auto; scrollbar-width: none; }
+.term-tab { padding: 10px 16px 9px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer; color: var(--term-muted); text-decoration: none; font: 600 var(--fs-sm) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.term-tab:hover { color: var(--term-text); }
+.term-tab--on { color: var(--term-accent); border-bottom-color: var(--term-accent); }
+.settings-tabs { flex-wrap: wrap; justify-content: space-between; }
+.settings-tabs .term-tab { padding: 8px 6px 7px; font-size: var(--fs-xs); letter-spacing: 0.04em; }
+.session-numbers { margin-bottom: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.story-back { justify-self: start; }
 /* Rows sized to their cards: a panel clips its own overflow, so without this a long feed squeezed each card to two lines. */
 .story-feed { display: grid; grid-auto-rows: max-content; gap: 12px; min-width: 0; }
 .story-card .term-panel-body { padding: 14px 16px; }
@@ -1309,7 +1312,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 /* A text link inside a table, with a target a finger can hit. */
 .term-link { display: inline-block; padding: 4px 6px; margin: -4px -6px; color: var(--term-accent); text-decoration: none; }
 .term-link:hover { text-decoration: underline; }
-button.term-link { background: none; border: 0; font: inherit; cursor: pointer; }
 
 /* Loading placeholders the height of what replaces them, so nothing below jumps when it lands. */
 .history-skel-day { height: 104px !important; }

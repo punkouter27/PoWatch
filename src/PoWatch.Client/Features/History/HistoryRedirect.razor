@@ -1,0 +1,16 @@
+@page "/history"
+@page "/history/{Day}"
+@inject NavigationManager Navigation
+
+@* History became Stories (/stories, with ?view=week|month) and Days (/days/{date}); old links and
+   bookmarks land on the new address, replacing the old one in Back/Forward. *@
+
+@code {
+    [Parameter] public string? Day { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var query = new Uri(Navigation.Uri).Query;
+        Navigation.NavigateTo(Day is null ? $"stories{query}" : $"days/{Day}{query}", replace: true);
+    }
+}

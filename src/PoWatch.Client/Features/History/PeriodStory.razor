@@ -34,7 +34,7 @@
                         <ol>
                             @foreach (var day in _story.Days)
                             {
-                                <li><a class="num" href="history/@day.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" title="Open this day">@day.Date.ToString("ddd d MMM", CultureInfo.CurrentCulture)</a> @day.Text</li>
+                                <li><a class="num" href="@StoryLinks.Day(day.Date)" title="Open this day">@day.Date.ToString("ddd d MMM", CultureInfo.CurrentCulture)</a> @day.Text</li>
                             }
                         </ol>
                     </details>
@@ -78,7 +78,7 @@
     private Task MoveAsync(int step)
     {
         var day = Month ? _day.AddMonths(step) : _day.AddDays(7 * step);
-        Navigation.NavigateTo($"history?view={Kind}&date={day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
+        Navigation.NavigateTo($"stories?view={Kind}&date={day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
         return Task.CompletedTask;
     }
 

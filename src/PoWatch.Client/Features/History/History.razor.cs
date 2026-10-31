@@ -100,10 +100,10 @@ public sealed partial class History
 
     private void Move(int days) => Go(_day.AddDays(days) > Today ? Today : _day.AddDays(days));
 
-    // "/history" is the story feed now, so every day, today included, has its own address.
+    // Every day, today included, has its own address (/days opens on today).
     private void Go(DateOnly day) => Navigation.NavigateTo(DayPath(day));
 
-    private static string DayPath(DateOnly day) => $"history/{day.ToString(DayFormat, CultureInfo.InvariantCulture)}";
+    private static string DayPath(DateOnly day) => StoryLinks.Day(day);
 
     private static DateOnly? DayFor(int index)
     {

@@ -29,7 +29,7 @@
         <ChildContent>
             @if (Sensing.IsRunning && Sensing.Live.LastError is { } error)
             {
-                <p class="tray-item tray-item--bad" role="alert" data-test="tray-error">@error</p>
+                <p class="tray-item tray-item--bad" role="alert" data-test="tray-error">@error <a class="term-link" href="system" data-test="tray-system">System status →</a></p>
             }
 
             @foreach (var alert in _alerts)
@@ -62,7 +62,7 @@
 
             @if (_week is { } week)
             {
-                <a class="tray-item tray-item--week" href="@($"history/{_weekEnd:yyyy-MM-dd}")" @onclick="DismissWeekAsync" data-test="tray-week">
+                <a class="tray-item tray-item--week" href="@($"stories?view=week&date={_weekEnd:yyyy-MM-dd}")" @onclick="DismissWeekAsync" data-test="tray-week">
                     <span class="tray-kicker">● THE WEEK IN REVIEW · OPEN HISTORY →</span>
                     <b>@week.Summary</b>
                 </a>

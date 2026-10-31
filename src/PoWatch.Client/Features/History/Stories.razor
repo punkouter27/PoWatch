@@ -1,13 +1,13 @@
-@page "/history"
+@page "/stories"
 @using System.Globalization
 @inject PoWatchApiClient Api
 
-<PageTitle>PoWatch | History</PageTitle>
+<PageTitle>PoWatch | Stories</PageTitle>
 
 @* History tells what happened. Sessions: every session, newest first, with the story of the whole
    session and, under it, its ten-minute chapters, newest first; each card asks for its story, which
    writes whatever is still due (a session closed without Stop gets its story here). Week and Month:
-   one story of the whole period. The tab is in the address (?view=week). The day view is one click away. *@
+   one story of the whole period. The tab is in the address (?view=week). The numbers by day are the Days section. *@
 <div class="history-page history-page--feed">
     <HistorySwitch Active="@View" />
     @if (View is "week" or "month")
@@ -35,7 +35,7 @@
                 <TerminalPanel Title="@Heading(session)" Class="story-card" Test="story-card">
                     <Aside>
                         <span class="story-meta">@SessionDto.Tag(session.Id) · @(session.IsRunning ? "RECORDING" : DisplayText.Duration(session.DurationSeconds))</span>
-                        <a class="term-link" href="@DayLink(session)" title="This day's numbers, recap and replay">Day view →</a>
+                        <a class="term-link" href="@StoryLinks.Session(session.Id)" title="This session's page: story, transcript and numbers" data-test="story-open">Open →</a>
                     </Aside>
                     <ChildContent>
                         <SessionStory SessionId="@session.Id" NewestFirst="true" ChaptersOpen="true" />
@@ -88,6 +88,4 @@
         return $"{start.ToString("ddd d MMM · HH:mm", CultureInfo.CurrentCulture)}–{end.ToString("HH:mm", CultureInfo.CurrentCulture)}";
     }
 
-    private static string DayLink(SessionDto session) =>
-        $"history/{session.StartedUtc.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
 }

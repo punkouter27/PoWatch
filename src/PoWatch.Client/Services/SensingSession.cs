@@ -183,6 +183,8 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         _demoStep = 0;
         _cts = new CancellationTokenSource();
         Live = new LiveSensingState { Session = session, Demo = demo, StartedUtc = session.StartedUtc };
+        // A new recording makes the last one's recap card stale.
+        Recap = null;
         await js.TryInvokeVoidAsync("powatchOutbox.guard", session.Id.ToString());
         Rules = await WatchRules.LoadAsync(js);
         _lastAlert.Clear();

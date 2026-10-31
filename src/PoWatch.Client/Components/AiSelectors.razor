@@ -3,23 +3,25 @@
 @inject PoWatchApiClient Api
 @inject IJSRuntime JS
 
-<div class="header-ai" data-test="header-ai" aria-label="AI models">
-    <div class="header-ai-control">
-        <label for="header-caption-model">CAMERA AI</label>
-        <select id="header-caption-model" @key="_captionRevision" value="@(Sensing.Captions ? Sensing.CaptionModel : "off")"
-                @onchange="SelectCaptionAsync" data-test="header-caption-model" aria-describedby="header-caption-status">
+@* The two model choices, in Settings → Recording: chosen rarely, so they no longer take header space. *@
+
+<div class="ai-models" data-test="ai-models" aria-label="AI models">
+    <div class="ai-model">
+        <label for="ai-caption-model">Camera AI <i>describes the scene; Captions off saves the GPU</i></label>
+        <select id="ai-caption-model" @key="_captionRevision" value="@(Sensing.Captions ? Sensing.CaptionModel : "off")"
+                @onchange="SelectCaptionAsync" data-test="ai-caption-model" aria-describedby="ai-caption-status">
             <option value="off">Captions off</option>
             @foreach (var model in CaptionModels.All)
             {
                 <option value="@model.Key">@model.Label</option>
             }
         </select>
-        <a id="header-caption-status" class="header-ai-status" href="system" title="@CaptionHint" data-test="header-caption-status"><span role="status">@CaptionStatus</span></a>
+        <a id="ai-caption-status" class="ai-model-status" href="system" title="@CaptionHint" data-test="ai-caption-status"><span role="status">@CaptionStatus</span></a>
     </div>
-    <div class="header-ai-control">
-        <label for="header-chat-model">ASK / RECAP AI</label>
-        <select id="header-chat-model" @key="_chatRevision" value="@_models?.SelectedId" @onchange="SelectChatAsync"
-                disabled="@(_models is null || _saving)" data-test="header-chat-model" aria-describedby="header-chat-status">
+    <div class="ai-model">
+        <label for="ai-chat-model">Story and Ask AI <i>writes recaps and stories, answers questions</i></label>
+        <select id="ai-chat-model" @key="_chatRevision" value="@_models?.SelectedId" @onchange="SelectChatAsync"
+                disabled="@(_models is null || _saving)" data-test="ai-chat-model" aria-describedby="ai-chat-status">
             @if (_models is null)
             {
                 <option>@(_loadFailed ? "Unavailable" : "Loading models...")</option>
@@ -32,13 +34,13 @@
                 }
             }
         </select>
-        <span id="header-chat-status" class="header-ai-status" role="status" title="Configured server model; availability is checked when you use it, and a failing model hands over to the next configured one. Auto picks local Ollama when it answers, else a cloud model. Changes apply to new requests in this browser.">
+        <span id="ai-chat-status" class="ai-model-status" role="status" title="Configured server model; availability is checked when you use it, and a failing model hands over to the next configured one. Auto picks local Ollama when it answers, else a cloud model. Changes apply to new requests in this browser.">
             @(_saving ? "SAVING..." : _models?.SelectedId switch { "Template" => "TEMPLATE / BROWSER FALLBACK", "Ollama" => "SERVER · OLLAMA", "Auto" => "SERVER · AUTO", null => "SERVER", _ => "SERVER · CLOUD" })
         </span>
     </div>
     @if (_error is not null)
     {
-        <span class="header-ai-error" role="alert">@_error</span>
+        <span class="ai-models-error" role="alert">@_error</span>
     }
     @if (_loadFailed)
     {

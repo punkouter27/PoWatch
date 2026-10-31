@@ -103,7 +103,7 @@ public sealed class DigestService(IRollupStore rollups, IRegularStore regulars, 
         var heading = $"Your week of {week.WeekStart.ToString("d MMMM", CultureInfo.InvariantCulture)}";
         var subject = $"PoWatch · {digest.Headline ?? heading}";
         var html = HtmlEncoder.Default;
-        var link = appUrl is null ? null : new Uri(appUrl, "history");
+        var link = appUrl is null ? null : new Uri(appUrl, "stories?view=week");
 
         var body = new StringBuilder();
         body.Append("<div style=\"font-family:system-ui,sans-serif;max-width:560px;color:#1f2329\">");

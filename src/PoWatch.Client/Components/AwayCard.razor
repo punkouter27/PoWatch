@@ -14,6 +14,7 @@
         <header class="term-panel-head">
             <h2 id="away-title">@(recap.AwayFor is { } away ? $"While you were away · {DisplayText.Duration(away.TotalSeconds)}" : "Session recap")</h2>
             <span class="term-panel-meta">SESSION @tag · @DisplayText.Duration(recap.Session.DurationSeconds)</span>
+            <a class="term-button" href="@($"stories/s/{recap.Session.Id}")" title="This session's page: story, transcript and numbers" data-test="away-open">Open</a>
             <a class="term-button" href="@PoWatchApiClient.SessionRecapPdfUrl(recap.Session.Id)" download="PoWatch-session-@(tag[1..]).pdf" data-test="away-pdf">PDF ↓</a>
             <button class="term-icon-button" @onclick="Close" aria-label="Dismiss" data-test="away-close">✕</button>
         </header>

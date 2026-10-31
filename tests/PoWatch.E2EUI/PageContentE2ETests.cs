@@ -102,7 +102,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         // Bob is recognised by name on the live overlay, and listed in Settings' "Who PoWatch knows"; the cat stays unnamed.
         await Assertions.Expect(page.GetByTestId("live-tracks")).ToContainTextAsync("Bob", new() { Timeout = 25_000 });
         await page.GetByTestId("header-stop").ClickAsync();
-        await page.OpenSettingsAsync();
+        await page.OpenSettingsAsync("people");
         await Assertions.Expect(page.GetByTestId("regulars-table")).ToBeVisibleAsync();
         ILocator NameBox(string who) => page.Locator(".regular-name").Filter(new() { HasText = $"Name for {who}" }).Locator("input");
         await Assertions.Expect(NameBox("Bob")).ToHaveValueAsync("Bob");
@@ -139,10 +139,12 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         });
         Assert.True(batch.Ok, $"batch returned {batch.Status}");
 
-        // History opens on the stories, newest session first; the day view is behind "Days".
-        await page.GoToAsync("/history", "HISTORY");
+        // Stories lists every session, newest first; each opens its own page. The numbers by day are Days.
+        await page.GoToAsync("/stories", "STORIES");
         await Assertions.Expect(page.GetByTestId("story-card").First).ToBeVisibleAsync(new() { Timeout = 30_000 });
-        await page.GetByTestId("history-days-link").ClickAsync();
+        await page.GetByTestId("story-open").First.ClickAsync();
+        await Assertions.Expect(page.GetByTestId("session-page")).ToBeVisibleAsync(new() { Timeout = 30_000 });
+        await page.GetByTestId("nav-days").ClickAsync();
         await Assertions.Expect(page.GetByTestId("history-calendar")).ToBeVisibleAsync();
         // The year turns into a 3D skyline and back; the choice is the browser's to remember.
         await page.GetByTestId("year-3d").ClickAsync();
@@ -223,7 +225,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
-        await page.OpenSettingsAsync();
+        await page.OpenSettingsAsync("account");
         await page.GetByTestId("sign-out").ClickAsync();
 
         await Assertions.Expect(page.GetByTestId("login-shell")).ToBeVisibleAsync(new() { Timeout = 60000 });

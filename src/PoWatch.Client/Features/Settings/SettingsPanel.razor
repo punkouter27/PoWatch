@@ -9,216 +9,268 @@
 @inject UiPrefs Prefs
 @implements IDisposable
 
-@* Every optional choice in one place, so the pages you work on carry none. Each starts on the value
-   that suits most rooms (dark, quiet cues, captions on, Advanced off) and is remembered in this browser.
-   Advanced shows the extras here and across the app; anything already switched on stays visible without it.
-   One column: it opens in the gear's drawer, and as the /settings page. *@
+@* Every optional choice, grouped by what it is about: what is recorded, who is known, what alerts you,
+   what is shared, how it looks, and your account. Browser choices start on the values that suit most
+   rooms and are remembered here; "Show power features" (Look) shows the extras here and across the app,
+   and anything already switched on stays visible without it. One column: it opens in the gear's drawer,
+   and as the /settings page (?section= opens a tab). *@
 <div class="settings-stack" data-test="settings-page">
-    <TerminalPanel Title="Preferences" Test="settings-preferences" Flush="true">
-        <Aside>REMEMBERED IN THIS BROWSER</Aside>
-        <ChildContent>
-            <div class="settings-list">
-                <button class="term-menu-item" @onclick="ToggleThemeAsync" data-test="theme-toggle">
-                    <span>Theme</span><b>@_theme.ToUpperInvariant()</b>
-                </button>
-                <button class="term-menu-item" @onclick="CycleSoundAsync" data-test="sound-toggle">
-                    <span>Sound cues <i>off · low · mid · high</i></span><b>@_sound.ToUpperInvariant()</b>
-                </button>
-                <button class="term-menu-item" role="switch" aria-checked="@(Sensing.Captions ? "true" : "false")" @onclick="ToggleCaptionsAsync" data-test="captions-toggle">
-                    <span>Captions <i>an on-device vision model describes the scene</i></span><b>@(Sensing.Captions ? "ON" : "OFF")</b>
-                </button>
-                <button class="term-menu-item" role="switch" aria-checked="@(Sensing.Listening ? "true" : "false")" @onclick="ToggleListeningAsync" data-test="listening-toggle">
-                    <span>Listening <i>the microphone, heard on this machine: words, sounds, loudness (never the audio itself)</i></span><b>@(Sensing.Listening ? "ON" : "OFF")</b>
-                </button>
-                <button class="term-menu-item" role="switch" aria-checked="@(Prefs.Advanced ? "true" : "false")" @onclick="ToggleAdvancedAsync" data-test="advanced-toggle">
-                    <span>Advanced <i>Ask, downloads, sharing, watch rules, weather, visual effects</i></span><b>@(Prefs.Advanced ? "ON" : "OFF")</b>
-                </button>
-                @if (Prefs.Advanced)
-                {
-                    <button class="term-menu-item" @onclick="CycleCaptionModelAsync" disabled="@(!Sensing.Captions)" data-test="caption-model">
-                        <span>Caption model <i>runs in Ollama on this PC, in the browser when Ollama is off; applies from the next caption</i></span><b>@CaptionModels.Label(Sensing.CaptionModel)</b>
-                    </button>
-                    <button class="term-menu-item" onclick="powatchMenus.openPalette()" data-test="open-palette">
-                        <span>Commands and shortcuts</span><b>CTRL K</b>
-                    </button>
-                }
-                <button class="term-menu-item" @onclick="ResetAsync" data-test="settings-reset">
-                    <span>Reset to defaults <i>dark, low sound, captions and listening on, Advanced off; rules and server settings stay</i></span><b>↺</b>
-                </button>
-            </div>
-        </ChildContent>
-    </TerminalPanel>
+    <nav class="term-tabbar settings-tabs" aria-label="Settings sections">
+        @foreach (var (key, label) in Sections)
+        {
+            <button type="button" class="term-tab @(_section == key ? "term-tab--on" : null)" aria-pressed="@(_section == key ? "true" : "false")"
+                    @onclick="() => _section = key" data-test="@($"settings-tab-{key}")">@label</button>
+        }
+    </nav>
 
-    @if (Prefs.Advanced || _rules.Count > 0)
+    @switch (_section)
     {
-        <TerminalPanel Title="Watch rules" Test="watch-rules">
-            <Aside>@_rules.Count OF @WatchRules.Max</Aside>
-            <ChildContent>
-                @foreach (var rule in _rules)
-                {
-                    <div class="rule-row">
-                        <span>@rule</span>
-                        <button class="term-icon-button" @onclick="() => RemoveRuleAsync(rule)" aria-label="@($"Remove rule: {rule}")">✕</button>
+        case "recording":
+            <TerminalPanel Title="Recording" Test="settings-recording" Flush="true">
+                <Aside>REMEMBERED IN THIS BROWSER</Aside>
+                <ChildContent>
+                    @* Which models see and describe the room, and which one writes recaps and answers questions. *@
+                    <AiSelectors />
+                    <div class="settings-list">
+                        <button class="term-menu-item" role="switch" aria-checked="@(Sensing.Listening ? "true" : "false")" @onclick="ToggleListeningAsync" data-test="listening-toggle">
+                            <span>Listening <i>the microphone, heard on this machine: words, sounds, loudness (never the audio itself)</i></span><b>@(Sensing.Listening ? "ON" : "OFF")</b>
+                        </button>
                     </div>
-                }
-                @if (_rules.Count < WatchRules.Max)
-                {
-                    <form class="rule-form" @onsubmit="AddRuleAsync">
-                        <label class="visually-hidden" for="rule-class">Alert me when this appears</label>
-                        <select id="rule-class" @bind="_ruleClass">
-                            <option value="person">person</option>
-                            <option value="cat">cat</option>
-                            <option value="dog">dog</option>
-                            <option value="@WatchRules.Any">anything</option>
-                        </select>
-                        <label class="visually-hidden" for="rule-from">From hour</label>
-                        <input id="rule-from" type="number" min="0" max="23" @bind="_ruleFrom" />
-                        <span aria-hidden="true">→</span>
-                        <label class="visually-hidden" for="rule-to">Until hour</label>
-                        <input id="rule-to" type="number" min="0" max="23" @bind="_ruleTo" />
-                        <button type="submit" class="term-button" data-test="rule-add">Add</button>
-                    </form>
-                    @* Or in plain words: the server's model drafts the rule, which shows here to confirm before it is kept. *@
-                    <form class="rule-form rule-form--words" @onsubmit="DraftRuleAsync" data-test="rule-words">
-                        <label class="visually-hidden" for="rule-words">Describe a rule in your own words</label>
-                        <input id="rule-words" @bind="_ruleWords" @bind:event="oninput" maxlength="@RuleDraftRequestDto.MaxLength" autocomplete="off"
-                               placeholder="Or say it: tell me if a dog shows up at night" disabled="@_drafting" />
-                        <button type="submit" class="term-button" disabled="@(_drafting || string.IsNullOrWhiteSpace(_ruleWords))">@(_drafting ? "…" : "Draft")</button>
-                    </form>
-                    @if (_draft is { } draft)
-                    {
-                        <div class="rule-row rule-row--draft" data-test="rule-draft">
-                            <span>@draft</span>
-                            <span>
-                                <button class="term-button" @onclick="KeepDraftAsync" data-test="rule-draft-keep">Keep</button>
-                                <button class="term-icon-button" @onclick="() => _draft = null" aria-label="Discard the drafted rule">✕</button>
-                            </span>
-                        </div>
-                    }
-                    else if (_draftError is not null)
-                    {
-                        <p class="term-stat-hint" role="status">@_draftError</p>
-                    }
-                }
-                <p class="term-stat-hint">Alerts land in the bell. Hours are local; the same hour twice means any time. @(_notifications ?? "They also show as desktop notifications if you allow them.")</p>
-            </ChildContent>
-        </TerminalPanel>
-    }
+                </ChildContent>
+            </TerminalPanel>
+            break;
 
-    <TerminalPanel Title="Kept on the server" Test="settings-server" Flush="true">
-        <Aside>FOR YOUR ACCOUNT</Aside>
-        <ChildContent>
-            @if (_profile is null)
-            {
-                <p class="term-empty">@(_profileLoaded ? "Could not load these settings — the server did not answer." : "Loading…")</p>
-            }
-            else
-            {
-                <div class="settings-list">
-                    <button class="term-menu-item" @onclick="NextRetention" disabled="@_saving" data-test="retention-toggle">
-                        <span>Raw detail kept <i>replays, captions, moments; charts and totals stay forever</i></span><b>@RetentionLabel(_profile.RetentionDays)</b>
-                    </button>
+        case "people":
+            <KnownRegulars />
+            break;
 
-                    @if (Prefs.Advanced || _profile.Place is not null)
-                    {
-                        <div class="settings-place" data-test="weather-place">
-                            <span>Weather from <i>daily weather beside each day on History</i></span>
-                            @if (_profile.Place is { } place)
-                            {
-                                <b>@place.Name.ToUpperInvariant()</b>
-                                <button class="term-icon-button" @onclick="ClearPlaceAsync" disabled="@_saving" aria-label="Stop showing weather" title="Stop showing weather">✕</button>
-                            }
-                            else
-                            {
-                                <b>OFF</b>
-                            }
-                        </div>
-                        <form class="settings-search" @onsubmit="SearchPlacesAsync">
-                            <label class="visually-hidden" for="place-search">Find a town or city</label>
-                            <input id="place-search" @bind="_placeQuery" placeholder="Find a town or city…" autocomplete="off" maxlength="80" data-test="place-search" />
-                            <button type="submit" class="term-button" disabled="@_searching" data-test="place-search-go">@(_searching ? "…" : "Find")</button>
-                        </form>
-                        @if (_places is { } places)
+        case "alerts":
+            @if (Prefs.Advanced || _rules.Count > 0)
+            {
+                <TerminalPanel Title="Watch rules" Test="watch-rules">
+                    <Aside>@_rules.Count OF @WatchRules.Max</Aside>
+                    <ChildContent>
+                        @foreach (var rule in _rules)
                         {
-                            @if (places.Count == 0)
+                            <div class="rule-row">
+                                <span>@rule</span>
+                                <button class="term-icon-button" @onclick="() => RemoveRuleAsync(rule)" aria-label="@($"Remove rule: {rule}")">✕</button>
+                            </div>
+                        }
+                        @if (_rules.Count < WatchRules.Max)
+                        {
+                            <form class="rule-form" @onsubmit="AddRuleAsync">
+                                <label class="visually-hidden" for="rule-class">Alert me when this appears</label>
+                                <select id="rule-class" @bind="_ruleClass">
+                                    <option value="person">person</option>
+                                    <option value="cat">cat</option>
+                                    <option value="dog">dog</option>
+                                    <option value="@WatchRules.Any">anything</option>
+                                </select>
+                                <label class="visually-hidden" for="rule-from">From hour</label>
+                                <input id="rule-from" type="number" min="0" max="23" @bind="_ruleFrom" />
+                                <span aria-hidden="true">→</span>
+                                <label class="visually-hidden" for="rule-to">Until hour</label>
+                                <input id="rule-to" type="number" min="0" max="23" @bind="_ruleTo" />
+                                <button type="submit" class="term-button" data-test="rule-add">Add</button>
+                            </form>
+                            @* Or in plain words: the server's model drafts the rule, which shows here to confirm before it is kept. *@
+                            <form class="rule-form rule-form--words" @onsubmit="DraftRuleAsync" data-test="rule-words">
+                                <label class="visually-hidden" for="rule-words">Describe a rule in your own words</label>
+                                <input id="rule-words" @bind="_ruleWords" @bind:event="oninput" maxlength="@RuleDraftRequestDto.MaxLength" autocomplete="off"
+                                       placeholder="Or say it: tell me if a dog shows up at night" disabled="@_drafting" />
+                                <button type="submit" class="term-button" disabled="@(_drafting || string.IsNullOrWhiteSpace(_ruleWords))">@(_drafting ? "…" : "Draft")</button>
+                            </form>
+                            @if (_draft is { } draft)
                             {
-                                <p class="term-stat-hint">NO PLACE BY THAT NAME</p>
+                                <div class="rule-row rule-row--draft" data-test="rule-draft">
+                                    <span>@draft</span>
+                                    <span>
+                                        <button class="term-button" @onclick="KeepDraftAsync" data-test="rule-draft-keep">Keep</button>
+                                        <button class="term-icon-button" @onclick="() => _draft = null" aria-label="Discard the drafted rule">✕</button>
+                                    </span>
+                                </div>
                             }
-                            <ul class="settings-results" data-test="place-results">
-                                @foreach (var found in places)
-                                {
-                                    <li><button class="term-menu-item" @onclick="() => SavePlaceAsync(found)" disabled="@_saving"><span>@found.Name <i>@found.Detail</i></span><b>USE</b></button></li>
-                                }
-                            </ul>
+                            else if (_draftError is not null)
+                            {
+                                <p class="term-stat-hint" role="status">@_draftError</p>
+                            }
+                        }
+                        <p class="term-stat-hint">Alerts land in the bell. Hours are local; the same hour twice means any time. @(_notifications ?? "They also show as desktop notifications if you allow them.")</p>
+                    </ChildContent>
+                </TerminalPanel>
+            }
+            <TerminalPanel Title="Weekly email" Test="settings-email" Flush="true">
+                <ChildContent>
+                    @if (_profile is null)
+                    {
+                        <p class="term-empty">@(_profileLoaded ? "Could not load your settings — the server did not answer." : "Loading…")</p>
+                    }
+                    else
+                    {
+                        <div class="settings-list">
+                            <button class="term-menu-item" role="switch" aria-checked="@(_profile.DigestEmail ? "true" : "false")" @onclick="ToggleDigestEmailAsync"
+                                    disabled="@(_saving || !_profile.DigestEmailAvailable)" data-test="digest-toggle">
+                                <span>Weekly email <i>@(_profile.DigestEmailAvailable ? (_profile.DigestEmail ? $"Mondays, to {_profile.Email}" : "the week in review, Monday mornings") : "this server cannot send email; the week is on Stories")</i></span>
+                                <b>@(_profile.DigestEmail ? "ON" : "OFF")</b>
+                            </button>
+                        </div>
+                        @if (_profileMessage is not null)
+                        {
+                            <p class="term-stat-hint settings-note" role="status">@_profileMessage</p>
                         }
                     }
-
-                    @if (Prefs.Advanced || _profile.DigestEmail)
-                    {
-                        <button class="term-menu-item" role="switch" aria-checked="@(_profile.DigestEmail ? "true" : "false")" @onclick="ToggleDigestEmailAsync"
-                                disabled="@(_saving || !_profile.DigestEmailAvailable)" data-test="digest-toggle">
-                            <span>Weekly email <i>@(_profile.DigestEmailAvailable ? (_profile.DigestEmail ? $"Mondays, to {_profile.Email}" : "the week in review, Monday mornings") : "this server cannot send email; the week is on History")</i></span>
-                            <b>@(_profile.DigestEmail ? "ON" : "OFF")</b>
-                        </button>
-                    }
-                </div>
-                @if (_profileMessage is not null)
-                {
-                    <p class="term-stat-hint settings-note" role="status">@_profileMessage</p>
-                }
-            }
-        </ChildContent>
-    </TerminalPanel>
-
-    @if (Prefs.Advanced || _shares is { Count: > 0 })
-    {
-        <TerminalPanel Title="Shared recaps" Test="settings-shares">
-            <Aside>@(_shares?.Count ?? 0) LIVE</Aside>
-            <ChildContent>
-                @if (_shares is null)
-                {
-                    <p class="term-empty">Could not load your links.</p>
-                }
-                else if (_shares.Count == 0)
-                {
-                    <p class="term-empty">No shared recaps. Share a day from its recap on History; the link works without signing in until it expires.</p>
-                }
-                else
-                {
-                    @foreach (var share in _shares)
-                    {
-                        <div class="rule-row" data-test="share-row">
-                            <span><a class="term-link" href="@share.Path" target="_blank" rel="noopener">@share.Day.ToString("ddd d MMM", CultureInfo.CurrentCulture)</a> <i class="term-stat-hint">UNTIL @share.ExpiresUtc.ToLocalTime().ToString("d MMM HH:mm", CultureInfo.CurrentCulture)</i></span>
-                            <button class="term-icon-button" @onclick="() => RevokeAsync(share)" aria-label="@($"Take down the link to {share.Day:d MMM}")" title="Take the link down" data-test="share-revoke">✕</button>
-                        </div>
-                    }
-                }
-            </ChildContent>
-        </TerminalPanel>
-    }
-
-    <KnownRegulars />
-
-    <TerminalPanel Title="Account and data" Test="your-data" Flush="true">
-        <Aside>@_email</Aside>
-        <ChildContent>
-            <div class="settings-list">
-                <a class="term-menu-item" href="system" data-test="nav-system"><span>System status <i>connections, runtime, inference, pipeline</i></span><b>→</b></a>
-                <a class="term-menu-item" href="@PoWatchApiClient.ExportUrl(TimeZoneInfo.Local.Id)" download="PoWatch-days.csv" data-test="export-csv"><span>Export days <i>one row per observed day</i></span><b>CSV ↓</b></a>
-                <button class="term-menu-item" @onclick="SignOutAsync" disabled="@_signingOut" data-test="sign-out"><span>Sign out</span><b>@(_signingOut ? "…" : "→")</b></button>
-                <button class="term-menu-item term-menu-item--danger" @onclick="DeleteAllAsync" disabled="@_deleting" data-test="delete-data">
-                    <span>Delete everything <i>sessions, stats, regulars, snapshots, links</i></span><b>@(_deleting ? "DELETING…" : "DELETE…")</b>
-                </button>
-            </div>
-            @if (_dataMessage is not null)
+                </ChildContent>
+            </TerminalPanel>
+            @if (!Prefs.Advanced && _rules.Count == 0)
             {
-                <p class="term-stat-hint settings-note" role="status">@_dataMessage</p>
+                <p class="term-stat-hint settings-note">Watch rules ("a person between 22 and 6") are a power feature: turn them on under Look.</p>
             }
-        </ChildContent>
-    </TerminalPanel>
+            break;
+
+        case "sharing":
+            <TerminalPanel Title="Shared recaps" Test="settings-shares">
+                <Aside>@(_shares?.Count ?? 0) LIVE</Aside>
+                <ChildContent>
+                    @if (_shares is null)
+                    {
+                        <p class="term-empty">Could not load your links.</p>
+                    }
+                    else if (_shares.Count == 0)
+                    {
+                        <p class="term-empty">@(Prefs.Advanced
+                            ? "No shared recaps. Share a day from its recap on Days; the link works without signing in until it expires."
+                            : "No shared recaps. Sharing a day's recap is a power feature: turn it on under Look.")</p>
+                    }
+                    else
+                    {
+                        @foreach (var share in _shares)
+                        {
+                            <div class="rule-row" data-test="share-row">
+                                <span><a class="term-link" href="@share.Path" target="_blank" rel="noopener">@share.Day.ToString("ddd d MMM", CultureInfo.CurrentCulture)</a> <i class="term-stat-hint">UNTIL @share.ExpiresUtc.ToLocalTime().ToString("d MMM HH:mm", CultureInfo.CurrentCulture)</i></span>
+                                <button class="term-icon-button" @onclick="() => RevokeAsync(share)" aria-label="@($"Take down the link to {share.Day:d MMM}")" title="Take the link down" data-test="share-revoke">✕</button>
+                            </div>
+                        }
+                    }
+                </ChildContent>
+            </TerminalPanel>
+            break;
+
+        case "look":
+            <TerminalPanel Title="Look and feel" Test="settings-preferences" Flush="true">
+                <Aside>REMEMBERED IN THIS BROWSER</Aside>
+                <ChildContent>
+                    <div class="settings-list">
+                        <button class="term-menu-item" @onclick="ToggleThemeAsync" data-test="theme-toggle">
+                            <span>Theme</span><b>@_theme.ToUpperInvariant()</b>
+                        </button>
+                        <button class="term-menu-item" @onclick="CycleSoundAsync" data-test="sound-toggle">
+                            <span>Sound cues <i>off · low · mid · high</i></span><b>@_sound.ToUpperInvariant()</b>
+                        </button>
+                        <button class="term-menu-item" role="switch" aria-checked="@(Prefs.Advanced ? "true" : "false")" @onclick="ToggleAdvancedAsync" data-test="advanced-toggle">
+                            <span>Show power features <i>Ask, downloads, sharing, watch rules, weather, the 3D year, visual effects</i></span><b>@(Prefs.Advanced ? "ON" : "OFF")</b>
+                        </button>
+                        @if (Prefs.Advanced)
+                        {
+                            <button class="term-menu-item" onclick="powatchMenus.openPalette()" data-test="open-palette">
+                                <span>Commands and shortcuts</span><b>CTRL K</b>
+                            </button>
+                        }
+                        <button class="term-menu-item" @onclick="ResetAsync" data-test="settings-reset">
+                            <span>Reset to defaults <i>dark, low sound, captions and listening on, power features off; rules and account settings stay</i></span><b>↺</b>
+                        </button>
+                    </div>
+                </ChildContent>
+            </TerminalPanel>
+            break;
+
+        default:
+            <TerminalPanel Title="Account and data" Test="your-data" Flush="true">
+                <Aside>@_email</Aside>
+                <ChildContent>
+                    @if (_profile is null)
+                    {
+                        <p class="term-empty">@(_profileLoaded ? "Could not load your settings — the server did not answer." : "Loading…")</p>
+                    }
+                    else
+                    {
+                        <div class="settings-list">
+                            <button class="term-menu-item" @onclick="NextRetention" disabled="@_saving" data-test="retention-toggle">
+                                <span>Raw detail kept <i>replays, captions, moments; charts and totals stay forever</i></span><b>@RetentionLabel(_profile.RetentionDays)</b>
+                            </button>
+                        </div>
+                        @if (Prefs.Advanced || _profile.Place is not null)
+                        {
+                            <div class="settings-place" data-test="weather-place">
+                                <span>Weather from <i>daily weather beside each day</i></span>
+                                @if (_profile.Place is { } place)
+                                {
+                                    <b>@place.Name.ToUpperInvariant()</b>
+                                    <button class="term-icon-button" @onclick="ClearPlaceAsync" disabled="@_saving" aria-label="Stop showing weather" title="Stop showing weather">✕</button>
+                                }
+                                else
+                                {
+                                    <b>OFF</b>
+                                }
+                            </div>
+                            <form class="settings-search" @onsubmit="SearchPlacesAsync">
+                                <label class="visually-hidden" for="place-search">Find a town or city</label>
+                                <input id="place-search" @bind="_placeQuery" placeholder="Find a town or city…" autocomplete="off" maxlength="80" data-test="place-search" />
+                                <button type="submit" class="term-button" disabled="@_searching" data-test="place-search-go">@(_searching ? "…" : "Find")</button>
+                            </form>
+                            @if (_places is { } places)
+                            {
+                                @if (places.Count == 0)
+                                {
+                                    <p class="term-stat-hint">NO PLACE BY THAT NAME</p>
+                                }
+                                <ul class="settings-results" data-test="place-results">
+                                    @foreach (var found in places)
+                                    {
+                                        <li><button class="term-menu-item" @onclick="() => SavePlaceAsync(found)" disabled="@_saving"><span>@found.Name <i>@found.Detail</i></span><b>USE</b></button></li>
+                                    }
+                                </ul>
+                            }
+                        }
+                        @if (_profileMessage is not null)
+                        {
+                            <p class="term-stat-hint settings-note" role="status">@_profileMessage</p>
+                        }
+                    }
+                    <div class="settings-list">
+                        <a class="term-menu-item" href="system" data-test="nav-system"><span>System status <i>connections, runtime, inference, pipeline</i></span><b>→</b></a>
+                        <a class="term-menu-item" href="@PoWatchApiClient.ExportUrl(TimeZoneInfo.Local.Id)" download="PoWatch-days.csv" data-test="export-csv"><span>Export days <i>one row per observed day</i></span><b>CSV ↓</b></a>
+                        <button class="term-menu-item" @onclick="SignOutAsync" disabled="@_signingOut" data-test="sign-out"><span>Sign out</span><b>@(_signingOut ? "…" : "→")</b></button>
+                        <button class="term-menu-item term-menu-item--danger" @onclick="DeleteAllAsync" disabled="@_deleting" data-test="delete-data">
+                            <span>Delete everything <i>sessions, stats, regulars, voices, snapshots, links</i></span><b>@(_deleting ? "DELETING…" : "DELETE…")</b>
+                        </button>
+                    </div>
+                    @if (_dataMessage is not null)
+                    {
+                        <p class="term-stat-hint settings-note" role="status">@_dataMessage</p>
+                    }
+                </ChildContent>
+            </TerminalPanel>
+            break;
+    }
 </div>
 
 @code {
+    private static readonly (string Key, string Label)[] Sections =
+    [
+        ("recording", "Recording"), ("people", "People"), ("alerts", "Alerts"), ("sharing", "Sharing"), ("look", "Look"), ("account", "Account"),
+    ];
+
+    /// <summary>The tab to open on: recording, people, alerts, sharing, look or account.</summary>
+    [Parameter] public string? Section { get; set; }
+
+    private string _section = "recording";
+
+    protected override void OnParametersSet()
+    {
+        if (Section is { } section && Sections.Any(t => t.Key == section)) _section = section;
+    }
+
     private string _theme = "dark";
     private string _sound = "low";
     private string? _email;
@@ -397,12 +449,6 @@
         if (_draft is not { } rule) return;
         (_ruleClass, _ruleFrom, _ruleTo, _draft, _ruleWords) = (rule.Class, rule.FromHour, rule.ToHour, null, string.Empty);
         await AddRuleAsync();
-    }
-
-    private async Task CycleCaptionModelAsync()
-    {
-        Sensing.CaptionModel = CaptionModels.Next(Sensing.CaptionModel);
-        await JS.TryInvokeVoidAsync("localStorage.setItem", CaptionModels.Key, Sensing.CaptionModel);
     }
 
     private async Task AddRuleAsync()

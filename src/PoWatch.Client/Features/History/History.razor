@@ -1,4 +1,5 @@
-@page "/history/{Day}"
+@page "/days"
+@page "/days/{Day}"
 @using System.Globalization
 @using PoWatch.Shared.Services.Recaps
 @inject PoWatchApiClient Api
@@ -7,15 +8,14 @@
 @inject UiPrefs Prefs
 @implements IDisposable
 
-<PageTitle>PoWatch | History</PageTitle>
+<PageTitle>PoWatch | Days</PageTitle>
 
 @* Master-detail in one viewport: on the left the year, the chosen day's numbers beside its week, and
    its sessions; on the right two tabs: the recap with its motion and captions, and the replay with the
    day's moments and time-lapse under it. On a desktop each column scrolls on its own, never the page. The day is in the address
-   (/history/2026-10-03), so it survives a reload and Back/Forward walk the days you looked at. ◀ ▶ and
+   (/days/2026-10-03), so it survives a reload and Back/Forward walk the days you looked at. ◀ ▶ and
    the arrow keys step a day (menus.js); the calendar button jumps to any day. *@
 <div class="history-page">
-<HistorySwitch Active="days" />
 <div class="history-grid">
     <div class="history-col">
         <TerminalPanel Title="The year" Test="history-calendar">

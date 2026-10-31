@@ -16,7 +16,7 @@
     <main class="term-body" id="main-content" tabindex="-1">
         <AwayCard />
         @* Keyed on the section, not the full URI: a query change (?range=, ?start=) or a deeper
-           segment (/history/2026-10-03) must not rebuild the page. *@
+           segment (/days/2026-10-03) must not rebuild the page. *@
         <ErrorBoundary @key="Section(Nav.Uri)">
             <ChildContent>
                 @Body
@@ -84,7 +84,7 @@
 
     private static bool IsLive(string uri) => Section(uri).Length == 0;
 
-    /// <summary>The first path segment: "" for Live, "history", "settings", …</summary>
+    /// <summary>The first path segment: "" for Live, "stories", "days", "settings", …</summary>
     private static string Section(string uri) => new Uri(uri).AbsolutePath.Trim('/').Split('/')[0];
 
     public void Dispose()

@@ -290,7 +290,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
 
         var sent = Assert.Single(mail.Sent, m => m.To == "someone@example.com");
         Assert.Contains("12 October", sent.Subject, StringComparison.Ordinal);
-        Assert.Contains("https://powatch.example/history", sent.Html, StringComparison.Ordinal);
+        Assert.Contains("https://powatch.example/stories?view=week", sent.Html, StringComparison.Ordinal);
         Assert.Equal(new DateOnly(2026, 10, 12), (await profiles.GetAsync(user, CancellationToken.None))!.LastDigestWeek);
     }
 

@@ -1,0 +1,78 @@
+@page "/stories/s/{Id:guid}"
+@using System.Globalization
+@inject PoWatchApiClient Api
+
+<PageTitle>PoWatch | Session</PageTitle>
+
+@* One session, whole: its numbers, the story with every chapter, and the transcript. Every link to a
+   session lands here (the story feed, a day's sessions, the recap card); Live view shows its panels. *@
+<div class="history-page history-page--feed">
+    <HistorySwitch />
+    <div class="story-feed">
+        @if (!_loaded)
+        {
+            <Skeleton Heights="@([240])" />
+        }
+        else if (_session is null)
+        {
+            <p class="term-empty" data-test="session-missing">That session was not found. <a class="term-link" href="stories">All sessions →</a></p>
+        }
+        else
+        {
+            var tag = SessionDto.Tag(_session.Id);
+            <TerminalPanel Title="@Heading(_session)" Class="story-card" Test="session-page">
+                <Aside>
+                    <span class="story-meta">@tag · @(_session.IsRunning ? "RECORDING" : DisplayText.Duration(_session.DurationSeconds))</span>
+                    <a class="term-link" href="@($"?session={_session.Id}")" title="This session's panels on Live">Live view →</a>
+                    <a class="term-link" href="@StoryLinks.DayOf(_session)" title="That day's numbers, recap and replay">Day →</a>
+                    <a class="term-link" href="@PoWatchApiClient.SessionRecapPdfUrl(_session.Id)" download="PoWatch-session-@(tag[1..]).pdf">PDF ↓</a>
+                </Aside>
+                <ChildContent>
+                    @if (_presence is { } p)
+                    {
+                        <div class="term-stats session-numbers" data-test="session-numbers">
+                            <StatCell Label="Visits" Value="@p.Visits.ToString(CultureInfo.InvariantCulture)" />
+                            <StatCell Label="Occupancy" Value="@p.Occupancy.ToString("0%", CultureInfo.InvariantCulture)" />
+                            <StatCell Label="Peak at once" Value="@p.PeakConcurrency.ToString(CultureInfo.InvariantCulture)" />
+                            <StatCell Label="Seen" Value="@(_objects?.Classes.Count.ToString(CultureInfo.InvariantCulture) ?? "0")" Hint="@string.Join(", ", _objects?.Classes.Take(4).Select(c => c.Name) ?? [])" />
+                        </div>
+                    }
+                    <SessionStory SessionId="@_session.Id" NewestFirst="true" ChaptersOpen="true" />
+                    <SessionTranscript SessionId="@_session.Id" Open="true" />
+                </ChildContent>
+            </TerminalPanel>
+            <a class="term-link story-back" href="stories">← All sessions</a>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private Guid _shown;
+    private bool _loaded;
+    private SessionDto? _session;
+    private PresenceStatsDto? _presence;
+    private ObjectStatsDto? _objects;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id == _shown) return;
+        (_shown, _loaded, _session, _presence, _objects) = (Id, false, null, null, null);
+        _session = await Api.GetSessionAsync(Id);
+        _loaded = true;
+        if (_session is null) return;
+        var query = StatsQuery.For("session", Id);
+        var presence = Api.GetPresenceAsync(query);
+        var objects = Api.GetObjectsAsync(query);
+        await Task.WhenAll(presence, objects);
+        (_presence, _objects) = (presence.Result, objects.Result);
+    }
+
+    private static string Heading(SessionDto session)
+    {
+        var start = session.StartedUtc.ToLocalTime();
+        var end = (session.EndedUtc ?? DateTimeOffset.Now).ToLocalTime();
+        return $"{start.ToString("ddd d MMM · HH:mm", CultureInfo.CurrentCulture)}–{end.ToString("HH:mm", CultureInfo.CurrentCulture)}";
+    }
+}
