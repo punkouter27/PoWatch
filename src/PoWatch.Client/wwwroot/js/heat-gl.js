@@ -140,7 +140,13 @@ void main() {
 
     function loop(canvas, state) {
         // The page that owned the canvas is gone: stop, and let the context be collected.
-        if (!canvas.isConnected) { state.raf = 0; return; }
+        // Releasing the context now matters: Chrome keeps ~16 alive and drops the oldest past that.
+        if (!canvas.isConnected) {
+            state.raf = 0;
+            state.gl.getExtension('WEBGL_lose_context')?.loseContext();
+            states.delete(canvas);
+            return;
+        }
         render(canvas, state);
         state.raf = requestAnimationFrame(() => loop(canvas, state));
     }

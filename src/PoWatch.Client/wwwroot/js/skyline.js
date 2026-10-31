@@ -157,7 +157,7 @@ void main() {
     const place = (i) => [(i % COLS) - (COLS - 1) / 2, Math.floor(i / COLS) - (ROWS - 1) / 2];
 
     function mount(canvas, values, wet, labels, selected, dotnet, tip) {
-        unmount(canvas);
+        teardown(canvas);
         const view = create(canvas);
         if (!view) return false;
 
@@ -387,14 +387,20 @@ void main() {
         });
     }
 
-    function unmount(canvas) {
+    function teardown(canvas) {
         const state = canvas && states.get(canvas);
-        if (!state) return;
+        if (!state) return null;
         state.flying?.stop();
         state.detach?.();
         state.observer?.disconnect();
         cancelAnimationFrame(state.raf);
         states.delete(canvas);
+        return state;
+    }
+
+    /** The component is going away: also give its WebGL context back now, not at GC (Chrome caps live contexts at ~16). */
+    function unmount(canvas) {
+        teardown(canvas)?.view.gl.getExtension('WEBGL_lose_context')?.loseContext();
     }
 
     window.powatchSkyline = { mount, select, flyover, unmount };

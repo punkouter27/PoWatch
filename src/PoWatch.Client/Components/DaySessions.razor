@@ -1,0 +1,42 @@
+@using System.Globalization
+
+@* The day's camera sessions, each linking to its stats on Live. *@
+<TerminalPanel Title="Sessions" Class="history-sessions" Test="history-sessions" Flush="true">
+    <Aside>@Sessions.Count ON THIS DAY</Aside>
+    <ChildContent>
+        @if (!Loaded)
+        {
+            <Skeleton Heights="@([0])" Span="term-span-4 history-skel-sessions" />
+        }
+        else if (Sessions.Count == 0)
+        {
+            <p class="term-empty">No sessions on this day.</p>
+        }
+        else
+        {
+            @* A table on a desktop; on a phone each row becomes a small card (term-table--cards). *@
+            <table class="term-table term-table--cards">
+                <thead><tr><th>Session</th><th>From</th><th>To</th><th class="r">Length</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var s in Sessions)
+                    {
+                        <tr>
+                            <td data-label="Session">@SessionDto.Tag(s.Id)</td>
+                            <td data-label="From">@s.StartedUtc.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture)</td>
+                            <td data-label="To">@(s.EndedUtc?.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture) ?? "running")</td>
+                            <td data-label="Length" class="r">@DisplayText.Duration(s.DurationSeconds)</td>
+                            <td class="r"><a class="term-link" href="?session=@s.Id" title="Open this session's stats on Live">stats →</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </ChildContent>
+</TerminalPanel>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<SessionDto> Sessions { get; set; } = [];
+
+    /// <summary>False while the day is loading: a placeholder instead of "no sessions".</summary>
+    [Parameter] public bool Loaded { get; set; }
+}

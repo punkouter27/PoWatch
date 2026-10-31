@@ -160,7 +160,12 @@ void main() {
             state.done = () => resolve(true);
             const step = (now) => {
                 const t = (now - started) / length;
-                if (t >= 1 || !canvas.isConnected) { finish(canvas, state); return; }
+                if (t >= 1 || !canvas.isConnected) {
+                    finish(canvas, state);
+                    // Live is gone: give its WebGL context back now (Chrome caps live contexts at ~16).
+                    if (!canvas.isConnected) { state.gl.getExtension('WEBGL_lose_context')?.loseContext(); states.delete(canvas); }
+                    return;
+                }
                 draw(canvas, state, on, t);
                 state.raf = requestAnimationFrame(step);
             };
