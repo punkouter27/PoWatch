@@ -41,8 +41,6 @@ internal static class PoWatchPage
 
         try
         {
-            // The first-run tour sits over a corner of the page; tests start as a returning browser.
-            await page.AddInitScriptAsync("localStorage.setItem('powatch:tour', 'done')");
             if (advanced) await page.AddInitScriptAsync("localStorage.setItem('powatch:advanced', 'on')");
 
             // BFF auth: sign in first to set the session cookie before returning to the app.

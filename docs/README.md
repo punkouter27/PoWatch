@@ -92,10 +92,9 @@ or Ask answers its usual 503; the log says which model answered.
 Template keeps the existing browser recap fallback. On narrow screens the selectors occupy a second
 header row.
 
-**Safety nets and first run.** Every panel (`TerminalPanel`) has its own error boundary, so a failing
+**Safety nets.** Every panel (`TerminalPanel`) has its own error boundary, so a failing
 panel shows a small retry box while the rest of the page keeps working; the page-level boundary in
-`MainLayout` stays as the last resort. A new browser gets a three-card tour in the corner (not modal;
-`powatch:tour` in localStorage remembers Skip/Done). Empty days and an empty Regulars board offer "Try the
+`MainLayout` stays as the last resort. Empty days and an empty Regulars board offer "Try the
 demo" (`?start=demo`). The yyMMdd build date sits in the bottom-right corner (`BuildStamp`, from an
 `AssemblyMetadata` item in the client csproj). System is three tabs (Connections, Engine, Pipeline), and
 tables marked `term-table--cards` turn into one card per row on a phone.

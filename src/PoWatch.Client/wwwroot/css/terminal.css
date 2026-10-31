@@ -1208,33 +1208,10 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .regular-card input[type="checkbox"] { width: 24px; height: 24px; }
 }
 
-/* ── Safety nets, first run, build stamp ──────────────────────────────── */
+/* ── Safety nets, build stamp ───────────────────────────────── */
 
 /* A panel whose content threw: a small retry box in place of its content, the rest of the page untouched. */
 .panel-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; color: var(--term-red); font: var(--fs-sm) var(--term-mono); }
-
-/* The first-run tour: a card in the corner, never over the whole page. */
-.tour {
-    position: fixed;
-    z-index: 40;
-    left: 12px;
-    bottom: calc(12px + var(--term-bottom-bar));
-    width: min(330px, calc(100vw - 24px));
-    box-sizing: border-box;
-    padding: 12px 14px;
-    background: var(--term-glass);
-    -webkit-backdrop-filter: var(--term-glass-blur);
-    backdrop-filter: var(--term-glass-blur);
-    border: 1px solid var(--term-accent);
-    border-radius: var(--term-radius);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-    font: var(--fs-sm) var(--term-mono);
-    animation: fx-pop 0.35s var(--spring);
-}
-.tour-count { margin: 0; color: var(--term-dim); font-size: var(--fs-xs); letter-spacing: 0.1em; }
-.tour-title { margin: 4px 0 6px; color: var(--term-accent); font: 600 var(--fs-md) var(--term-mono); }
-.tour-text { margin: 0 0 10px; line-height: 1.45; color: var(--term-text); }
-.tour-actions { display: flex; justify-content: flex-end; gap: 6px; }
 
 /* yyMMdd of this build, bottom-right, out of the way of anything clickable. */
 .build-stamp {
