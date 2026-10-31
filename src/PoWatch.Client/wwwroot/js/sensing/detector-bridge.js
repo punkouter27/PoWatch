@@ -1,6 +1,7 @@
 // Page side of the L1 detector: owns the detector worker, grabs frames from the <video> on a
-// worker-driven clock (about 1 Hz), and hands normalised boxes to .NET. A frame is skipped while
-// the previous one is still being detected, so a slow device lowers the rate instead of queueing.
+// worker-driven clock (about 1 Hz), and hands normalised boxes to .NET as typed arrays through a
+// [JSExport] (SensingSession.OnDetectorBoxes), not JSON. A frame is skipped while the previous one is
+// still being detected, so a slow device lowers the rate instead of queueing.
 //
 // The detector and the caption model live in separate workers but share one GPU. A WebGPU detector
 // therefore sits out the ticks while a caption is being generated (powatchGpu, set by
@@ -18,6 +19,32 @@
   let _busy = false;
   let _device = null;
   let _yielded = 0;
+  let _exports = null;
+
+  /** The client assembly's [JSExport] methods (the .NET runtime's own API, as Blazor's docs use it). */
+  function dotnetExports() {
+    _exports ??= Promise.resolve(globalThis.getDotnetRuntime(0))
+      .then((runtime) => runtime.getAssemblyExports('PoWatch.Client.dll'))
+      .catch((err) => { _exports = null; throw err; });
+    return _exports;
+  }
+
+  /** Labels, and per box score, x0, y0, x1, y1, the signature's length and the signature, in one Float64Array. */
+  function pack(detections) {
+    const labels = [];
+    let size = 0;
+    for (const d of detections) size += 6 + (d.signature?.length ?? 0);
+    const values = new Float64Array(size);
+    let at = 0;
+    for (const d of detections) {
+      const signature = d.signature ?? [];
+      labels.push(d.label);
+      values.set([d.score, d.x0, d.y0, d.x1, d.y1, signature.length], at);
+      values.set(signature, at + 6);
+      at += 6 + signature.length;
+    }
+    return { labels, values };
+  }
 
   /** Loads the detector; resolves to { modelId, device, dtype, loadMs }. `device` forces 'webgpu' or 'wasm'. */
   async function load(device) {
@@ -50,11 +77,9 @@
       try {
         const result = await detect(video, threshold ?? 0.5);
         if (result) {
-          await dotnetRef.invokeMethodAsync('OnDetections', JSON.stringify({
-            atUtc: new Date().toISOString(),
-            latencyMs: result.latencyMs,
-            detections: result.detections,
-          }));
+          const exports = await dotnetExports();
+          const { labels, values } = pack(result.detections);
+          exports.PoWatch.Client.Services.SensingSession.OnDetectorBoxes(new Date(), result.latencyMs, labels, values);
         }
       } catch (err) {
         dotnetRef.invokeMethodAsync('OnDetectorError', String(err?.message ?? err)).catch(() => { });

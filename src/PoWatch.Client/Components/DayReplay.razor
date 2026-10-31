@@ -5,6 +5,7 @@
 @implements IAsyncDisposable
 @inject PoWatchApiClient Api
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <div class="replay" @ref="_root" data-test="history-replay">
     @if (_data is null)
@@ -48,6 +49,12 @@
         <div class="replay-actions">
             <button class="term-button term-button--primary" data-replay="play" data-test="replay-play">▶ Play</button>
             <span class="term-stat-hint">@_data.Minutes.Count OBSERVED MINUTES · DRAG, OR ← → A MINUTE</span>
+            <button class="term-button" disabled="@(_saving || VideoBlocker is not null)" title="@(VideoBlocker ?? "Download this browser's time-lapse of the day as a WebM")"
+                    @onclick="SaveVideoAsync" data-test="replay-save-video">@(_saving ? "Saving…" : "Save video")</button>
+            @if (VideoBlocker is not null)
+            {
+                <span class="term-stat-hint" data-test="replay-save-video-reason">@VideoBlocker</span>
+            }
         </div>
 
         @if (_moments.Count > 0)
@@ -73,6 +80,12 @@
     private List<ReplayEventDto> _moments = [];
     private bool _loaded;
     private bool _mounted;
+    private int _frames;
+    private bool _canRecord;
+    private bool _saving;
+
+    /// <summary>Time-lapse frames per second in the saved video.</summary>
+    private const int VideoFps = 12;
 
     [Parameter, EditorRequired] public DateOnly Day { get; set; }
 
@@ -81,13 +94,21 @@
 
     private string DayKey => Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
+    /// <summary>Why "Save video" is off, or null when it can run: the frames live only in the browser that took them.</summary>
+    private string? VideoBlocker =>
+        _frames == 0 ? "This browser kept no time-lapse frames for this day."
+        : !_canRecord ? "This browser cannot record video."
+        : null;
+
     protected override async Task OnParametersSetAsync()
     {
         (_data, _loaded, _mounted) = (null, false, false);
         var day = Day;
         var data = await Api.GetReplayAsync(day);
+        var frames = await JS.TryInvokeAsync<int>("powatchTimelapse.count", DayKey);
+        var canRecord = await JS.TryInvokeAsync<bool>("powatchTimelapse.canRecord");
         if (day != Day) return; // A newer day owns the tab now.
-        _data = data;
+        (_data, _frames, _canRecord) = (data, frames, canRecord);
         _moments = data?.Events.Where(e => e.Kind == "moment").ToList() ?? [];
         _loaded = true;
     }
@@ -96,7 +117,19 @@
     {
         if (_mounted || _data is not { Minutes.Count: > 0 }) return;
         _mounted = true;
-        await JS.TryInvokeVoidAsync("powatchReplay.mount", _root, JsonSerializer.Serialize(_data, Json.ReplayDayDto), DayKey, StartAt);
+        // The grids go over as raw bytes when they can (ReplayGrids), so the JSON carries everything else.
+        var data = _data;
+        if (await ReplayGrids.TryStageAsync(Nav.BaseUri, DayKey, data.Grids))
+            data = new ReplayDayDto { Window = data.Window, Minutes = data.Minutes, Events = data.Events };
+        await JS.TryInvokeVoidAsync("powatchReplay.mount", _root, JsonSerializer.Serialize(data, Json.ReplayDayDto), DayKey, StartAt);
+    }
+
+    /// <summary>Encodes the day's time-lapse frames (kept only in this browser) to a WebM and downloads it.</summary>
+    private async Task SaveVideoAsync()
+    {
+        _saving = true;
+        await JS.TryInvokeAsync<bool>("powatchTimelapse.saveVideo", DayKey, VideoFps);
+        _saving = false;
     }
 
     public async ValueTask DisposeAsync() => await JS.TryInvokeVoidAsync("powatchReplay.unmount", _root);

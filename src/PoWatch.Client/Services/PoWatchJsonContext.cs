@@ -39,7 +39,6 @@ namespace PoWatch.Client.Services;
 [JsonSerializable(typeof(RenameRegularRequestDto))]
 [JsonSerializable(typeof(MergeRegularsRequestDto))]
 [JsonSerializable(typeof(List<MomentDto>))]
-[JsonSerializable(typeof(DetectionsPayload))]
 [JsonSerializable(typeof(FxFramePayload))]
 [JsonSerializable(typeof(List<double>))]
 [JsonSerializable(typeof(AskRequestDto))]

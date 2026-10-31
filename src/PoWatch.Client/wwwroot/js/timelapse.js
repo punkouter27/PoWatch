@@ -86,8 +86,43 @@
     if (_playing || !canvas) return null;
     const shots = await frames(day);
     if (shots.length === 0) return null;
-    _playing = true;
+    const video = await record(canvas, shots, fps);
+    if (!video) return null;
+    if (_videoUrl) URL.revokeObjectURL(_videoUrl);
+    _videoUrl = URL.createObjectURL(video);
+    return _videoUrl;
+  }
 
+  /**
+   * Encodes a day's frames into a WebM and downloads it as powatch-yyyy-MM-dd.webm, without
+   * showing the flipbook (an off-screen canvas). Resolves true when a file was offered.
+   */
+  async function saveVideo(day, fps) {
+    if (_playing) return false;
+    const shots = await frames(day);
+    if (shots.length === 0) return false;
+    // In the document but out of sight: some browsers only capture a canvas that is attached.
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none';
+    document.body.appendChild(canvas);
+    try {
+      const video = await record(canvas, shots, fps);
+      if (!video) return false;
+      const url = URL.createObjectURL(video);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `powatch-${day}.webm`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      return true;
+    } finally {
+      canvas.remove();
+    }
+  }
+
+  /** Draws `shots` onto `canvas` one by one at `fps` and records it; resolves with the WebM blob, or null. */
+  async function record(canvas, shots, fps) {
+    _playing = true;
     try {
       const first = await createImageBitmap(shots[0].blob);
       canvas.width = first.width;
@@ -119,14 +154,15 @@
 
       if (!recorder) return null;
       await new Promise((resolve) => { recorder.onstop = resolve; recorder.stop(); });
-      if (_videoUrl) URL.revokeObjectURL(_videoUrl);
-      _videoUrl = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
-      return _videoUrl;
+      return new Blob(chunks, { type: 'video/webm' });
     } finally {
       _playing = false;
     }
   }
 
-  // frames() is for replay.js; .NET calls capture, count and play.
-  window.powatchTimelapse = { capture, count, frames, play };
+  /** Whether this browser can record a canvas into a WebM (the "Save video" button needs it). */
+  const canRecord = () => !!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream);
+
+  // frames() is for replay.js; .NET calls capture, count, play, saveVideo and canRecord.
+  window.powatchTimelapse = { capture, count, frames, play, saveVideo, canRecord };
 })();

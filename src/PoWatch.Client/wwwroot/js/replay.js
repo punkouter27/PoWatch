@@ -2,7 +2,9 @@
 // (occupancy as amber bars, motion as a line, moments as ticks, captions as dots); the playhead drives
 // the motion grid (heat-gl.js), the readout, the caption of the moment, and, where this device kept a
 // time-lapse, the camera frame nearest that minute. The slider is a native range input, so arrow keys,
-// Home/End and screen readers work without extra code, and menus.js leaves its keys alone.
+// Home/End and screen readers work without extra code, and menus.js leaves its keys alone. Passing a
+// moment while playing or scrubbing plays a soft tick (cues.js, at the user's sound level). The grids
+// arrive as raw bytes through stage() (DayReplay → replay-grids.js) before mount; base64 is the fallback.
 (function () {
     'use strict';
 
@@ -10,7 +12,21 @@
     const CAPTION_HOLD_MS = 15 * 60 * 1000; // a caption describes the scene for a while after it was written
     const FRAME_NEAR_MS = 5 * 60 * 1000;    // a time-lapse frame stands for the minutes around it
     const PLAY_STEP_MS = 70;
+    const TICK_HZ = 1760;
     const mounted = new WeakMap();
+    const staged = new Map(); // day → Uint8Array of grids handed over by .NET before mount
+
+    /** Keeps a day's grids (144 bytes a minute, in minute order) for the next mount of that day. */
+    function stage(day, grids) {
+        staged.set(day, grids);
+    }
+
+    function decode(base64) {
+        const raw = atob(base64 || '');
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        return bytes;
+    }
 
     function color(el, variable, fallback) {
         return getComputedStyle(el).getPropertyValue(variable).trim() || fallback;
@@ -42,11 +58,11 @@
         const from = Date.parse(data.window.fromUtc);
         const to = Date.parse(data.window.toUtc);
         const minutes = data.minutes.map((m) => ({ at: Date.parse(m.atUtc), occupancy: m.occupancy, peak: m.peak, motion: m.motion }));
-        const raw = atob(data.grids);
-        const grids = new Uint8Array(raw.length);
-        for (let i = 0; i < raw.length; i++) grids[i] = raw.charCodeAt(i);
+        const grids = staged.get(day) ?? decode(data.grids);
+        staged.delete(day);
         const events = data.events.map((e) => ({ kind: e.kind, text: e.text, cls: e.class, at: Date.parse(e.atUtc) }));
         const captions = events.filter((e) => e.kind === 'caption');
+        const moments = events.filter((e) => e.kind === 'moment');
         const maxMotion = Math.max(0.0001, ...minutes.map((m) => m.motion));
         const empty = new Array(GRID).fill(0);
 
@@ -143,8 +159,23 @@
             drawTrack();
         }
 
-        function seek(at, fromSlider) {
+        // One soft tick when the playhead passes a moment (several passed in one drag still tick once).
+        // Compared by minute: the minutes entered on the way, so the one left behind does not count.
+        function tick(before, after) {
+            if (before === after || moments.length === 0) return;
+            const minute = (at) => Math.floor((at - from) / 60000);
+            const a = minute(before), b = minute(after);
+            const passed = moments.find((m) => {
+                const k = minute(m.at);
+                return b > a ? k > a && k <= b : k < a && k >= b;
+            });
+            if (passed) window.powatchCues?.tone(TICK_HZ, 0.05, ((passed.at - from) / (to - from)) * 2 - 1);
+        }
+
+        function seek(at, fromSlider, sound) {
+            const before = state.at;
             state.at = Math.min(Math.max(at, from), to - 60000);
+            if (sound) tick(before, state.at);
             if (!fromSlider) scrub.value = String(Math.round((state.at - from) / 60000));
             render();
         }
@@ -165,12 +196,12 @@
             if (playButton) playButton.textContent = '❚❚ Pause';
             state.timer = setInterval(() => {
                 if (++i >= minutes.length) { stop(); return; }
-                seek(minutes[i].at, false);
+                seek(minutes[i].at, false, true);
             }, PLAY_STEP_MS);
         }
 
         // Remembered so unmount can take them off again: the root element outlives a change of day.
-        const onScrub = () => { stop(); seek(from + Number(scrub.value) * 60000, true); };
+        const onScrub = () => { stop(); seek(from + Number(scrub.value) * 60000, true, true); };
         const onJump = (e) => {
             const jump = e.target.closest?.('[data-replay-jump]');
             if (jump) { stop(); seek(Number(jump.dataset.replayJump), false); scrub.focus(); }
@@ -210,5 +241,5 @@
         mounted.delete(root);
     }
 
-    window.powatchReplay = { mount, unmount };
+    window.powatchReplay = { mount, unmount, stage };
 })();
