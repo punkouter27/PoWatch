@@ -4,7 +4,7 @@ using Microsoft.JSInterop;
 using PoWatch.Client.Services;
 using PoWatch.Shared.Models;
 
-namespace PoWatch.Client.Pages;
+namespace PoWatch.Client.Features.Live;
 
 /// <summary>The Live page's state and behaviour; the markup is in Live.razor.</summary>
 public sealed partial class Live

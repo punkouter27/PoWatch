@@ -5,7 +5,7 @@ using PoWatch.Client.Services;
 using PoWatch.Shared.Models;
 using PoWatch.Shared.Services.Recaps;
 
-namespace PoWatch.Client.Pages;
+namespace PoWatch.Client.Features.History;
 
 /// <summary>The History page's state and behaviour; the markup is in History.razor.</summary>
 public sealed partial class History

@@ -43,7 +43,7 @@ camera ──► browser (all sensing on-device)                        server
 
 ## Pages
 
-`/` Live, one screen under one bar (range picker; with Advanced on, an "Ask" box and "JSON ↓" for
+`/` Live, one screen under one bar (range picker: Session · Today · Week · Month · All, plus a Day picker for any single day (`?range=day&date=`); with Advanced on, an "Ask" box and "JSON ↓" for
 every number behind the grid): a 4×4 grid of the camera (2×2, one Start button; a synthetic demo is
 available whenever stopped), key metrics for the range beside your usual day (σ, rhythm, trend, next busy hour), who is in
 frame with every class seen in the range, then the live motion grid and six stat panels. On a phone the
@@ -92,15 +92,32 @@ or Ask answers its usual 503; the log says which model answered.
 Template keeps the existing browser recap fallback. On narrow screens the selectors occupy a second
 header row.
 
+**Safety nets and first run.** Every panel (`TerminalPanel`) has its own error boundary, so a failing
+panel shows a small retry box while the rest of the page keeps working; the page-level boundary in
+`MainLayout` stays as the last resort. A new browser gets a three-card tour in the corner (not modal;
+`powatch:tour` in localStorage remembers Skip/Done). Empty days and an empty Regulars board offer "Try the
+demo" (`?start=demo`). The yyMMdd build date sits in the bottom-right corner (`BuildStamp`, from an
+`AssemblyMetadata` item in the client csproj). System is three tabs (Connections, Engine, Pipeline), and
+tables marked `term-table--cards` turn into one card per row on a phone.
+
 **Look.** One palette on every page (deep-blue glass in the dark theme, plain panels in the light one),
 five type sizes (`--fs-xs` to `--fs-xl`), and Radzen's `--rz-*` variables pointed at the same tokens.
 
 **Keyboard.** `g` then `l h r` jumps to a section, Space starts or stops, ← → step History's
 day, Ctrl+K opens a command palette (also: the demo scene, System, full screen) (`wwwroot/js/menus.js`).
 
+**Effects.** The header is frosted glass; with Advanced on the background drifts very slowly (CSS,
+paused while a caption generates or the tab is hidden), and sparks burst where something enters the
+frame (`fx.js`). A faint warm wash follows the room's measured light while a session runs, and stat
+numbers roll up or down when they change. `fx.js`, `crt.js` and `skyline.js` are not in `index.html`:
+`js/lazy.js` loads them on first use, and `UiPrefs` preloads them once Advanced is on. WebGL canvases
+give their context back when their page goes away.
+
 **Sound.** `wwwroot/js/cues.js` synthesises short cues with the Web Audio API (start, stop, something
 entering — panned to the side it entered from — a new regular, an alert, an error). Level
-off/low/mid/high is on Settings and remembered per browser.
+off/low/mid/high is on Settings and remembered per browser. Each kind of thing has its own entry
+chirp (person, dog, cat, other animal, object), a quiet hum rises with how many are in frame
+(`Components/AmbientBridge.razor`), and Replay ticks softly as the playhead passes a moment.
 
 **Motion grid.** On Live the 16×9 grid is, with Advanced on, a WebGL2 shader (`wwwroot/js/heat-gl.js`); without WebGL2
 or with Advanced off it is the plain grid. Animations use spring easings and all stop under `prefers-reduced-motion`.
@@ -134,6 +151,17 @@ a track of the whole day (occupancy bars, motion line, moment ticks, caption dot
 range slider (drag, ← →, Home/End); the playhead drives the motion grid shader, the readout, the
 caption of the moment and, where this browser kept a time-lapse, the nearest camera frame. Play walks
 the observed minutes only.
+
+**Save video** (History → Replay) encodes the time-lapse this browser kept for the day to WebM
+(MediaRecorder) and downloads it; it is disabled, with the reason, when nothing was kept.
+
+**Interop.** Replay's 16×9 grids reach JS as raw bytes through `[JSImport]` (`Services/ReplayGrids.cs`,
+`js/replay-grids.js`), and detector boxes reach the C# tracker as typed arrays through `[JSExport]`
+(`SensingSession.OnDetectorBoxes`), colour signatures included.
+
+**Client layout.** `PoWatch.Client` is grouped by feature: `Features/Live`, `History`, `Regulars`,
+`Diagnostics` (the `/system` page), `Settings` and `Account`; `Layout` is the shell, `Components` holds
+the parts shared between features, `Services` the state and API client.
 
 **Comet trails** (`wwwroot/js/fx.js`, fed by `Components/FxBridge.razor`, Advanced) follow people and animals over
 the camera and add up to a long-exposure PNG on the session recap; they respect
