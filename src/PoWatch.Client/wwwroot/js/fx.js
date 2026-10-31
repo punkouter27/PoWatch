@@ -1,5 +1,7 @@
-// Comet trails over the camera, accumulated into a long-exposure print per session. Driven by the
-// tracks FxBridge.razor pushes about four times a second. Honours prefers-reduced-motion.
+// Comet trails over the camera, accumulated into a long-exposure print per session, and a burst of
+// sparks where something enters. Driven by the tracks FxBridge.razor pushes about four times a second.
+// Also pauses the slow background (.term-shell--fluid) while a caption is generating or the tab is
+// hidden. Honours prefers-reduced-motion. Loaded on first use (lazy.js), since all of it is Advanced.
 (function () {
   'use strict';
 
@@ -32,6 +34,7 @@
       if (!trail) {
         trail = { label: t.label, points: [], hx: t.x, hy: t.y, alive: now };
         trails.set(t.id, trail);
+        if (next.running) burst(t.x, t.y, colorFor(t.label), now);
       }
       trail.alive = now;
       const last = trail.points.at(-1);
@@ -94,6 +97,49 @@
     return out.toDataURL('image/png');
   }
 
+  // ── Entry bursts ─────────────────────────────────────────────────────────
+
+  const SPARKS = 22;
+  const SPARK_MS = 900;
+  let sparks = [];             // { x, y, vx, vy, color, born } in frame units per second
+
+  function burst(x, y, color, now) {
+    if (reduced.matches) return;
+    for (let i = 0; i < SPARKS; i++) {
+      const angle = (i / SPARKS) * Math.PI * 2 + Math.random() * 0.4;
+      const speed = 0.08 + Math.random() * 0.14;
+      sparks.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed * 1.6, color, born: now });
+    }
+  }
+
+  function drawSparks(ctx, w, h, dpr, now) {
+    sparks = sparks.filter((s) => now - s.born < SPARK_MS);
+    for (const s of sparks) {
+      const t = (now - s.born) / 1000;
+      const life = 1 - (now - s.born) / SPARK_MS;
+      // Out fast, then drifting down as they slow and fade.
+      const drift = 1 - Math.exp(-3 * t);
+      const x = s.x + (s.vx / 3) * drift;
+      const y = s.y + (s.vy / 3) * drift + 0.05 * t * t;
+      ctx.globalAlpha = life * life;
+      ctx.fillStyle = s.color;
+      ctx.shadowColor = s.color;
+      ctx.beginPath();
+      ctx.arc(x * w, y * h, (0.8 + 1.6 * life) * dpr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ── The slow background ──────────────────────────────────────────────────
+  // The detector and the caption model share the GPU: while a caption is generating, or nobody can
+  // see the page, the background stands still.
+
+  setInterval(() => {
+    const pause = document.hidden || !!window.powatchGpu?.captioning;
+    if (pause) document.documentElement.dataset.fluid = 'paused';
+    else delete document.documentElement.dataset.fluid;
+  }, 1000);
+
   // ── Drawing loop ─────────────────────────────────────────────────────────
 
   let raf = 0;
@@ -101,7 +147,7 @@
 
   function loop(now) {
     raf = 0;
-    const canvas = running || trails.size ? document.querySelector('[data-fx-trails]') : null;
+    const canvas = running || trails.size || sparks.length ? document.querySelector('[data-fx-trails]') : null;
     if (!canvas) return;
     raf = requestAnimationFrame(loop);
     // ~30 fps is plenty and leaves the GPU to the detector and the vision model.
@@ -157,6 +203,7 @@
         ctx.fill();
       }
     }
+    drawSparks(ctx, w, h, dpr, now);
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
   }

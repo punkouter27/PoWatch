@@ -36,6 +36,9 @@ public sealed class LiveSensingState
     public double Motion { get; private set; }
     public IReadOnlyList<double> MotionHistory => _motion;
 
+    /// <summary>The room's mean brightness in [0, 1] from the latest pixel sample (null before the first).</summary>
+    public double? Light { get; private set; }
+
     /// <summary>Exponentially smoothed motion per grid cell, for the overlay.</summary>
     public IReadOnlyList<float> Heat => _heat;
 
@@ -53,6 +56,7 @@ public sealed class LiveSensingState
         PixelSamples++;
         PixelHz = Rate(_pixelTimes, nowUtc);
         Motion = sample.Motion;
+        Light = sample.Luminance;
         Push(_motion, sample.Motion);
         if (sample.Grid.Count == _heat.Length)
         {
