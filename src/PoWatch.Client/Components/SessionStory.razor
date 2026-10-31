@@ -18,7 +18,7 @@
         {
             @foreach (var paragraph in text.Split("\n\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                <p class="session-story-text" data-test="session-story-text">@paragraph</p>
+                <p class="session-story-text @(paragraph == Quiet ? "session-story-text--quiet" : null)" data-test="session-story-text">@paragraph</p>
             }
         }
         else if (_story.Chapters.Count == 0)
@@ -46,6 +46,9 @@
 
 @code {
     [Parameter, EditorRequired] public Guid SessionId { get; set; }
+
+    /// <summary>The server's words for a window in which nothing was observed (TemplateRecap.NothingObserved).</summary>
+    private const string Quiet = "Nothing was observed in this window.";
 
     /// <summary>History lists the latest chapter first, as it lists the latest session first.</summary>
     [Parameter] public bool NewestFirst { get; set; }

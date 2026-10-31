@@ -1,7 +1,6 @@
 @page "/history"
 @using System.Globalization
 @inject PoWatchApiClient Api
-@inject NavigationManager Navigation
 
 <PageTitle>PoWatch | History</PageTitle>
 
@@ -9,17 +8,8 @@
    session and, under it, its ten-minute chapters, newest first; each card asks for its story, which
    writes whatever is still due (a session closed without Stop gets its story here). Week and Month:
    one story of the whole period. The tab is in the address (?view=week). The day view is one click away. *@
-<div class="history-page">
-    <div class="history-bar">
-        <HistorySwitch Stories="true" />
-        <span class="history-switch" role="group" aria-label="Stories of" data-test="story-views">
-            @foreach (var (view, label) in Views)
-            {
-                <button type="button" class="term-button @(View == view ? "term-button--on" : null)" aria-pressed="@(View == view ? "true" : "false")"
-                        @onclick="() => Show(view)" data-test="@($"story-view-{view}")">@label</button>
-            }
-        </span>
-    </div>
+<div class="history-page history-page--feed">
+    <HistorySwitch Active="@View" />
     @if (View is "week" or "month")
     {
         <div class="story-feed">
@@ -39,12 +29,13 @@
         }
         else
         {
-            @foreach (var session in _sessions)
+            @* A session that saw nothing at all for under a minute (a Start and a quick Stop) is noise here. *@
+            @foreach (var session in _sessions.Where(s => s.IsRunning || s.DurationSeconds >= MinSeconds))
             {
                 <TerminalPanel Title="@Heading(session)" Class="story-card" Test="story-card">
                     <Aside>
-                        @SessionDto.Tag(session.Id) · @(session.IsRunning ? "RUNNING" : DisplayText.Duration(session.DurationSeconds))
-                        <a class="term-link" href="@DayLink(session)" title="This day's numbers, recap and replay">day →</a>
+                        <span class="story-meta">@SessionDto.Tag(session.Id) · @(session.IsRunning ? "RECORDING" : DisplayText.Duration(session.DurationSeconds))</span>
+                        <a class="term-link" href="@DayLink(session)" title="This day's numbers, recap and replay">Day view →</a>
                     </Aside>
                     <ChildContent>
                         <SessionStory SessionId="@session.Id" NewestFirst="true" ChaptersOpen="true" />
@@ -62,7 +53,7 @@
 </div>
 
 @code {
-    private static readonly (string View, string Label)[] Views = [("sessions", "Sessions"), ("week", "Week"), ("month", "Month")];
+    private const double MinSeconds = 10;
 
     [SupplyParameterFromQuery(Name = "view")] public string? ViewParameter { get; set; }
 
@@ -73,8 +64,6 @@
         DateOnly.TryParseExact(DateParameter, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? day : null;
 
     private string View => ViewParameter is "week" or "month" ? ViewParameter : "sessions";
-
-    private void Show(string view) => Navigation.NavigateTo(view == "sessions" ? "history" : $"history?view={view}");
 
     private const int Page = 10;
 

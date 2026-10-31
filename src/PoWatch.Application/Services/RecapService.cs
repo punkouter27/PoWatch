@@ -36,7 +36,7 @@ public sealed class RecapService(
             $"Session {SessionDto.Tag(sessionId)}",
             $"{start:ddd d MMM, HH:mm} · {TemplateRecap.Duration(session.Duration(DateTimeOffset.UtcNow))}",
             await MomentsAsync(userId, session, cancellationToken),
-            cancellationToken);
+            cancellationToken, sessionId);
         return await WriteAsync(facts, cancellationToken);
     }
 
@@ -57,7 +57,7 @@ public sealed class RecapService(
         var from = TimeZoneInfo.ConvertTime(fromUtc, zone);
         var to = TimeZoneInfo.ConvertTime(toUtc, zone);
         var moments = (await MomentsAsync(userId, session, cancellationToken)).Where(m => m.AtUtc >= fromUtc && m.AtUtc < toUtc).ToList();
-        var facts = await GatherAsync(userId, window, title, $"{from:HH:mm}–{to:HH:mm}", moments, cancellationToken);
+        var facts = await GatherAsync(userId, window, title, $"{from:HH:mm}–{to:HH:mm}", moments, cancellationToken, session.Id);
         return useAi ? await WriteAsync(facts, cancellationToken) : TemplateRecap.Build(facts);
     }
 
@@ -101,7 +101,9 @@ public sealed class RecapService(
         return moments;
     }
 
-    private async Task<RecapFacts> GatherAsync(string userId, StatsWindow window, string title, string subtitle, IReadOnlyList<MomentDto> moments, CancellationToken ct)
+    /// <param name="sessionId">For a session or part of one: tell only its own ticks and events, not those of
+    /// another session sharing the same minutes (a Stop and a Start a few seconds apart).</param>
+    private async Task<RecapFacts> GatherAsync(string userId, StatsWindow window, string title, string subtitle, IReadOnlyList<MomentDto> moments, CancellationToken ct, Guid? sessionId = null)
     {
         var presence = await stats.PresenceAsync(userId, window, ct);
         var objects = await stats.ObjectsAsync(userId, window, ct);
@@ -109,7 +111,9 @@ public sealed class RecapService(
         var patterns = window.Range == StatsRange.Day ? await stats.PatternsAsync(userId, window, ct) : null;
         // Every tick and scene event of a short window: the story is told from them (SceneNarrator).
         var raw = await stats.RawAsync(userId, window, ct);
-        return new RecapFacts(title, subtitle, window.FromUtc, window.ToUtc, window.Zone, presence, objects, environment, patterns, moments, raw?.Events, raw?.Ticks);
+        var events = raw?.Events.Where(e => sessionId is null || e.SessionId == sessionId).ToList();
+        var ticks = raw?.Ticks.Where(t => sessionId is null || t.SessionId == sessionId).ToList();
+        return new RecapFacts(title, subtitle, window.FromUtc, window.ToUtc, window.Zone, presence, objects, environment, patterns, moments, events, ticks);
     }
 
     private async Task<RecapDto> WriteAsync(RecapFacts facts, CancellationToken cancellationToken)

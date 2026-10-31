@@ -75,7 +75,8 @@ and the cells around it scroll · `/history` the stories: every session, newest 
 story of the whole session and its ten-minute chapters under it, newest first ("Older sessions" pages
 back through the latest hundred); its Week and Month tabs (`?view=week`, `?view=month`, with `&date=` for the period ◀ ▶ moved to) tell one story
 of the whole Monday-to-Sunday week or calendar month, with the days it was told from under it, newest
-first, and ◀ ▶ to step back; a Stories | Days switch leads to · `/history/{yyyy-MM-dd}` the day
+first, and ◀ ▶ to step back; one tab strip (Sessions · Week · Month · Days) moves between them, the stories in a centred column
+in the text face, and leads to · `/history/{yyyy-MM-dd}` the day
 view: on the left the year (with the
 weather's effect, once a place is set), the day's numbers, weather and its week against the week
 before, and the day's sessions; on the right two tabs (recap with motion and captions, plus JSON/PDF and a

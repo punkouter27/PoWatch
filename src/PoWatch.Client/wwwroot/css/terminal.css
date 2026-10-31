@@ -755,7 +755,8 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 /* A session's story: the chapters joined into prose, the chapters themselves folded under it. */
 .session-story { margin: 12px 0 0; display: grid; gap: 8px; max-width: 80ch; }
-.session-story-text { margin: 0; line-height: 1.55; color: var(--term-text); font: var(--fs-sm) var(--term-mono); }
+.session-story-text { margin: 0; color: var(--term-text); font: 400 var(--fs-md)/1.65 var(--term-font); max-width: 72ch; }
+.session-story-text--quiet { color: var(--term-dim); font-style: italic; }
 .session-story-chapters summary { cursor: pointer; color: var(--term-dim); font: var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; }
 .session-story-chapters ol { margin: 8px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; font: var(--fs-sm) var(--term-mono); color: var(--term-muted); line-height: 1.45; }
 .session-story-chapters .num { color: var(--term-accent); margin-right: 6px; }
@@ -1120,10 +1121,17 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 /* Both History views sit under the Stories | Days switch. */
 .history-page { display: grid; gap: var(--term-gap); align-content: start; }
-.history-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-.history-switch { display: flex; gap: 6px; }
-.story-feed { display: grid; gap: var(--term-gap); max-width: 100ch; min-width: 0; }
-.story-card .session-story { margin-top: 0; max-width: none; }
+/* The story views read as one centred column, like an article; the day view keeps the full width. */
+.history-page--feed > * { width: min(100%, 980px); justify-self: center; }
+.history-tabbar { display: flex; gap: 4px; border-bottom: 1px solid var(--term-line); overflow-x: auto; scrollbar-width: none; }
+.history-tab { padding: 10px 16px 9px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--term-muted); text-decoration: none; font: 600 var(--fs-sm) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.history-tab:hover { color: var(--term-text); }
+.history-tab--on { color: var(--term-accent); border-bottom-color: var(--term-accent); }
+/* Rows sized to their cards: a panel clips its own overflow, so without this a long feed squeezed each card to two lines. */
+.story-feed { display: grid; grid-auto-rows: max-content; gap: 12px; min-width: 0; }
+.story-card .term-panel-body { padding: 14px 16px; }
+.story-card .session-story { margin-top: 0; max-width: none; gap: 10px; }
+.story-meta { margin-right: 12px; }
 .story-more { justify-self: start; }
 .history-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); align-items: start; }
 .history-col { display: grid; gap: var(--term-gap); min-width: 0; }

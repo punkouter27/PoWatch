@@ -1,13 +1,23 @@
 @using System.Globalization
 
-@* History's two views: the stories (every session, newest first) and the days (calendar, recap, replay). *@
-<nav class="history-switch" aria-label="History view" data-test="history-switch">
-    <a class="term-button @(Stories ? "term-button--on" : null)" href="history" aria-current="@(Stories ? "page" : null)" data-test="history-stories-link">Stories</a>
-    <a class="term-button @(Stories ? null : "term-button--on")" href="history/@DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
-       aria-current="@(Stories ? null : "page")" data-test="history-days-link">Days</a>
+@* History's one tab strip: the stories (every session, the week, the month) and the day view
+   (calendar, recap, replay). Plain links, so each view has its own address. *@
+<nav class="history-tabbar" aria-label="History" data-test="history-switch">
+    @foreach (var (key, label, href, test) in Tabs)
+    {
+        <a class="history-tab @(Active == key ? "history-tab--on" : null)" href="@href" aria-current="@(Active == key ? "page" : null)" data-test="@test">@label</a>
+    }
 </nav>
 
 @code {
-    /// <summary>True on the story feed, false on the day view.</summary>
-    [Parameter] public bool Stories { get; set; }
+    /// <summary>sessions, week, month or days.</summary>
+    [Parameter] public string Active { get; set; } = "sessions";
+
+    private static IEnumerable<(string Key, string Label, string Href, string Test)> Tabs =>
+    [
+        ("sessions", "Sessions", "history", "history-stories-link"),
+        ("week", "Week", "history?view=week", "story-view-week"),
+        ("month", "Month", "history?view=month", "story-view-month"),
+        ("days", "Days", $"history/{DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}", "history-days-link"),
+    ];
 }
