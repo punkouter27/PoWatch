@@ -51,12 +51,12 @@
   </ItemGroup>
   <!-- Observability -->
   <ItemGroup>
+    <!-- Brings the console sink (stdout, which App Service's log stream reads) and the file sink
+         (Development only, see TelemetrySetup); neither needs its own reference. -->
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
-    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.ApplicationInsights" Version="4.0.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
-    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.15.3" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.7.0" />
   </ItemGroup>
   <!-- API documentation -->
@@ -89,12 +89,6 @@
   <!-- Reporting -->
   <ItemGroup>
     <PackageVersion Include="QuestPDF" Version="2025.4.0" />
-  </ItemGroup>
-  <!-- Serilog enrichers + console sink -->
-  <ItemGroup>
-    <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
-    <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
-    <PackageVersion Include="Serilog.Enrichers.Thread" Version="4.0.0" />
   </ItemGroup>
   <!-- Testing -->
   <ItemGroup>

@@ -32,8 +32,8 @@
                 }
             }
         </select>
-        <span id="header-chat-status" class="header-ai-status" role="status" title="Configured server model; availability is checked when you use it. Changes apply to new requests in this browser.">
-            @(_saving ? "SAVING..." : _models?.SelectedId switch { "Template" => "TEMPLATE / BROWSER FALLBACK", "Ollama" => "SERVER · OLLAMA", null => "SERVER", _ => "SERVER · CLOUD" })
+        <span id="header-chat-status" class="header-ai-status" role="status" title="Configured server model; availability is checked when you use it, and a failing model hands over to the next configured one. Auto picks local Ollama when it answers, else a cloud model. Changes apply to new requests in this browser.">
+            @(_saving ? "SAVING..." : _models?.SelectedId switch { "Template" => "TEMPLATE / BROWSER FALLBACK", "Ollama" => "SERVER · OLLAMA", "Auto" => "SERVER · AUTO", null => "SERVER", _ => "SERVER · CLOUD" })
         </span>
     </div>
     @if (_error is not null)

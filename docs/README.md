@@ -79,10 +79,16 @@ account's server settings stay.
 chooses MiniCPM-V, Qwen3-VL 8B, Qwen2.5-VL 7B, or captions off; its status reports whether Ollama
 answered or the in-browser fallback (WebGPU/WASM) ran, loading/failure, or a pending switch. Changes are saved per browser, also update
 Settings, and apply after the current caption finishes, even in a still scene. Ask / Recap AI lists
-the server-configured Azure OpenAI, Gemini and Ollama models plus Template. Its choice is kept in an
+the server-configured Azure OpenAI, Gemini and Ollama models plus Template and, when any model is
+configured, Auto: the local Ollama model when it lists the configured model (probed with a one-second
+timeout, the answer kept 30 seconds), else Gemini, else Azure OpenAI, else Template; its label names
+the model it resolves to. `AiProvider:Provider` picks the default (Auto in Development, Template in
+Production and tests). Its choice is kept in an
 HTTP-only browser cookie for a year and applies to new Ask, recap, PDF and assist requests, not
 other browsers or background digests. Already displayed answers are not regenerated. Labels expose
-neither credentials nor endpoints; a configured model can still be unavailable when called.
+neither credentials nor endpoints; a configured model can still be unavailable when called, and then
+the next one in Auto's order is tried once (`AiFallback`) before the recap falls back to the template
+or Ask answers its usual 503; the log says which model answered.
 Template keeps the existing browser recap fallback. On narrow screens the selectors occupy a second
 header row.
 
@@ -143,11 +149,11 @@ the camera and add up to a long-exposure PNG on the session recap; they respect
 | `GET /api/stats/all?range=` | every family in one JSON document, plus the raw ticks and events for session, today or one day (Live's "All data ↓", History's "Day data ↓") |
 | `GET /api/recaps/session/{id}[.pdf]`, `GET /api/recaps/day/{date}[.pdf]?tz=[&ai=false]` | recaps and PDFs; `ai=false` answers from the template at once |
 | `POST /api/ask` | a plain-language question answered from the caller's own statistics (503 without an AI provider) |
-| `GET /api/ai/models`, `PUT /api/ai/models` | configured server model labels and the browser's selected model; unknown selections return 400 |
+| `GET /api/ai/models`, `PUT /api/ai/models` | configured server model labels (Auto's names the model it resolves to now) and the browser's selected model; unknown selections return 400 |
 | `POST /api/ask/rule` | a watch rule drafted from a sentence, for the caller to confirm (422 when it is not a rule, 503 without an AI provider) |
 | `POST /api/alerts` | relay a fired watch rule to the user's open tabs |
 | `GET /api/export.csv`, `DELETE /api/data` | one row per observed day; delete everything stored for the caller |
-| `/api/regulars` (+ `/observe`, `/merge`, `PATCH /{id}`), `POST /api/snapshots`, `GET /api/snapshots/read`, `GET /api/sessions/{id}/moments` | regulars and highlights |
+| `/api/regulars` (+ `/observe`, `/merge`, `PATCH /{id}`), `POST /api/snapshots`, `GET /api/sessions/{id}/moments` | regulars and highlights (moments carry their own short-lived image links) |
 | `GET /api/stats/replay?date=&tz=` | one day's observed minutes with their 16×9 motion grids (base64 bytes), and its captions, moments, entrances and exits |
 | `GET`/`PUT /api/profile`, `GET /api/places?q=` | retention window, weather place, weekly email; place search (Open-Meteo) |
 | `GET /api/weather/year?tz=` | a year of daily weather at the caller's place and, with enough days, how wet days compare with dry |
@@ -248,6 +254,9 @@ multi-threaded.
 ## Quality gates
 
 - `TreatWarningsAsErrors`, `dotnet format --verify-no-changes`.
+- A pre-commit hook (`SCRIPTS/hooks/pre-commit`, installed by `SCRIPTS/setup.ps1` through
+  `core.hooksPath`) runs the format check on the staged C# files (`POWATCH_HOOK_FULL=1` for the whole
+  solution) and `check-hygiene.ps1`.
 - Test caps (`SCRIPTS/check-test-caps.ps1`): 100 unit · 50 integration · 25 API E2E · 25 UI E2E.
 - `SCRIPTS/check-hygiene.ps1`: layout, naming, central package versions, shell assets, and no
   caregiver-era vocabulary.

@@ -21,8 +21,6 @@ using Serilog;
 // does not re-freeze a shared ReloadableLogger instance.
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
-    .Enrich.WithMachineName()
-    .Enrich.WithThreadId()
     .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
     .CreateLogger();
 
