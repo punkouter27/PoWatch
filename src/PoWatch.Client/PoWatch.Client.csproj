@@ -14,6 +14,8 @@
     <NoWarn>$(NoWarn);IL2111</NoWarn>
     <!-- Offline shell: the build lists every published file with its hash for service-worker.published.js. -->
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+    <!-- The [JSImport]/[JSExport] source generators emit unsafe code (replay grids, detector boxes). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

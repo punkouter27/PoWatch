@@ -12,26 +12,6 @@ public sealed class PixelSamplePayload
     public List<int> Palette { get; init; } = [];
 }
 
-public sealed class DetectionPayload
-{
-    public string Label { get; init; } = string.Empty;
-    public double Score { get; init; }
-    public double X0 { get; init; }
-    public double Y0 { get; init; }
-    public double X1 { get; init; }
-    public double Y1 { get; init; }
-
-    /// <summary>64-bin colour histogram of the box centre, for recognising regulars.</summary>
-    public List<float> Signature { get; init; } = [];
-}
-
-public sealed class DetectionsPayload
-{
-    public DateTimeOffset AtUtc { get; init; }
-    public double LatencyMs { get; init; }
-    public List<DetectionPayload> Detections { get; init; } = [];
-}
-
 public sealed class DetectorInfoPayload
 {
     public string ModelId { get; init; } = string.Empty;

@@ -1,6 +1,6 @@
-// The Live motion grid as a WebGL2 fragment shader: the 16×9 grid is one small texture, smoothed
-// between cells, with a bloom around hot spots, cell lines and scanlines on top — a thermal-camera
-// look. Values ease toward each new frame, so the picture flows instead of stepping four times a
+// The Live (and replay) motion grid as a WebGL2 fragment shader: the 16×9 grid is one small texture,
+// sampled bilinearly (LINEAR filtering) so cells blend into each other, with a soft two-ring glow
+// around hot spots, faint cell lines and scanlines on top — a thermal-camera look. Values ease toward each new frame, so the picture flows instead of stepping four times a
 // second. Honours prefers-reduced-motion (no easing, no shimmer). draw() returns false when WebGL2
 // is unavailable and the page falls back to the plain grid.
 (function () {
@@ -25,7 +25,8 @@ uniform vec3 u_cold;
 in vec2 v_uv;
 out vec4 o_color;
 
-// Bilinear sampling with a smoothstep on the fraction: no visible cell edges, no diamond artefacts.
+// The texture's LINEAR filter does the bilinear blend; a smoothstep on the fraction first rounds off
+// its creases, so there are no visible cell edges and no diamond artefacts.
 float heat(vec2 uv) {
   vec2 p = uv * u_grid - 0.5;
   vec2 f = fract(p);
@@ -33,21 +34,33 @@ float heat(vec2 uv) {
   return texture(u_heat, (floor(p) + f + 0.5) / u_grid).r;
 }
 
+// A soft glow: the average of two rings of taps, about one and two cells out, the far ring weaker,
+// so heat bleeds into its neighbours like light through fog.
+float glow(vec2 uv) {
+  vec2 cell = 1.0 / u_grid;
+  float near = 0.0;
+  float far = 0.0;
+  for (int k = 0; k < 8; k++) {
+    float a = float(k) * 0.7853982 + 0.3926991;
+    vec2 d = vec2(cos(a), sin(a)) * cell;
+    near += heat(uv + d * 0.9);
+    far += heat(uv + d * 2.0);
+  }
+  return (near * 0.65 + far * 0.35) / 8.0;
+}
+
 void main() {
   float h = heat(v_uv);
-  float glow = 0.0;
-  for (int k = 0; k < 8; k++) {
-    float a = float(k) * 0.7853982;
-    glow += heat(v_uv + vec2(cos(a), sin(a)) * vec2(0.05, 0.09));
-  }
-  float v = clamp(pow(h, 1.6) * 0.85 + glow * 0.02, 0.0, 1.0);
+  float g = glow(v_uv);
+  float v = clamp(pow(h, 1.5) * 0.85 + g * 0.2, 0.0, 1.0);
 
   vec3 hot = mix(u_hot, vec3(1.0, 0.96, 0.82), smoothstep(0.82, 1.0, v) * 0.55);
   vec3 color = mix(u_cold, hot, smoothstep(0.02, 1.0, v));
+  color += u_hot * smoothstep(0.05, 0.9, g) * 0.14;
   color += hot * v * 0.07 * sin(u_time * 2.2 + v_uv.x * 18.0 + v_uv.y * 7.0);
 
   vec2 cell = abs(fract(v_uv * u_grid) - 0.5);
-  color = mix(color, color * 0.7 + 0.025, smoothstep(0.46, 0.5, max(cell.x, cell.y)) * 0.55);
+  color = mix(color, color * 0.8 + 0.02, smoothstep(0.47, 0.5, max(cell.x, cell.y)) * 0.2);
   color *= 0.93 + 0.07 * sin(v_uv.y * u_size.y * 3.14159);
   o_color = vec4(color, 1.0);
 }`;

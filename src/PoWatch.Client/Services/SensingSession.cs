@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.Versioning;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -13,7 +15,7 @@ namespace PoWatch.Client.Services;
 /// every closed batch goes into the durable outbox (outbox.js) and is posted from there, oldest first.
 /// The Live page renders <see cref="Live"/> and listens to <see cref="Changed"/>.
 /// </summary>
-public sealed class SensingSession(PoWatchApiClient api, IJSRuntime js, TimeProvider time) : IAsyncDisposable
+public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, TimeProvider time) : IAsyncDisposable
 {
     private static readonly PoWatchJsonContext Json = PoWatchJsonContext.Default;
     private static readonly TimeSpan FlushEvery = TimeSpan.FromSeconds(2);
@@ -33,6 +35,9 @@ public sealed class SensingSession(PoWatchApiClient api, IJSRuntime js, TimeProv
     private static readonly HashSet<string> Nameable = new(StringComparer.OrdinalIgnoreCase) { "person", "cat", "dog" };
     private SyntheticScene? _scene;
     private DotNetObjectReference<SensingSession>? _self;
+
+    /// <summary>The session the detector's boxes go to (<see cref="OnDetectorBoxes"/> is static, as [JSExport] needs).</summary>
+    private static SensingSession? s_detecting;
     private ElementReference? _video;
     private CancellationTokenSource? _cts;
     private bool _vlmBusy;
@@ -177,6 +182,7 @@ public sealed class SensingSession(PoWatchApiClient api, IJSRuntime js, TimeProv
 
         await js.TryInvokeVoidAsync("powatchPixels.stop");
         await js.TryInvokeVoidAsync("powatchDetector.stop");
+        if (s_detecting == this) s_detecting = null;
         if (_scene is null) await js.TryInvokeVoidAsync("powatchInference.stopMonitor");
 
         await KeepAsync(_batcher.Flush(final: true));
@@ -208,12 +214,38 @@ public sealed class SensingSession(PoWatchApiClient api, IJSRuntime js, TimeProv
         AddPixel(new PixelSample(p.AtUtc, p.Motion, p.Luminance, p.Grid, p.Palette));
     }
 
-    [JSInvokable]
-    public void OnDetections(string json)
+    /// <summary>
+    /// The detector's boxes as typed arrays (detector-bridge.js), not JSON: one label per box, and in
+    /// <paramref name="values"/> (a Float64Array) per box its score, x0, y0, x1, y1, the length of its
+    /// colour signature, then the signature itself.
+    /// </summary>
+    [JSExport]
+    [SupportedOSPlatform("browser")]
+    internal static void OnDetectorBoxes(
+        [JSMarshalAs<JSType.Date>] DateTimeOffset atUtc,
+        double latencyMs,
+        [JSMarshalAs<JSType.Array<JSType.String>>] string[] labels,
+        [JSMarshalAs<JSType.Array<JSType.Number>>] double[] values) =>
+        s_detecting?.OnDetections(atUtc, latencyMs, labels, values);
+
+    private void OnDetections(DateTimeOffset atUtc, double latencyMs, string[] labels, double[] values)
     {
-        if (!IsRunning || JsonSerializer.Deserialize(json, Json.DetectionsPayload) is not { } p) return;
-        Live.DetectorLatencyMs = p.LatencyMs;
-        AddDetections(p.AtUtc, p.Detections.Select(d => new Detection(d.Label, d.Score, d.X0, d.Y0, d.X1, d.Y1)).ToList());
+        if (!IsRunning) return;
+        var detections = new List<Detection>(labels.Length);
+        var at = 0;
+        foreach (var label in labels)
+        {
+            if (at + 6 > values.Length) break;
+            var length = (int)values[at + 5];
+            if (length < 0 || at + 6 + length > values.Length) break;
+            float[]? signature = length == 0 ? null : new float[length];
+            for (var i = 0; i < length; i++) signature![i] = (float)values[at + 6 + i];
+            detections.Add(new Detection(label, values[at], values[at + 1], values[at + 2], values[at + 3], values[at + 4], signature));
+            at += 6 + length;
+        }
+
+        Live.DetectorLatencyMs = latencyMs;
+        AddDetections(atUtc, detections);
     }
 
     [JSInvokable]
@@ -412,6 +444,7 @@ public sealed class SensingSession(PoWatchApiClient api, IJSRuntime js, TimeProv
 
         Live.DetectorModel = info.ModelId;
         Live.DetectorDevice = info.Dtype is null ? info.Device : $"{info.Device} · {info.Dtype}";
+        s_detecting = this;
         await js.TryInvokeVoidAsync("powatchDetector.start", video, _self, 1000, 0.5);
         Notify();
     }
