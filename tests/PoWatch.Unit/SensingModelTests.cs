@@ -106,4 +106,31 @@ public sealed class SensingModelTests
         Assert.DoesNotContain(afterCatLeaves.Detections, detection => detection.Label == "cat");
         Assert.Contains(afterCatLeaves.Detections, detection => detection.Label == "cup");
     }
+
+    [Fact]
+    public void A_voice_is_learned_matched_kept_through_a_merge_and_never_confused_with_another()
+    {
+        static float[] Voice(params (int Index, float Value)[] parts)
+        {
+            var v = new float[8];
+            foreach (var (i, x) in parts) v[i] = x;
+            return v;
+        }
+        var book = new VoiceBook();
+        Assert.Null(book.Match(Voice((0, 1))));
+
+        book.Learn("sam", Voice((0, 1), (1, 0.1f)));
+        book.Learn("sam", Voice((0, 1), (2, 0.1f)));
+        book.Learn("ana", Voice((5, 1)));
+        Assert.Equal("sam", book.Match(Voice((0, 0.9f), (1, 0.05f))));
+        Assert.Equal("ana", book.Match(Voice((5, 1), (6, 0.2f))));
+        // Halfway between two voices is nobody's.
+        Assert.Null(book.Match(Voice((0, 1), (5, 1))));
+
+        book.Merge("sam", "ana");
+        Assert.False(book.Knows("ana"));
+        Assert.True(book.Knows("sam"));
+        book.Merge("bob", "sam");
+        Assert.True(book.Knows("bob"));
+    }
 }

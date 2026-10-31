@@ -42,6 +42,10 @@
                     <button class="term-button" @onclick="() => _selected.Clear()" disabled="@_busy">Clear</button>
                 </div>
             }
+            @if (Sensing.Voices.Prints.Count > 0)
+            {
+                <button class="term-button" @onclick="ForgetVoicesAsync" disabled="@_busy" title="Voiceprints are kept only in this browser" data-test="forget-voices">Forget voices (@Sensing.Voices.Prints.Count)</button>
+            }
             @if (_message is not null)
             {
                 <span class="@(_failed ? "live-error" : "term-stat-hint")" role="@(_failed ? "alert" : "status")" data-test="regulars-message">@_message</span>
@@ -65,6 +69,10 @@
                     <li class="regular-card @(_selected.Contains(regular.Id) ? "regular-card--on" : null)" @key="regular.Id">
                         <div class="regular-card-head">
                             <span class="regular-kind">@regular.Class</span>
+                            @if (Sensing.Voices.Knows(regular.Id))
+                            {
+                                <span class="regular-voice" title="Their voice is known in this browser, so the stories can say what they said" data-test="regular-voice">VOICE</span>
+                            }
                             <input type="checkbox" checked="@_selected.Contains(regular.Id)" @onchange="e => Select(regular, e.Value is true)"
                                    aria-label="@($"Select {regular.DisplayName} to merge")" title="Tick two or more of the same kind to merge them" data-test="regular-select" />
                         </div>
@@ -160,6 +168,13 @@
 
     private void Say(string message, bool failed = false) => (_message, _failed) = (message, failed);
 
+    private async Task ForgetVoicesAsync()
+    {
+        Sensing.Voices.Clear();
+        await Sensing.SaveVoicesAsync();
+        Say("VOICES FORGOTTEN IN THIS BROWSER");
+    }
+
     private async Task RenameAsync(RegularDto regular)
     {
         var name = string.IsNullOrWhiteSpace(_edits.GetValueOrDefault(regular.Id)) ? null : _edits[regular.Id]!.Trim();
@@ -201,6 +216,8 @@
                 if (merged is null) break;
             }
 
+            foreach (var duplicate in Selected.Where(r => r.Id != primaryId)) Sensing.Voices.Merge(primaryId, duplicate.Id);
+            await Sensing.SaveVoicesAsync();
             if (merged is null) Say("COULD NOT MERGE ALL OF THOSE — CHECK THE LIST", failed: true);
             else Say($"MERGED INTO {merged.DisplayName.ToUpperInvariant()}");
         }

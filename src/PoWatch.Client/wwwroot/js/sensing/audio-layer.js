@@ -2,7 +2,8 @@
 // 10-second ticks); a stretch of speech (loud, then quiet for most of a second) goes to Whisper and comes
 // back as words; a loud moment that is not speech goes to the sound classifier and comes back as a label.
 // All of it runs in audio-worker.js on this machine. The audio itself is never stored or sent: only the
-// loudness, the words and the labels reach SensingSession (OnSoundLevel, OnHeard, OnSound).
+// loudness, the words (with a voice embedding, matched to a regular in the browser) and the labels reach
+// SensingSession (OnSoundLevel, OnHeard, OnSound).
 (function () {
   'use strict';
 
@@ -36,8 +37,8 @@
 
   async function transcribe(samples, atMs) {
     try {
-      const { text } = await call({ type: 'transcribe', samples }, [samples.buffer], 60000);
-      if (text && state) await state.dotnet.invokeMethodAsync('OnHeard', new Date(atMs).toISOString(), text);
+      const { text, voice } = await call({ type: 'transcribe', samples }, [samples.buffer], 60000);
+      if (text && state) await state.dotnet.invokeMethodAsync('OnHeard', new Date(atMs).toISOString(), text, voice ? JSON.stringify(voice) : null);
     } catch { /* a missed line is better than a stalled microphone */ }
   }
 

@@ -64,6 +64,7 @@
         // Remembered per browser: whether camera sessions also run the caption model.
         if (await JS.TryInvokeAsync<string>("localStorage.getItem", CaptionsKey) == "off") Sensing.Captions = false;
         if (await JS.TryInvokeAsync<string>("localStorage.getItem", ListeningKey) == "off") Sensing.Listening = false;
+        await Sensing.LoadVoicesAsync();
         Sensing.CaptionModel = CaptionModels.Normalize(await JS.TryInvokeAsync<string>("localStorage.getItem", CaptionModels.Key));
         await Sensing.SendOutboxAsync();
     }

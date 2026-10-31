@@ -10,7 +10,7 @@
         <ol>
             @foreach (var line in lines)
             {
-                <li><span class="num">@line.AtUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture)</span> “@line.Text”</li>
+                <li><span class="num">@line.AtUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture)</span> @(line.Speaker is { } who ? $"{who}: " : null)“@line.Text”</li>
             }
         </ol>
     </details>

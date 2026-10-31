@@ -58,8 +58,9 @@ public sealed class TickBatcher(TimeProvider time)
     public void AddSound(DateTimeOffset atUtc, double mean, double max) => WindowFor(atUtc).AddSound(mean, max);
 
     /// <summary>Words the speech model heard.</summary>
-    public void AddSpeech(DateTimeOffset atUtc, string text) =>
-        _events.Add(new SceneEventDto { AtUtc = atUtc, Kind = "Speech", Text = text });
+    /// <param name="regularId">Who said it, when their voice (or being alone in frame) told.</param>
+    public void AddSpeech(DateTimeOffset atUtc, string text, string? regularId = null) =>
+        _events.Add(new SceneEventDto { AtUtc = atUtc, Kind = "Speech", Text = text, RegularId = regularId });
 
     /// <summary>A sound the classifier recognised, by its label.</summary>
     public void AddSoundEvent(DateTimeOffset atUtc, string label, double score) =>

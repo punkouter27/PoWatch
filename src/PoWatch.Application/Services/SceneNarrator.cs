@@ -55,7 +55,10 @@ public static class SceneNarrator
             var left = Who(beat.Where(e => e.Kind == SceneEventKind.TrackExit && IsMover(e)), names);
             var caption = beat.Where(e => e.Kind == SceneEventKind.Caption && seenCaptions.Add(e.Text!.Trim())).Select(e => e.Text!.Trim()).FirstOrDefault();
             var lights = beat.LastOrDefault(e => e.Kind is SceneEventKind.LightsOn or SceneEventKind.LightsOff);
-            var said = beat.FirstOrDefault(e => e.Kind == SceneEventKind.Speech)?.Text!.Trim();
+            var line = beat.FirstOrDefault(e => e.Kind == SceneEventKind.Speech);
+            var said = line?.Text!.Trim();
+            // Who said it, when their voice was known; otherwise "someone".
+            var speaker = line?.RegularId is { } speakerId && names.TryGetValue(speakerId, out var speakerName) ? speakerName : "someone";
             var heard = Sounds(beat);
 
             if (arrived.Count > 0)
@@ -70,7 +73,7 @@ public static class SceneNarrator
             }
             else if (said is not null)
             {
-                sentences.Add($"{when}, someone said: “{Sentence(said)}”");
+                sentences.Add($"{when}, {speaker} said: “{Sentence(said)}”");
                 said = null;
             }
             else if (heard.Count > 0)
@@ -96,7 +99,7 @@ public static class SceneNarrator
             else continue;
 
             if (caption is not null) sentences.Add($"The camera saw this: “{Sentence(caption)}”");
-            if (said is not null) sentences.Add($"Someone said: “{Sentence(said)}”");
+            if (said is not null) sentences.Add($"{Capital(speaker)} said: “{Sentence(said)}”");
             if (heard.Count > 0) sentences.Add($"The microphone picked up {Join(heard)}.");
             if (objects.Count > 0) sentences.Add($"{Capital(Join(objects))} {(objects.Count == 1 ? "was" : "were")} in view.");
             if (left.Count > 0) sentences.Add($"{Capital(Join(left))} left again{To(beat.Last(e => e.Kind == SceneEventKind.TrackExit && IsMover(e)).Edge)}.");

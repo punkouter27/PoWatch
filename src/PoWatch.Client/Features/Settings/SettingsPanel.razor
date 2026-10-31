@@ -445,6 +445,8 @@
             {
                 // Every page, card, prompt and list in this tab still holds the old data: start the app afresh.
                 _dataMessage = "Everything was deleted. Starting afresh…";
+                // Voiceprints never reached the server; they go from this browser here.
+                await JS.TryInvokeVoidAsync("localStorage.removeItem", SensingSession.VoicesKey);
                 StateHasChanged();
                 await Task.Delay(1200);
                 Navigation.NavigateTo("/", forceLoad: true);

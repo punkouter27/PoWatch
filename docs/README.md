@@ -28,7 +28,15 @@ camera ──► browser (all sensing on-device)                        server
   (`SoundMean`/`SoundMax`), a stretch of speech goes to Whisper (base, English, int8, WASM) and comes
   back as words (a `Speech` scene event), and a loud moment that is not speech goes to an AudioSet
   classifier (AST, int8, WASM) and comes back as a label (a `Sound` event: "Dog", "Music", "Knock").
-  Only those leave the browser. Settings' "Listening" switch (on by default, remembered per browser)
+  Only those leave the browser.
+- **Voices stay in this browser.** Each line heard also gets a speaker embedding (WavLM base-plus-sv,
+  full precision: about 400 MB, downloaded once on the first line heard; int8 blurred two voices into
+  one). A regular's voiceprint (`VoiceBook`) is learned when they are the only person in frame while
+  someone speaks, and later speech that sounds like them (cosine ≥ 0.86) is theirs, on camera or not.
+  Voiceprints are biometric, so they live in localStorage (`powatch:voices`) and never reach the
+  server; only the regular's id travels with the line, so transcripts and stories say "Sam said…".
+  Settings' "Who PoWatch knows" marks the regulars whose voice is known, merging keeps a voice, "Forget
+  voices" clears them, and "Delete everything" clears them too. Settings' "Listening" switch (on by default, remembered per browser)
   turns it off; the demo room has scripted words and a bark so all of it runs without a microphone.
 - **Frames never leave the device.** The only images uploaded are highlight snapshots (first sighting
   of a class, motion spikes, notable captions), capped per hour and per day. Time-lapses stay in the
@@ -44,7 +52,7 @@ camera ──► browser (all sensing on-device)                        server
 | Family | What | Where |
 |---|---|---|
 | A · Presence & space | occupancy, visits, dwell percentiles, peak at once, empty/still streaks, busiest minute, heatmaps, entry/exit edges | Live |
-| B · Objects & regulars | classes seen, rarest, regulars leaderboard (recognised by look, never by face) | Live, Settings ("Who PoWatch knows"), the stories |
+| B · Objects & regulars | classes seen, rarest, regulars leaderboard (recognised by look, never by face; by voice in the browser that learned it) | Live, Settings ("Who PoWatch knows"), the stories |
 | C · Patterns & anomalies | hour × weekday, rhythm score, "today vs usual" z-scores, trend, busy-hour forecast | Live |
 | D · Environment & captions | light curve, lights on/off, daylight estimate, palette, word cloud, weirdest caption, recaps | Live, History |
 | E · Pipeline | frames per layer, FPS, latency, detector confidence, uptime, storage | /system |

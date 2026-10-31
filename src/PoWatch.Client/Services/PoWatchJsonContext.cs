@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using PoWatch.Shared.Models;
+using PoWatch.Shared.Services.Sensing;
 
 namespace PoWatch.Client.Services;
 
@@ -22,6 +23,8 @@ namespace PoWatch.Client.Services;
 [JsonSerializable(typeof(SessionStoryDto))]
 [JsonSerializable(typeof(PeriodStoryDto))]
 [JsonSerializable(typeof(List<HeardLineDto>))]
+[JsonSerializable(typeof(Dictionary<string, VoicePrint>))]
+[JsonSerializable(typeof(float[]))]
 [JsonSerializable(typeof(IngestBatchDto))]
 [JsonSerializable(typeof(IngestBatchResultDto))]
 [JsonSerializable(typeof(PixelSamplePayload))]

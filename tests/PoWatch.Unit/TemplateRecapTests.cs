@@ -134,6 +134,9 @@ public sealed class TemplateRecapTests
             new() { SessionId = session, AtUtc = T0.AddSeconds(9), Kind = SceneEventKind.Sound, Text = "Dog" },
         ], UtcMinus5, new Dictionary<string, string>());
         Assert.Equal("At 08:00, someone said: “Has anyone seen my keys.” The microphone picked up a dog barking.", story);
+        Assert.StartsWith("At 08:00, Sam said: “Found them.”", SceneNarrator.Tell(
+            [new() { SessionId = session, AtUtc = T0, Kind = SceneEventKind.Speech, Text = "Found them.", RegularId = "r1" }],
+            UtcMinus5, new Dictionary<string, string> { ["r1"] = "Sam" }), StringComparison.Ordinal);
 
         Tick At(int minute, double sound) => new() { SessionId = session, StartUtc = T0.AddMinutes(minute), LuminanceMean = 0.7, SoundMean = sound, SoundMax = sound };
         var feel = SceneNarrator.Atmosphere([At(0, 0.1), At(1, 0.1), At(2, 0.8)], [], UtcMinus5, new Dictionary<string, string>());

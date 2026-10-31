@@ -1178,6 +1178,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .regular-card--on { border-color: var(--term-accent); box-shadow: 0 0 0 1px var(--term-accent) inset; }
 .regular-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .regular-kind { font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; color: var(--term-accent); background: var(--term-panel-2); }
+.regular-voice { margin-right: auto; font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; padding: 2px 6px; border-radius: 2px; color: var(--term-bg); background: var(--term-accent); }
 .regular-card input[type="checkbox"] { width: 24px; height: 24px; margin: 0; accent-color: var(--term-accent); }
 .regular-name input { box-sizing: border-box; width: 100%; min-height: 34px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: 600 var(--fs-md) var(--term-font); padding: 0 8px; }
 .regular-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 0; }

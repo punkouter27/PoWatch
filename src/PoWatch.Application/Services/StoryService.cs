@@ -19,6 +19,7 @@ public sealed class StoryService(
     RecapService recaps,
     IStoryStore store,
     ISensingLog sensingLog,
+    IRegularStore regulars,
     IEnumerable<IChatClient> chatClients,
     TimeProvider time,
     ILogger<StoryService> logger)
@@ -67,12 +68,13 @@ public sealed class StoryService(
         if (await sessions.GetAsync(userId, sessionId, cancellationToken) is not { } session) return null;
         var zone = session.TimeZone;
         var end = session.EndedUtc ?? time.GetUtcNow();
+        var names = (await regulars.ListAsync(userId, cancellationToken)).ToDictionary(r => r.Id, r => r.DisplayName);
         var lines = new List<HeardLineDto>();
         for (var day = LocalDay.Of(session.StartedUtc, zone); day <= LocalDay.Of(end, zone); day = day.AddDays(1))
         {
             lines.AddRange((await sensingLog.GetEventsAsync(userId, day, cancellationToken))
                 .Where(e => e.SessionId == sessionId && e.Kind == SceneEventKind.Speech && !string.IsNullOrWhiteSpace(e.Text))
-                .Select(e => new HeardLineDto { AtUtc = e.AtUtc, Text = e.Text!.Trim() }));
+                .Select(e => new HeardLineDto { AtUtc = e.AtUtc, Text = e.Text!.Trim(), Speaker = e.RegularId is { } id ? names.GetValueOrDefault(id) : null }));
         }
         return [.. lines.OrderBy(l => l.AtUtc)];
     }

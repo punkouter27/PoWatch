@@ -97,7 +97,8 @@ public sealed class SyntheticScene(int seed = 7)
 
     /// <summary>
     /// The room's sound at <paramref name="atUtc"/>: a quiet hum, louder while someone walks through, a
-    /// line said three seconds into every other crossing and a bark as the dog comes in. Each line and
+    /// line said eight seconds into every other crossing (by then the walker is known as a regular, so the
+    /// line is theirs) and a bark as the dog comes in. Each line and
     /// bark falls in one 250 ms step, so a demo ticking at that rate hears it once.
     /// </summary>
     public SyntheticSound Hear(DateTimeOffset atUtc)
@@ -108,7 +109,7 @@ public sealed class SyntheticScene(int seed = 7)
         var crossing = (int)(t / WalkPeriodSeconds);
         var dogPhase = t % DogPeriodSeconds;
         var level = 0.08 + (walkPhase < WalkSeconds ? 0.2 : 0) + (_noise.NextDouble() * 0.03);
-        var speech = crossing % 2 == 0 && walkPhase is >= 3 and < 3.25 ? Lines[crossing / 2 % Lines.Length] : null;
+        var speech = crossing % 2 == 0 && walkPhase is >= 8 and < 8.25 ? Lines[crossing / 2 % Lines.Length] : null;
         var sound = dogPhase is >= 1 and < 1.25 ? "Dog" : null;
         return new SyntheticSound(Math.Min(1, level + (speech is null ? 0 : 0.3) + (sound is null ? 0 : 0.45)), speech, sound);
     }

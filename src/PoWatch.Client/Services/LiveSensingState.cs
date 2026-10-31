@@ -52,9 +52,9 @@ public sealed class LiveSensingState
     /// <summary>The latest sound the classifier named, and when.</summary>
     public string? LastSound { get; private set; }
 
-    public void RecordHeard(DateTimeOffset atUtc, string text)
+    public void RecordHeard(DateTimeOffset atUtc, string text, string? speaker = null)
     {
-        _heard.Add(new HeardLineDto { AtUtc = atUtc, Text = text });
+        _heard.Add(new HeardLineDto { AtUtc = atUtc, Text = text, Speaker = speaker });
         if (_heard.Count > 50) _heard.RemoveAt(0);
     }
 
@@ -104,6 +104,9 @@ public sealed class LiveSensingState
     public IReadOnlyList<NamingPrompt> Prompts => _prompts;
 
     public RegularDto? RegularFor(string trackId) => _regularByTrack.GetValueOrDefault(trackId);
+
+    /// <summary>The name of a regular seen this session, by id; null when they have not been.</summary>
+    public string? RegularNamed(string regularId) => _regularByTrack.Values.FirstOrDefault(r => r.Id == regularId)?.DisplayName;
 
     public void AssignRegular(string trackId, RegularDto regular) => _regularByTrack[trackId] = regular;
 

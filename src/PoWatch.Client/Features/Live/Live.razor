@@ -108,7 +108,7 @@
                     <span class="live-caption-tag">HEARD @(L.Heard.LastOrDefault()?.AtUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture) ?? "--:--:--")</span>
                     @if (L.Heard.LastOrDefault() is { } line)
                     {
-                        <span @key="line.AtUtc">“@line.Text”</span>
+                        <span @key="line.AtUtc">@(line.Speaker is { } who ? $"{who}: " : null)“@line.Text”</span>
                     }
                     else
                     {
