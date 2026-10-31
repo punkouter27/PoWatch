@@ -46,3 +46,26 @@ public sealed class SessionStoryDto
     public string? Source { get; init; }
     public DateTimeOffset? WrittenUtc { get; init; }
 }
+
+/// <summary>One day's part of a week's or month's story.</summary>
+public sealed class DayStoryDto
+{
+    public DateOnly Date { get; init; }
+    public string Text { get; init; } = string.Empty;
+}
+
+/// <summary>The story of a whole week (Monday to Sunday) or calendar month, and the days it was told from, newest first.</summary>
+public sealed class PeriodStoryDto
+{
+    /// <summary>week or month.</summary>
+    public string Kind { get; init; } = "week";
+
+    public DateOnly From { get; init; }
+    public DateOnly To { get; init; }
+    public string Story { get; init; } = string.Empty;
+
+    /// <summary>template, or the server model's provider name.</summary>
+    public string Source { get; init; } = "template";
+
+    public List<DayStoryDto> Days { get; init; } = [];
+}

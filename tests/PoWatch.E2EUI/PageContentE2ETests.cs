@@ -47,7 +47,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     }
 
     [Fact]
-    public async Task Live_renders_every_stat_family_with_real_numbers_for_a_seeded_month()
+    public async Task Live_renders_every_stat_family_with_real_numbers_for_the_recording_session()
     {
         if (PlaywrightFixture.BaseUrl is null) return;
         // Its own user: the seed runs once per user, so on the shared guest it would land on whatever earlier tests left.
@@ -57,8 +57,11 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         var seed = await page.APIRequest.PostAsync($"{PlaywrightFixture.BaseUrl}/api/dev/seed?days=40&tz=UTC", new() { Headers = PoWatchPage.As(user) });
         Assert.True(seed.Ok, $"seed returned {seed.Status}");
 
-        await page.GoToAsync("/?range=30d", "LIVE");
-        await Assertions.Expect(page.GetByTestId("stats-occupancy")).Not.ToContainTextAsync("0.0%", new() { Timeout = 30_000 });
+        // Live is always the session being recorded (the seeded month is only the "usual" it is compared with).
+        await page.GoToAsync("/?start=demo", "LIVE");
+        await Assertions.Expect(page.GetByTestId("header-stop")).ToBeVisibleAsync(new() { Timeout = 30_000 });
+        await Assertions.Expect(page.GetByTestId("stats-window")).ToContainTextAsync("Recording session", new() { Timeout = 30_000 });
+        await Assertions.Expect(page.GetByTestId("stats-occupancy")).Not.ToContainTextAsync("0.0%", new() { Timeout = 45_000 });
         await Assertions.Expect(page.Locator("[data-test=stats-presence] .rz-chart svg").First).ToBeVisibleAsync();
 
         // Every family is on the Live grid (classes in "In frame"); pipeline counters are on System.
@@ -67,6 +70,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
             await Assertions.Expect(page.GetByTestId(content)).ToBeVisibleAsync(new() { Timeout = 30_000 });
         }
 
+        await page.GetByTestId("header-stop").ClickAsync();
         await page.GoToSystemAsync();
         await page.OpenSystemTabAsync("Pipeline");
         await Assertions.Expect(page.GetByTestId("stats-all-frames")).Not.ToContainTextAsync("—", new() { Timeout = 30_000 });
@@ -95,10 +99,10 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await cat.GetByTestId("name-skip").ClickAsync();
         await Assertions.Expect(cat).Not.ToBeVisibleAsync();
 
-        // Bob is recognised by name on the live overlay, and listed on Regulars; the cat stays unnamed.
+        // Bob is recognised by name on the live overlay, and listed in Settings' "Who PoWatch knows"; the cat stays unnamed.
         await Assertions.Expect(page.GetByTestId("live-tracks")).ToContainTextAsync("Bob", new() { Timeout = 25_000 });
         await page.GetByTestId("header-stop").ClickAsync();
-        await page.GetByTestId("nav-regulars").ClickAsync();
+        await page.OpenSettingsAsync();
         await Assertions.Expect(page.GetByTestId("regulars-table")).ToBeVisibleAsync();
         ILocator NameBox(string who) => page.Locator(".regular-name").Filter(new() { HasText = $"Name for {who}" }).Locator("input");
         await Assertions.Expect(NameBox("Bob")).ToHaveValueAsync("Bob");
@@ -135,7 +139,10 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         });
         Assert.True(batch.Ok, $"batch returned {batch.Status}");
 
+        // History opens on the stories, newest session first; the day view is behind "Days".
         await page.GoToAsync("/history", "HISTORY");
+        await Assertions.Expect(page.GetByTestId("story-card").First).ToBeVisibleAsync(new() { Timeout = 30_000 });
+        await page.GetByTestId("history-days-link").ClickAsync();
         await Assertions.Expect(page.GetByTestId("history-calendar")).ToBeVisibleAsync();
         // The year turns into a 3D skyline and back; the choice is the browser's to remember.
         await page.GetByTestId("year-3d").ClickAsync();

@@ -1,0 +1,86 @@
+@using System.Globalization
+@inject PoWatchApiClient Api
+
+@* The story of a whole week or month (PeriodStoryService), with the days it was told from under it,
+   newest first. ◀ ▶ step back and forth a week or a month at a time. *@
+<TerminalPanel Title="@Heading" Class="story-card" Test="period-story">
+    <Aside>
+        <span class="history-nav">
+            <button class="term-button" @onclick="() => MoveAsync(-1)" aria-label="@($"Previous {Kind}")" data-test="period-prev">◀</button>
+            <button class="term-button" @onclick="() => MoveAsync(1)" disabled="@(_story is { } s && s.To >= Today)" aria-label="@($"Next {Kind}")" data-test="period-next">▶</button>
+        </span>
+    </Aside>
+    <ChildContent>
+        @if (_loading)
+        {
+            <p class="term-empty">Writing the @Kind's story…</p>
+        }
+        else if (_story is null)
+        {
+            <p class="term-empty">The @Kind's story could not be loaded.</p>
+        }
+        else
+        {
+            <div class="session-story">
+                @foreach (var paragraph in _story.Story.Split("\n\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    <p class="session-story-text" data-test="period-story-text">@paragraph</p>
+                }
+                @if (_story.Days.Count > 1)
+                {
+                    <details class="session-story-chapters" open>
+                        <summary>@_story.Days.Count DAYS · NEWEST FIRST</summary>
+                        <ol>
+                            @foreach (var day in _story.Days)
+                            {
+                                <li><a class="num" href="history/@day.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" title="Open this day">@day.Date.ToString("ddd d MMM", CultureInfo.CurrentCulture)</a> @day.Text</li>
+                            }
+                        </ol>
+                    </details>
+                }
+            </div>
+        }
+    </ChildContent>
+</TerminalPanel>
+
+@code {
+    /// <summary>"week" or "month".</summary>
+    [Parameter, EditorRequired] public string Kind { get; set; } = "week";
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
+
+    private DateOnly _day = Today;
+    private string? _shownKind;
+    private bool _loading = true;
+    private PeriodStoryDto? _story;
+
+    private bool Month => Kind == "month";
+
+    private string Heading => _story is null
+        ? (Month ? "The month" : "The week")
+        : Month
+            ? _story.From.ToString("MMMM yyyy", CultureInfo.CurrentCulture)
+            : $"Week of {_story.From.ToString("ddd d MMM", CultureInfo.CurrentCulture)} – {_story.To.ToString("ddd d MMM", CultureInfo.CurrentCulture)}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Kind == _shownKind) return;
+        (_shownKind, _day) = (Kind, Today);
+        await LoadAsync();
+    }
+
+    private async Task MoveAsync(int step)
+    {
+        _day = Month ? _day.AddMonths(step) : _day.AddDays(7 * step);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        (_loading, _story) = (true, null);
+        var (kind, day) = (Kind, _day);
+        var story = await Api.GetPeriodStoryAsync(Month, day, TimeZoneInfo.Local.Id);
+        if ((kind, day) != (Kind, _day)) return;
+        (_story, _loading) = (story, false);
+    }
+}

@@ -1,5 +1,6 @@
 using System.Globalization;
 using Humanizer;
+using PoWatch.Domain.Models;
 using PoWatch.Shared.Models;
 
 namespace PoWatch.Application.Services;
@@ -15,7 +16,9 @@ public sealed record RecapFacts(
     ObjectStatsDto Objects,
     EnvironmentStatsDto Environment,
     PatternStatsDto? Patterns,
-    IReadOnlyList<MomentDto> Moments);
+    IReadOnlyList<MomentDto> Moments,
+    IReadOnlyList<SceneEvent>? Events = null,
+    IReadOnlyList<Tick>? Ticks = null);
 
 /// <summary>
 /// The deterministic recap: always available, needs no AI, and is what an AI rewrite falls back to.
@@ -60,6 +63,17 @@ public static class TemplateRecap
     {
         var p = facts.Presence;
         if (p.SecondsObserved <= 0) return NothingObserved;
+
+        // What happened, told from the scene events, then how it felt from the telemetry; the numbers
+        // below are only for a window with neither (seeded history).
+        var names = facts.Objects.Regulars.DistinctBy(r => r.Id).ToDictionary(r => r.Id, r => r.DisplayName);
+        var events = facts.Events ?? [];
+        var told = string.Join(' ', new[]
+        {
+            SceneNarrator.Tell(events, facts.Zone, names),
+            SceneNarrator.Atmosphere(facts.Ticks ?? [], events, facts.Zone, names)
+        }.Where(s => s is not null));
+        if (told.Length > 0) return told;
 
         var parts = new List<string>
         {

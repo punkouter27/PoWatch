@@ -19,7 +19,7 @@ camera ──► browser (all sensing on-device)                        server
                                                   IngestService: raw rows + rollups (minute/hour/day/all)
                                                   ──► SignalR push (statsChanged)
                                                                           │
-           Live · History · Regulars   ◄── GET /api/stats/{family}, /api/recaps, …
+           Live · History · Settings   ◄── GET /api/stats/{family}, /api/recaps, …
 ```
 
 - **Frames never leave the device.** The only images uploaded are highlight snapshots (first sighting
@@ -36,32 +36,39 @@ camera ──► browser (all sensing on-device)                        server
 | Family | What | Where |
 |---|---|---|
 | A · Presence & space | occupancy, visits, dwell percentiles, peak at once, empty/still streaks, busiest minute, heatmaps, entry/exit edges | Live |
-| B · Objects & regulars | classes seen, rarest, regulars leaderboard (recognised by look, never by face) | Live, /regulars |
+| B · Objects & regulars | classes seen, rarest, regulars leaderboard (recognised by look, never by face) | Live, Settings ("Who PoWatch knows"), the stories |
 | C · Patterns & anomalies | hour × weekday, rhythm score, "today vs usual" z-scores, trend, busy-hour forecast | Live |
 | D · Environment & captions | light curve, lights on/off, daylight estimate, palette, word cloud, weirdest caption, recaps | Live, History |
 | E · Pipeline | frames per layer, FPS, latency, detector confidence, uptime, storage | /system |
 
 ## Pages
 
-`/` Live, one screen under one bar (range picker: Session · Today · Week · Month · All, plus a Day picker for any single day (`?range=day&date=`); with Advanced on, an "Ask" box and "JSON ↓" for
-every number behind the grid): on a desktop a 3×3 with the camera in the larger middle cell (one Start
+`/` Live, always one session: the one being recorded, until it is stopped, then it stays as the last
+session (a History link, `?session=`, opens another). One bar names it (with Advanced on, an "Ask" box
+and "JSON ↓" for every number behind the grid); longer views are History's stories: on a desktop a 3×3 with the camera in the larger middle cell (one Start
 button; a synthetic demo is available whenever stopped). What is happening now touches it: key metrics
-for the range beside your usual day (σ, rhythm, trend, next busy hour) above, who is in frame with every
-class seen in the range below, the live motion grid left and motion energy right. The corners hold
+for the session beside your usual day (σ, rhythm, trend, next busy hour) above, who is in frame with every
+class seen in the session below, the live motion grid left and motion energy right. The corners hold
 Space, today's curve vs usual, hour × weekday and Environment (light, colours, captions). Every panel
 is there from the first paint, with a placeholder until its numbers arrive. Narrower screens stack the
-camera, key metrics and "In frame", and on a phone the panels after them are one swipeable strip · `/history/{yyyy-MM-dd}` on the left the year (with the
+camera, key metrics and "In frame", and on a phone the panels after them are one swipeable strip; on a short desktop screen the camera keeps its share
+and the cells around it scroll · `/history` the stories: every session, newest first, each with the
+story of the whole session and its ten-minute chapters under it, newest first ("Older sessions" pages
+back through the latest hundred); its Week and Month tabs (`?view=week`, `?view=month`) tell one story
+of the whole Monday-to-Sunday week or calendar month, with the days it was told from under it, newest
+first, and ◀ ▶ to step back; a Stories | Days switch leads to · `/history/{yyyy-MM-dd}` the day
+view: on the left the year (with the
 weather's effect, once a place is set), the day's numbers, weather and its week against the week
 before, and the day's sessions; on the right two tabs (recap with motion and captions, plus JSON/PDF and a
-share link with Advanced on; replay, with the day's moments and time-lapse under it); on a desktop each column scrolls on its own · `/regulars` a
-card per regular, filterable and sortable: rename in place, tick several to merge (a bar floats up) ·
-`/settings` the Settings drawer as a page, for links. Range, session and day live in the URL, so
+share link with Advanced on; replay, with the day's moments and time-lapse under it); on a desktop each column scrolls on its own ·
+`/settings` the Settings drawer as a page, for links. Session, view and day live in the URL, so
 reloads, links and Back/Forward keep their place. Every page needs a sign-in.
 
-**Header.** Brand, three section keys (a bottom tab bar on a phone), a status chip (state and uptime),
+**Header.** Brand, two section keys (a bottom tab bar on a phone), a status chip (state and uptime),
 Start/Stop, a bell and a gear. The gear opens Settings in a side drawer over any page: every optional
 choice (theme, sound, captions, watch rules), what the server keeps for you (retention window, weather
-place, weekly email), your shared recap links, and account and data (System status, CSV export, sign
+place, weekly email), your shared recap links, who PoWatch knows (each regular recognised by look:
+rename in place, filter, sort, tick several of a kind to merge), and account and data (System status, CSV export, sign
 out, delete everything; keeping less and deleting ask first). The bell is the one notification tray, in
 the same kind of drawer: sensing problems, watch-rule alerts, "name this newcomer" prompts and, once a
 week, last week in review; it opens by itself for a problem or an alert, and the rest only raise its
@@ -97,7 +104,7 @@ header row.
 
 **Safety nets.** Every panel (`TerminalPanel`) has its own error boundary, so a failing
 panel shows a small retry box while the rest of the page keeps working; the page-level boundary in
-`MainLayout` stays as the last resort. Empty days and an empty Regulars board offer "Try the
+`MainLayout` stays as the last resort. Empty days and an empty story feed offer "Try the
 demo" (`?start=demo`). The yyMMdd build date sits in the bottom-right corner (`BuildStamp`, from an
 `AssemblyMetadata` item in the client csproj). System is three tabs (Connections, Engine, Pipeline), and
 tables marked `term-table--cards` turn into one card per row on a phone.
@@ -105,7 +112,7 @@ tables marked `term-table--cards` turn into one card per row on a phone.
 **Look.** One palette on every page (deep-blue glass in the dark theme, plain panels in the light one),
 five type sizes (`--fs-xs` to `--fs-xl`), and Radzen's `--rz-*` variables pointed at the same tokens.
 
-**Keyboard.** `g` then `l h r` jumps to a section, Space starts or stops, ← → step History's
+**Keyboard.** `g` then `l h` jumps to a section, Space starts or stops, ← → step History's
 day, Ctrl+K opens a command palette (also: the demo scene, System, full screen) (`wwwroot/js/menus.js`).
 
 **Effects.** The header is frosted glass; with Advanced on the background drifts very slowly (CSS,
@@ -161,7 +168,7 @@ the observed minutes only.
 `js/replay-grids.js`), and detector boxes reach the C# tracker as typed arrays through `[JSExport]`
 (`SensingSession.OnDetectorBoxes`), colour signatures included.
 
-**Client layout.** `PoWatch.Client` is grouped by feature: `Features/Live`, `History`, `Regulars`,
+**Client layout.** `PoWatch.Client` is grouped by feature: `Features/Live`, `History`,
 `Diagnostics` (the `/system` page), `Settings` and `Account`; `Layout` is the shell, `Components` holds
 the parts shared between features, `Services` the state and API client.
 
@@ -234,7 +241,11 @@ copy; the owner can take it down from History or Settings, and "delete everythin
 
 ## Recaps
 
-`TemplateRecap` writes the paragraph from the numbers (Humanizer). If `AiProvider:Provider` names a
+`TemplateRecap` writes the paragraph as a story of the scene (`SceneNarrator`): who came in and from
+which side (regulars by name), what the caption model saw, who left, when the lights changed, with
+times as the only numbers and a long day cut to its six busiest stretches. A window without scene
+events (seeded history) gets the numbers paragraph instead (Humanizer); the numbers themselves are
+always in the recap's grid and highlights. If `AiProvider:Provider` names a
 model (`AzureOpenAi`, `Gemini` or `Ollama`), an `IChatClient` may rewrite the
 paragraph only — never the numbers — and the template wins on timeout, error, or a reply that uses a
 number not in the facts (`RecapPrompt.KeepsToFacts`, which reads spelled-out numbers too: "three",
@@ -267,7 +278,9 @@ the chapters are joined into one story, in order: by the model under the same nu
 (`RecapPrompt.StorySystem`), or else the chapters with their times, quiet chapters left out. Each call
 writes only what has fallen due, so a missed one is caught up by the next; a backlog (a sleeping tab,
 a session closed as stale) is written from the template, with the model kept for the newest chapter.
-The story shows on the recap card after Stop and under "story ▾" in History's sessions; both ask for
+Models are asked for a story of the scene, not statistics, under the same number check. The story
+shows on History's story feed, on the recap card after Stop and under "story ▾" in a day's sessions
+(one chapter is not listed again under the story it already is); each asks for
 it, so a session closed without Stop gets its story the first time someone opens it. Stories are kept
 like rollups: retention does not prune them, "delete everything" does.
 

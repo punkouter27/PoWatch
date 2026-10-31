@@ -28,9 +28,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         {
             ("/", "LIVE"),
             ("/history", "HISTORY"),
-            ("/regulars", "REGULARS"),
             ("/history/2026-01-01", "HISTORY"),
-            ("/?range=7d", "LIVE"),
         })
         {
             if (PlaywrightFixture.BaseUrl is null) return;
@@ -74,9 +72,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
 
         await page.GetByTestId("nav-history").ClickAsync();
         await page.ExpectSectionAsync("HISTORY");
-
-        await page.GetByTestId("nav-regulars").ClickAsync();
-        await page.ExpectSectionAsync("REGULARS");
 
         await page.GetByTestId("nav-live").ClickAsync();
         await page.ExpectSectionAsync("LIVE");
@@ -152,7 +147,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
             "start|stop|delete|merge|share|reset|sign out|keep|demo|clear|send|ask|save|remove|take down|download|explain|pdf",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-        foreach (var route in new[] { "/", "/history", "/regulars", "/system" })
+        foreach (var route in new[] { "/", "/history", "/system" })
         {
             await page.GotoAsync($"{PlaywrightFixture.BaseUrl}{route}");
             await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync(new() { Timeout = 60_000 });

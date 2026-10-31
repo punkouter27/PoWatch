@@ -84,7 +84,7 @@ public sealed partial class History
         }
         else if (!DateOnly.TryParseExact(Day, DayFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) || day > Today)
         {
-            Navigation.NavigateTo("history", replace: true);
+            Navigation.NavigateTo(DayPath(Today), replace: true);
             return;
         }
         else
@@ -100,8 +100,10 @@ public sealed partial class History
 
     private void Move(int days) => Go(_day.AddDays(days) > Today ? Today : _day.AddDays(days));
 
-    private void Go(DateOnly day) =>
-        Navigation.NavigateTo(day == Today ? "history" : $"history/{day.ToString(DayFormat, CultureInfo.InvariantCulture)}");
+    // "/history" is the story feed now, so every day, today included, has its own address.
+    private void Go(DateOnly day) => Navigation.NavigateTo(DayPath(day));
+
+    private static string DayPath(DateOnly day) => $"history/{day.ToString(DayFormat, CultureInfo.InvariantCulture)}";
 
     private static DateOnly? DayFor(int index)
     {

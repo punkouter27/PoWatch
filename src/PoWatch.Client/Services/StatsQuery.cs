@@ -9,4 +9,7 @@ public sealed record StatsQuery(string Range, string TimeZoneId, Guid? SessionId
 
     /// <summary>One local calendar day.</summary>
     public static StatsQuery ForDay(DateOnly date) => new("day", TimeZoneInfo.Local.Id, Date: date);
+
+    /// <summary>A session range with no session yet (Live before its first Start): nothing to ask the server.</summary>
+    public bool IsEmpty => Range == "session" && SessionId is null;
 }

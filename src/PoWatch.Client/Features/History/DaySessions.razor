@@ -34,7 +34,7 @@
                         </tr>
                         @if (_open == s.Id)
                         {
-                            <tr class="history-story-row"><td colspan="6"><SessionStory SessionId="@s.Id" /></td></tr>
+                            <tr class="history-story-row"><td colspan="6"><SessionStory SessionId="@s.Id" NewestFirst="true" /></td></tr>
                         }
                     }
                 </tbody>

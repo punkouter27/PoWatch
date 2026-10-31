@@ -9,18 +9,13 @@ namespace PoWatch.Client.Features.Live;
 /// <summary>The Live page's state and behaviour; the markup is in Live.razor.</summary>
 public sealed partial class Live
 {
-    private const string RangeKey = "powatch:range";
-    private static readonly string[] Ranges = ["session", "today", "7d", "30d", "all"];
     private static readonly string[] Edges = ["Left", "Top", "Right", "Bottom"];
 
     /// <summary>The phone strip's keys, in the order the panels appear.</summary>
     private static readonly string[] Pages = ["Grid", "Energy", "Space", "Curve", "Week", "Room"];
 
-    private const string DayFormat = "yyyy-MM-dd";
-    private string _range = "today";
-    private DateOnly? _date;
     private Guid _sessionId;
-    private StatsQuery _query = StatsQuery.For("today");
+    private StatsQuery _query = StatsQuery.For("session");
     private string? _question;
     private string? _answer;
     private bool _asking;
@@ -47,25 +42,12 @@ public sealed partial class Live
 
     [SupplyParameterFromQuery(Name = "start")] public string? StartMode { get; set; }
 
-    [SupplyParameterFromQuery(Name = "range")] public string? RangeParameter { get; set; }
-
-    /// <summary>The day for ?range=day, yyyy-MM-dd.</summary>
-    [SupplyParameterFromQuery(Name = "date")] public string? DateParameter { get; set; }
-
-    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
-
     /// <summary>A session to open straight away (History links each of its sessions here).</summary>
     [SupplyParameterFromQuery(Name = "session")] public Guid? SessionParameter { get; set; }
 
-    private string WindowLabel => _range switch
-    {
-        "session" => $"Session {SessionDto.Tag(_sessionId)}, minute by minute",
-        "day" => $"{_date?.ToString("ddd d MMM yyyy", CultureInfo.CurrentCulture)}, minute by minute",
-        "7d" => "Last 7 days, hour by hour",
-        "30d" => "Last 30 days, hour by hour",
-        "all" => "Everything, day by day",
-        _ => "Today so far, minute by minute"
-    } + $" · {TimeZoneInfo.Local.Id}";
+    private string WindowLabel => _sessionId == Guid.Empty
+        ? "No session yet: press Start"
+        : $"{(Sensing.IsRunning && Sensing.Live.Session?.Id == _sessionId ? "Recording" : "Last")} session {SessionDto.Tag(_sessionId)}, minute by minute · {TimeZoneInfo.Local.Id}";
 
     private LiveSensingState L => Sensing.Live;
 
@@ -80,35 +62,17 @@ public sealed partial class Live
         _ = RefreshLoopAsync(_refresh.Token);
     }
 
-    /// <summary>The URL is the state: the range control navigates, and this reads the result back.</summary>
+    /// <summary>A History link (?session=) opens that session; otherwise the page follows the recording one.</summary>
     protected override void OnParametersSet()
     {
-        DateOnly? date = RangeParameter == "day"
-            && DateOnly.TryParseExact(DateParameter, DayFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
-            && d <= Today ? d : null;
-        var range = SessionParameter is not null ? "session" : date is not null ? "day" : RangeParameter is { } r && Ranges.Contains(r) ? r : null;
-        var session = SessionParameter ?? _sessionId;
-        if (range is null || (range == _range && session == _sessionId && date == _date)) return;
-
-        (_range, _sessionId, _date) = (range, session, date);
+        if (SessionParameter is not { } session || session == _sessionId) return;
+        _sessionId = session;
         Apply();
-        // Key metrics and the census follow the range too (the stat panels reload themselves).
+        // Key metrics and the census follow the session too (the stat panels reload themselves).
         _ = RefreshStatsAsync();
     }
 
-    private void OnRangeChanged(string range)
-    {
-        if (range != "session") _ = JS.TryInvokeVoidAsync("localStorage.setItem", RangeKey, range);
-        Navigation.NavigateTo($"?range={range}" + (range == "session" && _sessionId != Guid.Empty ? $"&session={_sessionId}" : string.Empty));
-    }
-
-    private void PickDay(DateOnly day) =>
-        Navigation.NavigateTo($"?range=day&date={day.ToString(DayFormat, CultureInfo.InvariantCulture)}");
-
-    private void Apply() =>
-        _query = _range == "day" && _date is { } day
-            ? StatsQuery.ForDay(day)
-            : StatsQuery.For(_range, _range == "session" && _sessionId != Guid.Empty ? _sessionId : null);
+    private void Apply() => _query = StatsQuery.For("session", _sessionId == Guid.Empty ? null : _sessionId);
 
     private async Task AskAsync()
     {
@@ -167,11 +131,11 @@ public sealed partial class Live
         if (Sensing.IsRunning != _wasRunning)
         {
             _wasRunning = Sensing.IsRunning;
-            // SESSION means the one running, else the latest.
-            if (SessionParameter is null && Sensing.Live.Session is { } running)
+            // The page is the recording session; once it stops it stays on screen as the latest.
+            if (Sensing.Live.Session is { } running && running.Id != _sessionId)
             {
                 _sessionId = running.Id;
-                if (_range == "session") Apply();
+                Apply();
             }
 
             InvokeAsync(async () =>
@@ -206,14 +170,9 @@ public sealed partial class Live
     {
         var latest = await Api.ListSessionsAsync(1, ct);
         _firstRun = latest.Count == 0;
-        if (_sessionId == Guid.Empty) _sessionId = Sensing.Live.Session?.Id ?? (latest.Count > 0 ? latest[0].Id : Guid.Empty);
-
-        // A bare address opens on the range you last looked at.
-        if (RangeParameter is null && SessionParameter is null
-            && await JS.TryInvokeAsync<string>("localStorage.getItem", RangeKey) is { } remembered
-            && Ranges.Contains(remembered) && remembered != "session" && remembered != _range)
+        if (_sessionId == Guid.Empty)
         {
-            _range = remembered;
+            _sessionId = Sensing.Live.Session?.Id ?? (latest.Count > 0 ? latest[0].Id : Guid.Empty);
             Apply();
         }
 
@@ -235,6 +194,7 @@ public sealed partial class Live
     private async Task RefreshStatsAsync()
     {
         var query = _query;
+        if (query.IsEmpty) return;
         var today = StatsQuery.For("today");
         var presence = Api.GetPresenceAsync(query);
         var space = Api.GetSpaceAsync(today);

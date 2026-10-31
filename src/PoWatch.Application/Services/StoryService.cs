@@ -67,7 +67,8 @@ public sealed class StoryService(
         var told = chapters.Where(c => c.Text != Empty).Select(c => (When: Span(c, session.TimeZone), c.Text)).ToList();
         if (told.Count == 0) return new SessionStory(session.Id, Empty, "template", now);
 
-        var joined = string.Join("\n\n", told.Select(c => $"{c.When}. {c.Text}"));
+        // Each chapter already tells its own times; joined, they read in order.
+        var joined = string.Join("\n\n", told.Select(c => c.Text));
         if (told.Count == 1 || !chatClients.Any()) return new SessionStory(session.Id, joined, "template", now);
 
         var facts = RecapPrompt.StoryUser(told);

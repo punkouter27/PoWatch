@@ -997,7 +997,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .dash:has(> .stats-answer) { grid-template-rows: auto auto minmax(0, 1fr); }
     .dash-grid {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
-        grid-template-rows: minmax(240px, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
         grid-template-areas:
             "space   metrics curve"
             "heat    camera  energy"
@@ -1014,7 +1014,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .dash-grid .cell-week { grid-area: week; }
     .dash-grid .term-panel.cell-env { grid-area: env; }
     .dash-grid .stats-pending { min-height: 0; height: 100%; }
-    /* Short screens: the light curve keeps a readable height and the room's cell scrolls under it, as key metrics would. */
+    /* Short screens keep the camera's share; the cells around it scroll instead (key metrics, and the room under its light curve). */
     .dash-grid .cell-env > .term-panel-body, .dash-grid .cell-metrics > .term-panel-body { overflow-y: auto; }
     .dash-grid .cell-env .rz-chart { flex: 1 0 110px; }
     .dash-grid .term-skeleton { height: auto !important; }
@@ -1030,8 +1030,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
    swipeable strip (scroll-snapped, a panel per screen width) with keys to jump along it. */
 @media (max-width: 719.98px) {
     .stats-window { display: none; }
-    .stats-toolbar .rz-selectbar { width: 100%; display: flex; }
-    .stats-toolbar .rz-selectbar .rz-button { flex: 1; }
     .stats-ask-row { flex-basis: 100%; max-width: none; }
     .dash-pager { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
     .dash-pager .term-button { flex: none; min-height: 32px; padding: 0 10px; }
@@ -1113,6 +1111,13 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 /* ── History: master and detail ───────────────────────────────────────── */
 
+/* Both History views sit under the Stories | Days switch. */
+.history-page { display: grid; gap: var(--term-gap); align-content: start; }
+.history-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.history-switch { display: flex; gap: 6px; }
+.story-feed { display: grid; gap: var(--term-gap); max-width: 100ch; min-width: 0; }
+.story-card .session-story { margin-top: 0; max-width: none; }
+.story-more { justify-self: start; }
 .history-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); align-items: start; }
 .history-col { display: grid; gap: var(--term-gap); min-width: 0; }
 .history-nav { display: inline-flex; align-items: center; gap: 4px; }
@@ -1133,6 +1138,8 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 /* A desktop holds both columns in the viewport: the left one scrolls on its own (sessions take what is
    left of it), and the tab strip stays put while the open tab scrolls. */
 @media (min-width: 960px) {
+    .history-page { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
+    .story-feed { min-height: 0; overflow: auto; align-content: start; }
     .history-grid { height: 100%; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); grid-template-rows: minmax(0, 1fr); align-items: stretch; }
     .history-col { display: flex; flex-direction: column; min-height: 0; overflow: auto; }
     .history-col > .term-panel { flex: none; }
@@ -1260,10 +1267,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 }
 
 .try-demo { margin-left: 8px; min-height: 28px; }
-
-/* Live's single-day picker, beside the range bar; lit while a day is the range. */
-.stats-day { display: inline-flex; align-items: center; gap: 4px; padding: 0 0 0 8px; border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-muted); font: 600 var(--fs-sm) var(--term-mono); letter-spacing: 0.04em; }
-.stats-day--on { border-color: var(--term-accent); color: var(--term-accent); }
 
 .history-skel-sessions { height: 96px !important; }
 

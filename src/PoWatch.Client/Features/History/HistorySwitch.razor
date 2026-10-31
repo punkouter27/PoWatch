@@ -1,0 +1,13 @@
+@using System.Globalization
+
+@* History's two views: the stories (every session, newest first) and the days (calendar, recap, replay). *@
+<nav class="history-switch" aria-label="History view" data-test="history-switch">
+    <a class="term-button @(Stories ? "term-button--on" : null)" href="history" aria-current="@(Stories ? "page" : null)" data-test="history-stories-link">Stories</a>
+    <a class="term-button @(Stories ? null : "term-button--on")" href="history/@DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
+       aria-current="@(Stories ? null : "page")" data-test="history-days-link">Days</a>
+</nav>
+
+@code {
+    /// <summary>True on the story feed, false on the day view.</summary>
+    [Parameter] public bool Stories { get; set; }
+}

@@ -1,4 +1,5 @@
 using PoWatch.Application.Services;
+using PoWatch.Domain.Models;
 using PoWatch.Shared.Models;
 using PoWatch.Shared.Services.Recaps;
 
@@ -89,5 +90,36 @@ public sealed class TemplateRecapTests
         var recap = new RecapDto { Summary = "s", Highlights = ["a", "b"] };
         Assert.Equal(["a", "b"], RecapPrompt.Rewritten(recap, new RecapRewrite("New.", ["only one"]), "ai").Highlights);
         Assert.Equal(["x", "y"], RecapPrompt.Rewritten(recap, new RecapRewrite("New.", ["x", "y"]), "ai").Highlights);
+    }
+
+    [Fact]
+    public void The_scene_is_told_as_a_story_with_times_not_statistics()
+    {
+        var session = Guid.NewGuid();
+        SceneEvent At(int minute, SceneEventKind kind, string? track = null, string? cls = null, FrameEdge edge = FrameEdge.None, string? text = null, string? regular = null) =>
+            new() { SessionId = session, AtUtc = T0.AddMinutes(minute), Kind = kind, TrackId = track, Class = cls, Edge = edge, Text = text, RegularId = regular };
+
+        var story = SceneNarrator.Tell(
+        [
+            At(0, SceneEventKind.TrackEnter, "T1", "person", FrameEdge.Left, regular: "r1"),
+            At(0, SceneEventKind.TrackEnter, "T2", "cup"),
+            At(1, SceneEventKind.Caption, text: "a person sits down with a mug"),
+            At(2, SceneEventKind.TrackExit, "T1", "person", FrameEdge.Right, regular: "r1"),
+            At(30, SceneEventKind.TrackEnter, "T3", "dog", FrameEdge.Bottom),
+            At(30, SceneEventKind.TrackEnter, "T4", "dog", FrameEdge.Bottom),
+            At(31, SceneEventKind.TrackExit, "T3", "dog"),
+            At(31, SceneEventKind.TrackExit, "T4", "dog"),
+            At(45, SceneEventKind.LightsOff),
+        ], UtcMinus5, new Dictionary<string, string> { ["r1"] = "Sam" });
+
+        Assert.Equal(
+            "At 08:00, Sam came in from the left. The camera saw this: “A person sits down with a mug.” A cup was in view. Sam left again to the right. " +
+            "Later, at 08:30, two dogs came in from the near side. Two dogs left again. " +
+            "Around 08:45, the lights went off.",
+            story);
+        Assert.EndsWith("By 08:02 the room was quiet again.", SceneNarrator.Tell(
+            [At(0, SceneEventKind.TrackEnter, "T1", "cat"), At(2, SceneEventKind.TrackExit, "T1", "cat")], UtcMinus5, new Dictionary<string, string>()), StringComparison.Ordinal);
+        Assert.DoesNotContain("%", story, StringComparison.Ordinal);
+        Assert.Null(SceneNarrator.Tell([], UtcMinus5, new Dictionary<string, string>()));
     }
 }

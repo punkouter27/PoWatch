@@ -107,7 +107,9 @@ public sealed class RecapService(
         var objects = await stats.ObjectsAsync(userId, window, ct);
         var environment = await stats.EnvironmentAsync(userId, window, ct);
         var patterns = window.Range == StatsRange.Day ? await stats.PatternsAsync(userId, window, ct) : null;
-        return new RecapFacts(title, subtitle, window.FromUtc, window.ToUtc, window.Zone, presence, objects, environment, patterns, moments);
+        // Every tick and scene event of a short window: the story is told from them (SceneNarrator).
+        var raw = await stats.RawAsync(userId, window, ct);
+        return new RecapFacts(title, subtitle, window.FromUtc, window.ToUtc, window.Zone, presence, objects, environment, patterns, moments, raw?.Events, raw?.Ticks);
     }
 
     private async Task<RecapDto> WriteAsync(RecapFacts facts, CancellationToken cancellationToken)

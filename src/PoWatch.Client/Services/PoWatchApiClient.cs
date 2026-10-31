@@ -97,6 +97,10 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<SessionStoryDto?> UpdateStoryAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.PostAsync($"api/sessions/{sessionId}/story", content: null, ct), Json.SessionStoryDto, cancellationToken);
 
+    /// <summary>The story of the week (Monday to Sunday) or month holding <paramref name="day"/>; null on failure.</summary>
+    public Task<PeriodStoryDto?> GetPeriodStoryAsync(bool month, DateOnly day, string timeZoneId, CancellationToken cancellationToken = default) =>
+        ReadAsync(ct => httpClient.GetAsync($"api/stories/{(month ? "month" : "week")}?date={Day(day)}&tz={Uri.EscapeDataString(timeZoneId)}", ct), Json.PeriodStoryDto, cancellationToken);
+
     public async Task<IReadOnlyList<MomentDto>> GetMomentsAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         await ReadAsync(ct => httpClient.GetAsync($"api/sessions/{sessionId}/moments", ct), Json.ListMomentDto, cancellationToken) ?? [];
 

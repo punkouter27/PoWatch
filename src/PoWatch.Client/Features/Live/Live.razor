@@ -10,29 +10,12 @@
 
 <PageTitle>PoWatch</PageTitle>
 
-@* Everything on one screen: one bar (range; with Advanced on, the question box and the download), then a 4×4 grid. The camera
-   takes four cells; key metrics and who is in frame sit beside it, two cells tall; the motion grid and the
-   six stat panels fill the last two rows (CSS dissolves each family's own grid into this one). On a phone
-   the panels after "In frame" become a strip you swipe through. Range and session live in the URL, so a
-   reload, a shared link and Back/Forward land where you were. *@
+@* Everything on one screen, always about one session: the one recording now, else the latest (or the
+   one a History link names, ?session=). One bar (which session; with Advanced on, the question box and
+   the download), then a 3×3 around the camera (CSS dissolves each family's own grid into this one). On a
+   phone the panels after "In frame" become a strip you swipe through. Longer views live in History. *@
 <div class="dash">
     <div class="stats-toolbar" data-test="stats-toolbar">
-        <RadzenSelectBar TValue="string" Value="@_range" ValueChanged="@OnRangeChanged" Size="ButtonSize.Small" aria-label="Range" title="@WindowLabel">
-            <Items>
-                <RadzenSelectBarItem Text="SESSION" Value="@("session")" Disabled="@(_sessionId == Guid.Empty)" />
-                <RadzenSelectBarItem Text="TODAY" Value="@("today")" />
-                <RadzenSelectBarItem Text="WEEK" Value="@("7d")" />
-                <RadzenSelectBarItem Text="MONTH" Value="@("30d")" />
-                <RadzenSelectBarItem Text="ALL" Value="@("all")" />
-            </Items>
-        </RadzenSelectBar>
-        @* Any single day, minute by minute (?range=day&date=yyyy-MM-dd). *@
-        <span class="stats-day @(_range == "day" ? "stats-day--on" : null)" data-test="stats-day">
-            DAY
-            <RadzenDatePicker TValue="DateOnly" Value="@(_date ?? Today)" ValueChanged="@((DateOnly d) => PickDay(d))" ShowInput="false"
-                              Max="@Today.ToDateTime(TimeOnly.MinValue)" aria-label="Pick a day" title="Pick a day" />
-        </span>
-
         <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
 
         @if (Prefs.Advanced)
@@ -44,8 +27,8 @@
                     <button type="submit" class="term-button" disabled="@(_asking || string.IsNullOrWhiteSpace(_question))">@(_asking ? "…" : "Ask")</button>
                 </form>
                 @* The grid shows the headlines; this file has every number behind them. *@
-                <a class="term-button" href="@PoWatchApiClient.AllStatsUrl(_query)" download="PoWatch-@(_range).json"
-                   title="Every number for this range, as one JSON file" aria-label="Download every number for this range (JSON)" data-test="stats-json">JSON ↓</a>
+                <a class="term-button" href="@PoWatchApiClient.AllStatsUrl(_query)" download="PoWatch-session.json"
+                   title="Every number for this session, as one JSON file" aria-label="Download every number for this session (JSON)" data-test="stats-json">JSON ↓</a>
             </div>
         }
     </div>
@@ -119,7 +102,7 @@
             </ChildContent>
         </TerminalPanel>
 
-        <KeyMetrics Range="@_range" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend"
+        <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend"
                     OnExplain="@(Prefs.Advanced ? EventCallback.Factory.Create(this, ExplainAsync) : default)" Asking="@_asking" />
         <InFrame Objects="@_objects" />
 

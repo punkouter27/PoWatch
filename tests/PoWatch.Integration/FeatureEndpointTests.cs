@@ -137,6 +137,13 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal(told.WrittenUtc, again.WrittenUtc);
 
         Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsync($"/api/sessions/{Guid.NewGuid()}/story", null)).StatusCode);
+
+        // The week's story is told from the session stories of its days (Monday to Sunday).
+        var week = (await client.GetFromJsonAsync<PeriodStoryDto>($"/api/stories/week?date={TodayUtc:yyyy-MM-dd}&tz=UTC"))!;
+        Assert.Equal(DayOfWeek.Monday, week.From.DayOfWeek);
+        Assert.Equal(TodayUtc, Assert.Single(week.Days).Date);
+        Assert.Contains(chapter.Text[..20], week.Story, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/stories/year")).StatusCode);
     }
 
     [Fact]

@@ -1,14 +1,12 @@
-@page "/regulars"
 @using System.Globalization
 @inject PoWatchApiClient Api
 @inject SensingSession Sensing
 
-<PageTitle>PoWatch | Regulars</PageTitle>
-
-@* One card per regular, as many across as fit: filter by name, sort, rename in place (Enter or leaving
-   the box saves), and tick two or more of the same kind to merge them — recognition goes by look, so a
-   change of clothes can make someone new. Filter, sort and merge share one toolbar. *@
-<TerminalPanel Title="Regulars" Test="regulars-board" Flush="true">
+@* Who PoWatch recognises (by look, never by face), so the stories can say "Sam came in" instead of
+   "a person". One card per regular: filter by name, sort, rename in place (Enter or leaving the box
+   saves), and tick two or more of the same kind to merge them — a change of clothes can make someone
+   new. New ones are offered for naming from the bell as they are first seen. *@
+<TerminalPanel Title="Who PoWatch knows" Test="regulars-board" Flush="true">
     <Aside>@_regulars.Count KNOWN · @_regulars.Count(r => r.IsNamed) NAMED</Aside>
     <ChildContent>
         <div class="regulars-bar">
@@ -56,7 +54,7 @@
         }
         else if (_regulars.Count == 0)
         {
-            <p class="term-empty">No regulars recognized yet. Class counts on Live and History are sightings, not identities; regulars need repeated appearances with visual signatures, which old aggregate history does not contain. <TryDemo /></p>
+            <p class="term-empty">Nobody recognised yet. People and animals seen more than once are remembered by look, offered for naming from the bell, and named in the stories.</p>
         }
         else
         {

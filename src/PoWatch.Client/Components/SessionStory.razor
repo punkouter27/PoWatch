@@ -26,13 +26,15 @@
             <p class="term-empty">The first chapter is written ten minutes in.</p>
         }
 
-        @if (_story.Chapters.Count > 0)
+        @* One chapter is the whole story; listing it again under the story would say it twice. *@
+        @if (_story.Chapters.Count > 1 || (_story.Chapters.Count == 1 && _story.Story is null))
         {
-            @* Folded once there is a story; open while the session runs, when the chapters are all there is. *@
-            <details class="session-story-chapters" open="@(_story.Story is null)">
-                <summary>@(_story.Chapters.Count == 1 ? "1 CHAPTER" : $"{_story.Chapters.Count} CHAPTERS")</summary>
+            @* Folded once there is a story (unless the page asks for them open); open while the session runs,
+               when the chapters are all there is. *@
+            <details class="session-story-chapters" open="@(ChaptersOpen || _story.Story is null)">
+                <summary>@(_story.Chapters.Count == 1 ? "1 CHAPTER" : $"{_story.Chapters.Count} CHAPTERS") · EVERY 10 MINUTES@(NewestFirst ? " · NEWEST FIRST" : null)</summary>
                 <ol>
-                    @foreach (var chapter in _story.Chapters)
+                    @foreach (var chapter in NewestFirst ? _story.Chapters.AsEnumerable().Reverse() : _story.Chapters)
                     {
                         <li><span class="num">@Time(chapter.FromUtc)–@Time(chapter.ToUtc)</span> @chapter.Text</li>
                     }
@@ -44,6 +46,12 @@
 
 @code {
     [Parameter, EditorRequired] public Guid SessionId { get; set; }
+
+    /// <summary>History lists the latest chapter first, as it lists the latest session first.</summary>
+    [Parameter] public bool NewestFirst { get; set; }
+
+    /// <summary>Show the chapters unfolded even once the story is written.</summary>
+    [Parameter] public bool ChaptersOpen { get; set; }
 
     private Guid _loaded;
     private bool _loading = true;

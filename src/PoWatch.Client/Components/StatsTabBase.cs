@@ -26,7 +26,7 @@ public abstract class StatsTabBase<T> : ComponentBase where T : class
         _loaded = Query;
         Loading = true;
         _dirty = true;
-        Data = await LoadAsync(Query);
+        Data = Query.IsEmpty ? null : await LoadAsync(Query);
         Loading = false;
         _dirty = true;
     }

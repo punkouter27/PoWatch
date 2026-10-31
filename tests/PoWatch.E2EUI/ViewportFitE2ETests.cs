@@ -68,25 +68,6 @@ public sealed class ViewportFitE2ETests
     }
 
     [Fact]
-    public async Task People_body_fits_within_viewport()
-    {
-        foreach (var scenario in PhoneAndDesktopViewports())
-        {
-            int width = (int)scenario[0];
-            int height = (int)scenario[1];
-            if (PlaywrightFixture.BaseUrl is null) return;
-            await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser);
-            await page.SetViewportSizeAsync(width, height);
-            await page.GoToAsync("/regulars", "REGULARS");
-            await page.WaitForTimeoutAsync(500);
-
-            await AssertBodyFitsViewportAsync(page);
-            await page.AssertNoBlazorErrorAsync();
-
-        }
-    }
-
-    [Fact]
     public async Task System_body_fits_within_viewport()
     {
         foreach (var scenario in PhoneAndDesktopViewports())
@@ -114,12 +95,12 @@ public sealed class ViewportFitE2ETests
         await page.WaitForTimeoutAsync(500);
 
         // Every section stays reachable from the key bar, and the page itself never scrolls sideways.
-        await Assertions.Expect(page.GetByTestId("nav-regulars")).ToBeInViewportAsync();
+        await Assertions.Expect(page.GetByTestId("nav-history")).ToBeInViewportAsync();
         var pageOverflow = await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth > window.innerWidth + 1");
         Assert.False(pageOverflow, "The page scrolls horizontally on a 360 px phone.");
 
-        await page.GetByTestId("nav-regulars").ClickAsync();
-        await page.ExpectSectionAsync("REGULARS");
+        await page.GetByTestId("nav-history").ClickAsync();
+        await page.ExpectSectionAsync("HISTORY");
         await page.AssertNoBlazorErrorAsync();
     }
 
