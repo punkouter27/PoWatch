@@ -105,7 +105,5 @@
     return [...best.values()].sort((a, b) => b.score - a.score).slice(0, k);
   }
 
-  const count = () => run('readonly', (s) => s.count()).catch(() => 0);
-
-  window.powatchCaptionIndex = { put, addMany, search, count };
+  window.powatchCaptionIndex = { put, addMany, search };
 })();

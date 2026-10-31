@@ -18,7 +18,6 @@
   let _clock = null;
   let _busy = false;
   let _device = null;
-  let _yielded = 0;
   let _exports = null;
 
   /** The client assembly's [JSExport] methods (the .NET runtime's own API, as Blazor's docs use it). */
@@ -72,7 +71,7 @@
     _clock = new Worker(CLOCK_URL, { type: 'module' });
     _clock.onmessage = async () => {
       if (_busy) return;
-      if (_device === 'webgpu' && window.powatchGpu?.captioning) { _yielded++; return; }
+      if (_device === 'webgpu' && window.powatchGpu?.captioning) return;
       _busy = true;
       try {
         const result = await detect(video, threshold ?? 0.5);
@@ -95,8 +94,5 @@
     _busy = false;
   }
 
-  /** How many detector ticks gave the GPU to the caption model. */
-  const yielded = () => _yielded;
-
-  window.powatchDetector = { load, detect, start, stop, yielded };
+  window.powatchDetector = { load, start, stop };
 })();

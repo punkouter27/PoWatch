@@ -3,7 +3,6 @@
 //     Change the template and run: python po-shared/sync.py
 // </auto-generated>
 #nullable enable
-using System.Diagnostics;
 using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -78,10 +77,6 @@ public static class PoPlatform
     public static string SessionCookieName(bool secure) =>
         secure ? $"__Host-{AppName}.Auth" : $"{AppName}.Auth";
 
-    /// <summary>Antiforgery cookie name, following the same prefix rule.</summary>
-    public static string AntiforgeryCookieName(bool secure) =>
-        secure ? $"__Host-{AppName}.Antiforgery" : $"{AppName}.Antiforgery";
-
     /// <summary>Informational version, from the assembly's build metadata.</summary>
     public static string Version { get; } =
         Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
@@ -114,19 +109,5 @@ public static class PoPlatform
         .AllowAnonymous();
 
         return endpoints;
-    }
-
-    /// <summary>Stamps the person's id onto the current activity, if there is one.</summary>
-    /// <remarks>
-    /// The Azure Monitor exporter maps <c>enduser.id</c> onto <c>user_AuthenticatedId</c>, which is
-    /// what makes every request, dependency and exception in the operation attributable to a person
-    /// rather than only the sign-in record.
-    /// </remarks>
-    public static void TagEndUser(string? userId)
-    {
-        if (!string.IsNullOrWhiteSpace(userId))
-        {
-            Activity.Current?.SetTag("enduser.id", userId);
-        }
     }
 }

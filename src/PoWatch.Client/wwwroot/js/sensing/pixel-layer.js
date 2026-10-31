@@ -134,5 +134,5 @@
     return canvas.toDataURL('image/jpeg', 0.8);
   }
 
-  window.powatchPixels = { sample, start, stop, snapshot, cols: COLS, rows: ROWS };
+  window.powatchPixels = { start, stop, snapshot };
 })();

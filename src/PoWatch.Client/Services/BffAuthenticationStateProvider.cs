@@ -46,7 +46,4 @@ internal sealed class BffAuthenticationStateProvider(HttpClient http, IJSRuntime
             return Anonymous;
         }
     }
-
-    public void NotifyStateChanged() =>
-        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
 }
