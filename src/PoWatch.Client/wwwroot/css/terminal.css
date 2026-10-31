@@ -1245,3 +1245,57 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .history-skel-week { height: 236px !important; }
     [data-test="health-overall"] > .term-panel-body { min-height: 230px; }
 }
+
+/* ── Ambient: frosted header, the slow background, the room's light, rolling numbers ── */
+
+/* The header is frosted glass. The blur sits on a layer behind its contents, not on the header itself:
+   backdrop-filter there would trap the phone tab bar (fixed) and unfrost the drawers hanging from it. */
+.term-header { z-index: 40; background: color-mix(in srgb, var(--term-surface) 66%, transparent); }
+.term-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    -webkit-backdrop-filter: var(--term-glass-blur);
+    backdrop-filter: var(--term-glass-blur);
+}
+
+/* With Advanced on, the background's light drifts very slowly. Stepped at about four frames a second, so it
+   costs a few repaints a second, and fx.js pauses it while a caption generates or the tab is hidden. */
+@property --fluid-x { syntax: '<percentage>'; inherits: false; initial-value: 25%; }
+@property --fluid-y { syntax: '<percentage>'; inherits: false; initial-value: 30%; }
+@keyframes fx-fluid {
+    0% { --fluid-x: 25%; --fluid-y: 30%; }
+    33% { --fluid-x: 58%; --fluid-y: 20%; }
+    66% { --fluid-x: 72%; --fluid-y: 62%; }
+    100% { --fluid-x: 32%; --fluid-y: 68%; }
+}
+.term-shell--fluid { animation: fx-fluid 120s steps(160) infinite alternate; }
+:root[data-fluid="paused"] .term-shell--fluid { animation-play-state: paused; }
+:root:not([data-theme="light"]) .term-shell--fluid {
+    background:
+        repeating-radial-gradient(circle at 25% 38%, rgba(130, 205, 255, 0.06) 0 1px, transparent 1px 84px),
+        radial-gradient(55% 45% at calc(100% - var(--fluid-x)) calc(100% - var(--fluid-y)), rgba(60, 120, 190, 0.16), transparent 70%),
+        radial-gradient(120% 90% at var(--fluid-x) var(--fluid-y), #0b2540 0%, #030a12 62%) fixed;
+}
+:root[data-theme="light"] .term-shell--fluid {
+    background: radial-gradient(70% 60% at var(--fluid-x) var(--fluid-y), rgba(10, 99, 168, 0.07), transparent 70%), var(--term-bg);
+}
+
+/* The room's light (--room-light, 0 to 1, set by AmbientBridge while a session runs) warms the page a
+   little: a bright room a faint amber wash, a dark one none. */
+.term-shell {
+    box-shadow: inset 0 0 0 100vmax rgb(255 206 140 / calc(var(--room-light, 0) * 0.07));
+    transition: box-shadow 3s ease;
+}
+
+/* A headline number rolls from below when it grew and from above when it fell, on a spring. */
+@keyframes fx-tick-down { from { opacity: 0; transform: translateY(-45%); } to { opacity: 1; transform: none; } }
+.term-stat-value .fx-tick { animation-duration: 0.5s; animation-timing-function: var(--spring); }
+.fx-tick--down { animation-name: fx-tick-down; }
+
+@media (prefers-reduced-motion: reduce) {
+    .term-shell--fluid, .fx-tick--down, .term-stat-value .fx-tick { animation: none; }
+    .term-shell { transition: none; }
+}

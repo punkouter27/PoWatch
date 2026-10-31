@@ -1,8 +1,10 @@
+@using System.Globalization
 @* One headline number: label, mono value with unit, optional hint line. *@
 <div class="term-stat" data-test="@Test" title="@Hint">
     <div class="term-stat-label">@Label</div>
-    @* Keyed on the value: a new number is a new element, so it rolls in (fx-tick). *@
-    <div class="term-stat-value"><span class="fx-tick" @key="Value">@Value</span><span class="term-stat-unit">@Unit</span></div>
+    @* Keyed on the value: a new number is a new element, so it rolls in (fx-tick) — up from below when
+       it grew, down from above when it fell. *@
+    <div class="term-stat-value"><span class="fx-tick @(_fell ? "fx-tick--down" : null)" @key="Value">@Value</span><span class="term-stat-unit">@Unit</span></div>
     @if (!string.IsNullOrEmpty(Hint) || ChildContent is not null)
     {
         <div class="term-stat-hint">@Hint @ChildContent</div>
@@ -16,4 +18,29 @@
     [Parameter] public string? Hint { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public string? Test { get; set; }
+
+    private string? _shown;
+    private double? _number;
+    private bool _fell;
+
+    protected override void OnParametersSet()
+    {
+        if (Value == _shown) return;
+        var number = Leading(Value);
+        _fell = number < _number;
+        _shown = Value;
+        _number = number;
+    }
+
+    /// <summary>The first number in a formatted value ("1,204", "-3.5 σ", "42%"), or null when there is none.</summary>
+    private static double? Leading(string value)
+    {
+        var start = value.AsSpan().IndexOfAnyInRange('0', '9');
+        if (start < 0) return null;
+        var end = start;
+        while (end < value.Length && (char.IsAsciiDigit(value[end]) || value[end] is ',' or '.')) end++;
+        if (start > 0 && value[start - 1] == '-') start--;
+        var digits = value[start..end].Replace(",", string.Empty, StringComparison.Ordinal).TrimEnd('.');
+        return double.TryParse(digits, NumberStyles.Float, CultureInfo.InvariantCulture, out var n) ? n : null;
+    }
 }

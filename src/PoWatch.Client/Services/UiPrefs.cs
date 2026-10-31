@@ -20,6 +20,7 @@ public sealed class UiPrefs
         var advanced = await js.TryInvokeAsync<string>("localStorage.getItem", AdvancedKey) == "on";
         if (advanced == Advanced) return;
         Advanced = advanced;
+        Preload(js);
         Changed?.Invoke();
     }
 
@@ -27,6 +28,13 @@ public sealed class UiPrefs
     {
         Advanced = on;
         await js.TryInvokeVoidAsync("localStorage.setItem", AdvancedKey, on ? "on" : "off");
+        Preload(js);
         Changed?.Invoke();
+    }
+
+    /// <summary>The effect scripts load lazily (lazy.js); with Advanced on, fetch them now rather than on first use.</summary>
+    private void Preload(IJSRuntime js)
+    {
+        if (Advanced) _ = js.TryInvokeVoidAsync("powatchLoad", "fx", "crt", "skyline");
     }
 }

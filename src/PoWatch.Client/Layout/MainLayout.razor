@@ -8,7 +8,8 @@
 
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
-<div class="term-shell">
+@* With Advanced on, the background drifts very slowly (terminal.css, paused by fx.js while a caption generates). *@
+<div class="term-shell @(Prefs.Advanced ? "term-shell--fluid" : null)">
     <TerminalHeader ShowStart="@(!_live)" />
 
     @* App.razor moves focus here after every navigation, so keyboard and screen-reader users land in the page. *@
@@ -36,6 +37,7 @@
    sampling) on every page; Live docks it over its camera panel. *@
 <video @ref="_feed" class="term-feed" autoplay muted playsinline aria-label="Live camera feed"></video>
 <FxBridge />
+<AmbientBridge />
 @* Host for chart hover tooltips; without it RadzenChart never shows one. *@
 <RadzenChartTooltip />
 @* Host for DialogService confirmations (deleting data, keeping less of it). *@
@@ -48,6 +50,7 @@
     protected override void OnInitialized()
     {
         Nav.LocationChanged += OnLocationChanged;
+        Prefs.Changed += OnPrefsChanged;
         _live = IsLive(Nav.Uri);
     }
 
@@ -71,6 +74,8 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private void OnPrefsChanged() => InvokeAsync(StateHasChanged);
+
     public const string CaptionsKey = "powatch:captions";
 
     private static bool IsLive(string uri) => Section(uri).Length == 0;
@@ -78,5 +83,9 @@
     /// <summary>The first path segment: "" for Live, "history", "regulars", …</summary>
     private static string Section(string uri) => new Uri(uri).AbsolutePath.Trim('/').Split('/')[0];
 
-    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        Prefs.Changed -= OnPrefsChanged;
+    }
 }
