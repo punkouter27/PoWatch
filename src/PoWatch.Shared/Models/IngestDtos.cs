@@ -23,6 +23,11 @@ public sealed class TickDto
     public double MotionMean { get; init; }
     public double MotionMax { get; init; }
     public double LuminanceMean { get; init; }
+
+    /// <summary>Microphone loudness in [0, 1] (−60 dBFS to 0), averaged and peaked over the tick.</summary>
+    public double SoundMean { get; init; }
+
+    public double SoundMax { get; init; }
     public List<int> Palette { get; init; } = [];
     public List<float> MotionGrid { get; init; } = [];
     public List<float> PresenceGrid { get; init; } = [];
@@ -43,7 +48,7 @@ public sealed class SceneEventDto
 
     public DateTimeOffset AtUtc { get; init; }
 
-    /// <summary>TrackEnter, TrackExit, LightsOn, LightsOff, Caption or Notable.</summary>
+    /// <summary>TrackEnter, TrackExit, LightsOn, LightsOff, Caption, Notable, Speech (words heard) or Sound (a recognised sound's label).</summary>
     public string Kind { get; init; } = string.Empty;
 
     public string? TrackId { get; init; }

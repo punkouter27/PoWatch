@@ -143,7 +143,7 @@
 
         function render() {
             const i = minuteAt(minutes, state.at);
-            const time = new Date(state.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const time = new Date(state.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
             if (clock) clock.textContent = time;
             if (readout) {
                 readout.textContent = i < 0

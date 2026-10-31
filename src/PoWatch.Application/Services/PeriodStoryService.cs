@@ -72,7 +72,9 @@ public sealed class PeriodStoryService(
     {
         // Without a model: each day's opening, in order.
         var template = string.Join("\n\n", days.Select(d => $"{Label(d.Date)}: {Opening(d.Text)}"));
-        if (days.Count == 1 || !chatClients.Any()) return (template, "template");
+        // One day is its own story, whole; several without a model are each day's opening.
+        if (days.Count == 1) return (days[0].Text, "template");
+        if (!chatClients.Any()) return (template, "template");
 
         var facts = RecapPrompt.StoryUser(days.Select(d => (Label(d.Date), Cut(d.Text))));
         try

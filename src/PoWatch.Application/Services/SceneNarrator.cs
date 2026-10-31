@@ -29,6 +29,10 @@ public static class SceneNarrator
         ArgumentNullException.ThrowIfNull(events);
         var ordered = events.Where(Tellable).OrderBy(e => e.AtUtc).ToList();
         if (ordered.Count == 0) return null;
+        // A track is only recognised as a regular by the time it leaves; its exit names its entrance too.
+        var regularOf = ordered.Where(e => e is { Kind: SceneEventKind.TrackExit, RegularId: not null, TrackId: not null })
+            .GroupBy(e => e.TrackId!).ToDictionary(g => g.Key, g => g.Last().RegularId!);
+        ordered = [.. ordered.Select(e => e.RegularId is null && e.TrackId is { } track && regularOf.TryGetValue(track, out var regular) ? e with { RegularId = regular } : e)];
 
         var beats = new List<List<SceneEvent>> { new() { ordered[0] } };
         foreach (var e in ordered.Skip(1))
@@ -51,6 +55,8 @@ public static class SceneNarrator
             var left = Who(beat.Where(e => e.Kind == SceneEventKind.TrackExit && IsMover(e)), names);
             var caption = beat.Where(e => e.Kind == SceneEventKind.Caption && seenCaptions.Add(e.Text!.Trim())).Select(e => e.Text!.Trim()).FirstOrDefault();
             var lights = beat.LastOrDefault(e => e.Kind is SceneEventKind.LightsOn or SceneEventKind.LightsOff);
+            var said = beat.FirstOrDefault(e => e.Kind == SceneEventKind.Speech)?.Text!.Trim();
+            var heard = Sounds(beat);
 
             if (arrived.Count > 0)
             {
@@ -61,6 +67,16 @@ public static class SceneNarrator
             {
                 sentences.Add($"{when}, the camera saw this: “{Sentence(caption)}”");
                 caption = null;
+            }
+            else if (said is not null)
+            {
+                sentences.Add($"{when}, someone said: “{Sentence(said)}”");
+                said = null;
+            }
+            else if (heard.Count > 0)
+            {
+                sentences.Add($"{when}, the microphone picked up {Join(heard)}.");
+                heard = [];
             }
             else if (lights is not null)
             {
@@ -80,6 +96,8 @@ public static class SceneNarrator
             else continue;
 
             if (caption is not null) sentences.Add($"The camera saw this: “{Sentence(caption)}”");
+            if (said is not null) sentences.Add($"Someone said: “{Sentence(said)}”");
+            if (heard.Count > 0) sentences.Add($"The microphone picked up {Join(heard)}.");
             if (objects.Count > 0) sentences.Add($"{Capital(Join(objects))} {(objects.Count == 1 ? "was" : "were")} in view.");
             if (left.Count > 0) sentences.Add($"{Capital(Join(left))} left again{To(beat.Last(e => e.Kind == SceneEventKind.TrackExit && IsMover(e)).Edge)}.");
             if (lights is not null) sentences.Add($"The lights went {(lights.Kind == SceneEventKind.LightsOn ? "on" : "off")}.");
@@ -121,6 +139,21 @@ public static class SceneNarrator
 
         // Where: the busiest third of the frame, across and from front to back.
         if (Where(ordered) is { } where) sentences.Add($"Most of the movement was {where}.");
+
+        // Sound: how loud the room was, and its loudest moment (only when the microphone was listening).
+        var listened = ordered.Where(t => t.SoundMax > 0).ToList();
+        if (listened.Count > 0)
+        {
+            sentences.Add(listened.Average(t => t.SoundMean) switch
+            {
+                < 0.15 => "It was quiet.",
+                < 0.35 => "There was a soft background murmur.",
+                < 0.55 => "It was fairly noisy.",
+                _ => "It was loud."
+            });
+            var loudest = listened.MaxBy(t => t.SoundMax)!;
+            if (loudest.SoundMax >= 0.6) sentences.Add($"The loudest moment was at {Clock(loudest.StartUtc, zone)}.");
+        }
 
         // Company: the most in view at once, and the longest stay.
         var together = ordered.Max(t => t.Classes.Where(c => Movers.Contains(c.Key)).Sum(c => c.Value.Max));
@@ -243,12 +276,73 @@ public static class SceneNarrator
     private static bool Tellable(SceneEvent e) => e.Kind switch
     {
         SceneEventKind.TrackEnter or SceneEventKind.TrackExit => !string.IsNullOrWhiteSpace(e.Class),
-        SceneEventKind.Caption => !string.IsNullOrWhiteSpace(e.Text),
+        SceneEventKind.Caption or SceneEventKind.Speech or SceneEventKind.Sound => !string.IsNullOrWhiteSpace(e.Text),
         SceneEventKind.LightsOn or SceneEventKind.LightsOff => true,
         _ => false
     };
 
     private static bool IsMover(SceneEvent e) => Movers.Contains(e.Class ?? string.Empty);
+
+    /// <summary>The beat's recognised sounds, each once, as a phrase: "a dog barking", "music".</summary>
+    private static List<string> Sounds(IEnumerable<SceneEvent> beat) =>
+        [.. beat.Where(e => e.Kind == SceneEventKind.Sound && !Untold(e.Text!)).Select(e => SoundPhrase(e.Text!)).Distinct()];
+
+    // Generic tones say nothing, and body sounds read as medical, which a story never is (audio-layer.js
+    // drops these too; this keeps them out of stories told from older events).
+    private static bool Untold(string label) =>
+        label.Contains("heart", StringComparison.OrdinalIgnoreCase) || label.Contains("breath", StringComparison.OrdinalIgnoreCase)
+        || label.Equals("Sound effect", StringComparison.OrdinalIgnoreCase) || label.Equals("Sine wave", StringComparison.OrdinalIgnoreCase);
+
+    // AudioSet's labels as a person would say them; anything else is its own label in lower case.
+    private static readonly Dictionary<string, string> SoundPhrases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Dog"] = "a dog barking",
+        ["Bark"] = "a dog barking",
+        ["Bow-wow"] = "a dog barking",
+        ["Yip"] = "a dog barking",
+        ["Growling"] = "growling",
+        ["Cat"] = "a cat",
+        ["Meow"] = "a cat meowing",
+        ["Purr"] = "purring",
+        ["Music"] = "music",
+        ["Singing"] = "singing",
+        ["Whistling"] = "whistling",
+        ["Laughter"] = "laughter",
+        ["Giggle"] = "giggling",
+        ["Crying, sobbing"] = "crying",
+        ["Baby cry, infant cry"] = "a baby crying",
+        ["Door"] = "a door",
+        ["Knock"] = "knocking",
+        ["Doorbell"] = "the doorbell",
+        ["Slam"] = "a door slamming",
+        ["Footsteps"] = "footsteps",
+        ["Walk, footsteps"] = "footsteps",
+        ["Clapping"] = "clapping",
+        ["Applause"] = "applause",
+        ["Telephone"] = "a phone",
+        ["Ringtone"] = "a phone ringing",
+        ["Telephone bell ringing"] = "a phone ringing",
+        ["Alarm"] = "an alarm",
+        ["Smoke detector, smoke alarm"] = "a smoke alarm",
+        ["Siren"] = "a siren",
+        ["Television"] = "the TV",
+        ["Radio"] = "the radio",
+        ["Typing"] = "typing",
+        ["Computer keyboard"] = "typing",
+        ["Vacuum cleaner"] = "a vacuum cleaner",
+        ["Water"] = "running water",
+        ["Water tap, faucet"] = "a running tap",
+        ["Dishes, pots, and pans"] = "dishes clattering",
+        ["Cutlery, silverware"] = "cutlery",
+        ["Microwave oven"] = "the microwave",
+        ["Vehicle"] = "traffic",
+        ["Car"] = "a car",
+        ["Bird"] = "birds",
+        ["Rain"] = "rain",
+        ["Thunder"] = "thunder",
+    };
+
+    private static string SoundPhrase(string label) => SoundPhrases.TryGetValue(label.Trim(), out var phrase) ? phrase : label.Trim().ToLowerInvariant();
 
     /// <summary>Who in the beat, each once, in order: a regular by name, anyone else as "a dog".</summary>
     private static List<string> Who(IEnumerable<SceneEvent> tracks, IReadOnlyDictionary<string, string> names) =>
@@ -256,7 +350,8 @@ public static class SceneNarrator
             .GroupBy(e => e.RegularId is { } id && names.TryGetValue(id, out var known) ? known : e.Class!.ToLowerInvariant())
             .Select(g => names.Values.Contains(g.Key)
                 ? g.Key
-                : g.Select(e => e.TrackId).Distinct().Count() switch
+                // The same regular coming back is one of them; only different ones (or unknown tracks) add up.
+                : g.Select(e => e.RegularId ?? e.TrackId).Distinct().Count() switch
                 {
                     1 => Article(g.Key),
                     2 => $"two {Plural(g.Key)}",

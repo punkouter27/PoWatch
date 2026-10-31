@@ -5,6 +5,9 @@ namespace PoWatch.Shared.Services.Sensing;
 /// <summary>One synthetic moment: what the pixel layer, the detector and (sometimes) the VLM would report.</summary>
 public sealed record SyntheticFrame(PixelSample Pixels, IReadOnlyList<Detection> Detections, string? Caption);
 
+/// <summary>What the microphone would report at that moment: loudness in [0, 1], and now and then words or a sound.</summary>
+public sealed record SyntheticSound(double Level, string? Speech, string? Sound);
+
 /// <summary>
 /// A scripted room for demo mode and tests, so the whole pipeline runs with no camera, GPU or
 /// model: a recurring person crosses the frame, a dog occasionally trots through, a cat naps on the
@@ -31,6 +34,15 @@ public sealed class SyntheticScene(int seed = 7)
         "A person glances at the camera while walking by.",
     ];
 
+    // What the walker says on every other crossing, in turn.
+    private static readonly string[] Lines =
+    [
+        "Has anyone seen my keys?",
+        "I'll be back in a minute.",
+        "Come on, let's go for a walk.",
+        "It's getting dark in here.",
+    ];
+
     // Fixed looks, so the walker who crosses every 20 s comes back as the same regular.
     private static readonly float[] WalkerLook = Look(52, 56, 21);
     private static readonly float[] CatLook = Look(21, 42, 42);
@@ -38,6 +50,8 @@ public sealed class SyntheticScene(int seed = 7)
     private static readonly float[] MugLook = Look(63, 63, 42);
 
     private readonly Random _random = new(seed);
+    // Its own stream, so hearing the room never changes what the camera sees.
+    private readonly Random _noise = new(seed + 1);
     private DateTimeOffset? _startUtc;
 
     public SyntheticFrame Next(DateTimeOffset atUtc, bool withCaption = false)
@@ -79,6 +93,24 @@ public sealed class SyntheticScene(int seed = 7)
             : null;
 
         return new SyntheticFrame(new PixelSample(atUtc, motion, luminance, grid, palette), detections, caption);
+    }
+
+    /// <summary>
+    /// The room's sound at <paramref name="atUtc"/>: a quiet hum, louder while someone walks through, a
+    /// line said three seconds into every other crossing and a bark as the dog comes in. Each line and
+    /// bark falls in one 250 ms step, so a demo ticking at that rate hears it once.
+    /// </summary>
+    public SyntheticSound Hear(DateTimeOffset atUtc)
+    {
+        _startUtc ??= atUtc;
+        var t = (atUtc - _startUtc.Value).TotalSeconds;
+        var walkPhase = t % WalkPeriodSeconds;
+        var crossing = (int)(t / WalkPeriodSeconds);
+        var dogPhase = t % DogPeriodSeconds;
+        var level = 0.08 + (walkPhase < WalkSeconds ? 0.2 : 0) + (_noise.NextDouble() * 0.03);
+        var speech = crossing % 2 == 0 && walkPhase is >= 3 and < 3.25 ? Lines[crossing / 2 % Lines.Length] : null;
+        var sound = dogPhase is >= 1 and < 1.25 ? "Dog" : null;
+        return new SyntheticSound(Math.Min(1, level + (speech is null ? 0 : 0.3) + (sound is null ? 0 : 0.45)), speech, sound);
     }
 
     private static float[] Look(params int[] bins)

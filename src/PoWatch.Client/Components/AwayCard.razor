@@ -5,6 +5,7 @@
 @using System.Globalization
 @inject PoWatchApiClient Api
 @inject SensingSession Sensing
+@inject IJSRuntime JS
 
 @if (_shown is { } recap)
 {
@@ -34,6 +35,7 @@
 
                 @* Asking for the story writes whatever is due: after Stop, the last chapter and the story itself. *@
                 <SessionStory SessionId="@recap.Session.Id" />
+                <SessionTranscript SessionId="@recap.Session.Id" />
 
                 @if (recap.Exposure is { } exposure)
                 {
@@ -103,7 +105,14 @@
         StateHasChanged();
     }
 
-    private void Close() => Sensing.Recap = null;
+    /// <summary>The last recap card dismissed in this browser, so a reload does not bring it back.</summary>
+    public const string DismissedKey = "powatch:recap-dismissed";
+
+    private void Close()
+    {
+        if (_shown is { } recap) _ = JS.TryInvokeVoidAsync("localStorage.setItem", DismissedKey, recap.Session.Id.ToString());
+        Sensing.Recap = null;
+    }
 
     public void Dispose() => Sensing.Changed -= OnChanged;
 }

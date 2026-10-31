@@ -42,6 +42,24 @@ public sealed class LiveSensingState
     /// <summary>Exponentially smoothed motion per grid cell, for the overlay.</summary>
     public IReadOnlyList<float> Heat => _heat;
 
+    /// <summary>The microphone: "listening", why it could not, or null when it was not asked to.</summary>
+    public string? AudioStatus { get; set; }
+
+    /// <summary>The latest lines the speech model heard this session, newest last.</summary>
+    public IReadOnlyList<HeardLineDto> Heard => _heard;
+    private readonly List<HeardLineDto> _heard = [];
+
+    /// <summary>The latest sound the classifier named, and when.</summary>
+    public string? LastSound { get; private set; }
+
+    public void RecordHeard(DateTimeOffset atUtc, string text)
+    {
+        _heard.Add(new HeardLineDto { AtUtc = atUtc, Text = text });
+        if (_heard.Count > 50) _heard.RemoveAt(0);
+    }
+
+    public void RecordSound(string label) => LastSound = label;
+
     public string? LastCaption { get; private set; }
     public DateTimeOffset? LastCaptionUtc { get; private set; }
 

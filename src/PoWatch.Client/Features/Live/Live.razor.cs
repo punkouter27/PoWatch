@@ -43,7 +43,12 @@ public sealed partial class Live
     [SupplyParameterFromQuery(Name = "start")] public string? StartMode { get; set; }
 
     /// <summary>A session to open straight away (History links each of its sessions here).</summary>
-    [SupplyParameterFromQuery(Name = "session")] public Guid? SessionParameter { get; set; }
+    /// <remarks>Text, not a Guid: a mistyped link must not take the page down.</remarks>
+    [SupplyParameterFromQuery(Name = "session")] public string? SessionParameter { get; set; }
+
+    /// <summary>Set when ?session= named no session of yours; the page shows the latest instead.</summary>
+    private bool _sessionMissing;
+    private string? _checkedParameter;
 
     private string WindowLabel => _sessionId == Guid.Empty
         ? "No session yet: press Start"
@@ -63,10 +68,21 @@ public sealed partial class Live
     }
 
     /// <summary>A History link (?session=) opens that session; otherwise the page follows the recording one.</summary>
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        if (SessionParameter is not { } session || session == _sessionId) return;
-        _sessionId = session;
+        if (SessionParameter == _checkedParameter) return;
+        _checkedParameter = SessionParameter;
+        _sessionMissing = false;
+        if (SessionParameter is null) return;
+
+        // Only a session the server knows as yours: anything else says so and keeps the latest.
+        if (!Guid.TryParse(SessionParameter, out var id) || await Api.GetSessionAsync(id) is not { } session)
+        {
+            _sessionMissing = true;
+            return;
+        }
+        if (session.Id == _sessionId) return;
+        _sessionId = session.Id;
         Apply();
         // Key metrics and the census follow the session too (the stat panels reload themselves).
         _ = RefreshStatsAsync();
@@ -174,6 +190,15 @@ public sealed partial class Live
         {
             _sessionId = Sensing.Live.Session?.Id ?? (latest.Count > 0 ? latest[0].Id : Guid.Empty);
             Apply();
+        }
+
+        // Leaving or reloading the page ends a recording (the outbox's page-exit guard); coming back
+        // shows its recap, as Stop would have, unless that card was already dismissed here.
+        if (!Sensing.IsRunning && Sensing.Recap is null && latest.Count > 0 && latest[0] is { EndedUtc: { } ended } last
+            && DateTimeOffset.UtcNow - ended < TimeSpan.FromMinutes(2)
+            && await JS.TryInvokeAsync<string>("localStorage.getItem", PoWatch.Client.Components.AwayCard.DismissedKey) != last.Id.ToString())
+        {
+            Sensing.Recap = new SessionRecap(last, null, null);
         }
 
         await RefreshStatsAsync();

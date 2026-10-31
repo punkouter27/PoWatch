@@ -19,6 +19,17 @@ internal static class StoryEndpoints
             .WithName("SessionStory")
             .WithSummary("Writes the session's ten-minute chapters that have closed and, once it has ended, the story they make; returns all of it.");
 
+        app.MapGet("/api/sessions/{id:guid}/transcript", async (Guid id, HttpContext http, StoryService stories, CancellationToken ct) =>
+            {
+                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
+                var lines = await stories.TranscriptAsync(userId, id, ct);
+                return lines is null ? Results.NotFound() : Results.Ok(lines);
+            })
+            .RequireAuthorization()
+            .WithTags("Stories")
+            .WithName("SessionTranscript")
+            .WithSummary("Every line the on-device speech model heard during the session, in order.");
+
         app.MapGet("/api/stories/{kind}", async (string kind, string? date, string? tz, HttpContext http, PeriodStoryService periods, TimeProvider time, CancellationToken ct) =>
             {
                 if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();

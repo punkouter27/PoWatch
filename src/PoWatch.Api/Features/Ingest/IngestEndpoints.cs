@@ -79,6 +79,8 @@ internal static class IngestEndpoints
         MotionMean = dto.MotionMean,
         MotionMax = dto.MotionMax,
         LuminanceMean = dto.LuminanceMean,
+        SoundMean = dto.SoundMean,
+        SoundMax = dto.SoundMax,
         Palette = dto.Palette,
         MotionGrid = dto.MotionGrid,
         PresenceGrid = dto.PresenceGrid,

@@ -746,6 +746,13 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .away-exposure img { width: min(100%, 640px); aspect-ratio: 16 / 9; border: 1px solid var(--term-line); border-radius: 2px; }
 .away-exposure figcaption { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font: 11px var(--term-mono); letter-spacing: 0.06em; color: var(--term-muted); }
 
+/* What the microphone heard: the latest line on Live, the whole transcript under a story. */
+.live-heard { border-top: 0; }
+.live-heard-sound { margin-left: auto; color: var(--term-dim); white-space: nowrap; }
+.session-transcript summary { cursor: pointer; color: var(--term-dim); font: var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; }
+.session-transcript ol { margin: 8px 0 0; padding-left: 0; list-style: none; display: grid; gap: 4px; font: var(--fs-sm) var(--term-mono); color: var(--term-text); line-height: 1.45; }
+.session-transcript .num { color: var(--term-accent); margin-right: 6px; }
+
 /* A session's story: the chapters joined into prose, the chapters themselves folded under it. */
 .session-story { margin: 12px 0 0; display: grid; gap: 8px; max-width: 80ch; }
 .session-story-text { margin: 0; line-height: 1.55; color: var(--term-text); font: var(--fs-sm) var(--term-mono); }
@@ -1254,6 +1261,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .panel-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; color: var(--term-red); font: var(--fs-sm) var(--term-mono); }
 
 /* yyMMdd of this build, bottom-right, out of the way of anything clickable. */
+@media (max-width: 719.98px) { .build-stamp { display: none; } }
 .build-stamp {
     position: fixed;
     z-index: 5;

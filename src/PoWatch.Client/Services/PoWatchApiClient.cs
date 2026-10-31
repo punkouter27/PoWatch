@@ -24,6 +24,10 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<SessionDto?> StopSessionAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.PostAsync($"api/sessions/{sessionId}/stop", content: null, ct), Json.SessionDto, cancellationToken);
 
+    /// <summary>One of the caller's sessions; null when it is not theirs, does not exist, or the call failed.</summary>
+    public Task<SessionDto?> GetSessionAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
+        ReadAsync(ct => httpClient.GetAsync($"api/sessions/{sessionId}", ct), Json.SessionDto, cancellationToken);
+
     /// <summary>Empty on failure: Stats and History treat the list as optional.</summary>
     public async Task<IReadOnlyList<SessionDto>> ListSessionsAsync(int take = 20, CancellationToken cancellationToken = default) =>
         await ReadAsync(ct => httpClient.GetAsync($"api/sessions?take={take}", ct), Json.ListSessionDto, cancellationToken) ?? [];
@@ -100,6 +104,10 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     /// <summary>The story of the week (Monday to Sunday) or month holding <paramref name="day"/>; null on failure.</summary>
     public Task<PeriodStoryDto?> GetPeriodStoryAsync(bool month, DateOnly day, string timeZoneId, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.GetAsync($"api/stories/{(month ? "month" : "week")}?date={Day(day)}&tz={Uri.EscapeDataString(timeZoneId)}", ct), Json.PeriodStoryDto, cancellationToken);
+
+    /// <summary>Every line the microphone heard in the session; empty on failure.</summary>
+    public async Task<IReadOnlyList<HeardLineDto>> GetTranscriptAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
+        await ReadAsync(ct => httpClient.GetAsync($"api/sessions/{sessionId}/transcript", ct), Json.ListHeardLineDto, cancellationToken) ?? [];
 
     public async Task<IReadOnlyList<MomentDto>> GetMomentsAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         await ReadAsync(ct => httpClient.GetAsync($"api/sessions/{sessionId}/moments", ct), Json.ListMomentDto, cancellationToken) ?? [];

@@ -67,6 +67,26 @@ public sealed class TickBatcherTests
     }
 
     [Fact]
+    public void Loudness_folds_into_the_tick_and_words_and_sounds_become_events()
+    {
+        var time = new FakeTimeProvider(T0);
+        var batcher = new TickBatcher(time);
+        batcher.AddPixel(new PixelSample(T0, Motion: 0.1, Luminance: 0.4, Grid(7, 0.2f), []));
+        batcher.AddSound(T0, mean: 0.2, max: 0.3);
+        batcher.AddSound(T0.AddSeconds(1), mean: 0.4, max: 0.9);
+        batcher.AddSpeech(T0.AddSeconds(1), "Hello there.");
+        batcher.AddSoundEvent(T0.AddSeconds(2), "Dog", 1.4);
+
+        time.Advance(TimeSpan.FromSeconds(10));
+        var batch = batcher.Flush()!;
+        var tick = Assert.Single(batch.Ticks);
+        Assert.Equal(0.3, tick.SoundMean, 6);
+        Assert.Equal(0.9, tick.SoundMax);
+        Assert.Contains(batch.Events, e => e.Kind == "Speech" && e.Text == "Hello there.");
+        Assert.Contains(batch.Events, e => e.Kind == "Sound" && e.Text == "Dog" && e.Score == 1);
+    }
+
+    [Fact]
     public void Each_closed_window_is_handed_out_once_under_its_own_key()
     {
         var time = new FakeTimeProvider(T0);

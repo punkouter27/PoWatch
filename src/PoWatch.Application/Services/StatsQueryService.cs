@@ -95,6 +95,8 @@ public sealed class StatsQueryService(IRollupStore rollups, ISensingLog sensingL
     private static ReplayEventDto? ReplayEvent(SceneEvent e) => e.Kind switch
     {
         SceneEventKind.Caption when e.Text is not null => new() { AtUtc = e.AtUtc, Kind = "caption", Text = e.Text },
+        SceneEventKind.Speech when e.Text is not null => new() { AtUtc = e.AtUtc, Kind = "speech", Text = e.Text },
+        SceneEventKind.Sound when e.Text is not null => new() { AtUtc = e.AtUtc, Kind = "sound", Text = e.Text },
         SceneEventKind.Notable => new() { AtUtc = e.AtUtc, Kind = "moment", Text = e.Text },
         SceneEventKind.TrackEnter when e.Class is { } enterClass && EntityClasses.IsPresence(enterClass) => new() { AtUtc = e.AtUtc, Kind = "enter", Class = e.Class },
         SceneEventKind.TrackExit when e.Class is { } exitClass && EntityClasses.IsPresence(exitClass) => new() { AtUtc = e.AtUtc, Kind = "exit", Class = e.Class },

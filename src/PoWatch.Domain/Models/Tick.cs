@@ -49,6 +49,11 @@ public sealed record Tick
     /// <summary>Mean brightness in [0, 1].</summary>
     public double LuminanceMean { get; init; }
 
+    /// <summary>Loudness heard by the microphone in [0, 1] (−60 dBFS to 0), averaged and peaked; 0 when not listening.</summary>
+    public double SoundMean { get; init; }
+
+    public double SoundMax { get; init; }
+
     /// <summary>Up to five dominant colours as 0xRRGGBB.</summary>
     public IReadOnlyList<int> Palette { get; init; } = [];
 
@@ -81,6 +86,8 @@ public sealed record Tick
         RequireFraction(errors, nameof(MotionMean), MotionMean);
         RequireFraction(errors, nameof(MotionMax), MotionMax);
         RequireFraction(errors, nameof(LuminanceMean), LuminanceMean);
+        RequireFraction(errors, nameof(SoundMean), SoundMean);
+        RequireFraction(errors, nameof(SoundMax), SoundMax);
 
         if (Palette.Count > 5 || Palette.Any(c => c is < 0 or > 0xFFFFFF))
             errors.Add($"{nameof(Palette)} holds at most five 0xRRGGBB colours.");

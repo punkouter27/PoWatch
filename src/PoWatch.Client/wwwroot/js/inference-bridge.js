@@ -23,9 +23,11 @@
       const why = {
         NotReadableError: 'The camera is in use by another app or tab. Close it (or restart Windows if nothing else is open) and press Start camera again.',
         NotAllowedError: 'Camera permission was denied. Allow it in the address bar or in Windows camera privacy settings.',
-        NotFoundError: 'No camera found.',
-      }[e?.name] ?? `Camera error (${e?.name ?? 'unknown'}).`;
-      return `${why} Demo scene works without a camera.`;
+        NotFoundError: 'No camera was found on this device.',
+        NotSupportedError: 'This browser cannot use a camera here.',
+        OverconstrainedError: 'The camera could not be opened at a usable size.',
+      }[e?.name] ?? 'The camera could not be started.';
+      return `${why} The demo (“No camera? Try the demo”) works without one.`;
     }
   }
 

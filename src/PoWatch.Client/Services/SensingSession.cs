@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
 using System.Text.Json;
@@ -70,6 +71,18 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
             if (field == value) return;
             field = value;
             _vlm = new(time);
+            Notify();
+        }
+    } = true;
+
+    /// <summary>Whether a camera session also listens: loudness, words (Whisper) and sounds, all heard on this machine.</summary>
+    public bool Listening
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+            field = value;
             Notify();
         }
     } = true;
@@ -153,6 +166,12 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         {
             _self = DotNetObjectReference.Create(this);
             await js.TryInvokeVoidAsync("powatchPixels.start", video, _self, 250);
+            // Asked once per session: the browser shows its own microphone prompt the first time.
+            if (Listening)
+            {
+                var heard = await js.TryInvokeAsync<string>("powatchAudio.start", _self);
+                Live.AudioStatus = heard == "OK" ? "listening" : heard ?? "The microphone could not be started.";
+            }
             _ = LoadDetectorAsync(video!.Value, _cts.Token);
         }
 
@@ -189,6 +208,7 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         _cts = null;
 
         await js.TryInvokeVoidAsync("powatchPixels.stop");
+        await js.TryInvokeVoidAsync("powatchAudio.stop");
         await js.TryInvokeVoidAsync("powatchDetector.stop");
         if (s_detecting == this) s_detecting = null;
         if (_scene is null) await js.TryInvokeVoidAsync("powatchInference.stopMonitor");
@@ -212,6 +232,47 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
 
         _self?.Dispose();
         _self = null;
+        Notify();
+    }
+
+    /// <summary>A second of loudness from the microphone (audio-layer.js), in [0, 1].</summary>
+    [JSInvokable]
+    public void OnSoundLevel(double mean, double max)
+    {
+        if (IsRunning) _batcher.AddSound(time.GetUtcNow(), mean, max);
+    }
+
+    /// <summary>Words the speech model heard, starting at <paramref name="atIso"/>.</summary>
+    [JSInvokable]
+    public void OnHeard(string atIso, string text)
+    {
+        if (!IsRunning || string.IsNullOrWhiteSpace(text)) return;
+        AddHeard(At(atIso), text.Trim());
+    }
+
+    /// <summary>A sound the classifier named (an AudioSet label).</summary>
+    [JSInvokable]
+    public void OnSound(string atIso, string label, double score)
+    {
+        if (!IsRunning || string.IsNullOrWhiteSpace(label)) return;
+        AddSound(At(atIso), label.Trim(), score);
+    }
+
+    private DateTimeOffset At(string iso) =>
+        DateTimeOffset.TryParse(iso, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var at) ? at : time.GetUtcNow();
+
+    private void AddHeard(DateTimeOffset atUtc, string text)
+    {
+        var line = text.Length > SceneEventDto.MaxTextLength ? text[..SceneEventDto.MaxTextLength] : text;
+        _batcher.AddSpeech(atUtc, line);
+        Live.RecordHeard(atUtc, line);
+        Notify();
+    }
+
+    private void AddSound(DateTimeOffset atUtc, string label, double score)
+    {
+        _batcher.AddSoundEvent(atUtc, label, score);
+        Live.RecordSound(label);
         Notify();
     }
 
@@ -408,6 +469,11 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         var withCaption = _vlm.IsDue;
         var frame = _scene!.Next(now, withCaption);
         AddPixel(frame.Pixels);
+        // The demo room is heard too, so the transcript and the story's sounds work without a microphone.
+        var sound = _scene.Hear(now);
+        _batcher.AddSound(now, sound.Level, sound.Level);
+        if (sound.Speech is { } said) AddHeard(now, said);
+        if (sound.Sound is { } label) AddSound(now, label, 0.8);
         if (_demoStep++ % 4 == 0) AddDetections(now, frame.Detections);
         if (frame.Caption is { } caption)
         {

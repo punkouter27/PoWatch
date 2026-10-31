@@ -1,5 +1,6 @@
 @using System.Globalization
 @inject PoWatchApiClient Api
+@inject NavigationManager Navigation
 
 @* The story of a whole week or month (PeriodStoryService), with the days it was told from under it,
    newest first. ◀ ▶ step back and forth a week or a month at a time. *@
@@ -26,7 +27,7 @@
                 {
                     <p class="session-story-text" data-test="period-story-text">@paragraph</p>
                 }
-                @if (_story.Days.Count > 1)
+                @if (_story.Days.Count > 0)
                 {
                     <details class="session-story-chapters" open>
                         <summary>@_story.Days.Count DAYS · NEWEST FIRST</summary>
@@ -47,10 +48,13 @@
     /// <summary>"week" or "month".</summary>
     [Parameter, EditorRequired] public string Kind { get; set; } = "week";
 
+    /// <summary>Any day in the period (?date=); today when null.</summary>
+    [Parameter] public DateOnly? Day { get; set; }
+
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
 
     private DateOnly _day = Today;
-    private string? _shownKind;
+    private (string, DateOnly)? _shown;
     private bool _loading = true;
     private PeriodStoryDto? _story;
 
@@ -64,15 +68,18 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Kind == _shownKind) return;
-        (_shownKind, _day) = (Kind, Today);
+        var day = Day is { } d && d <= Today ? d : Today;
+        if ((Kind, day) == _shown) return;
+        (_shown, _day) = ((Kind, day), day);
         await LoadAsync();
     }
 
-    private async Task MoveAsync(int step)
+    // The period lives in the address, so reload, Back and a shared link keep it.
+    private Task MoveAsync(int step)
     {
-        _day = Month ? _day.AddMonths(step) : _day.AddDays(7 * step);
-        await LoadAsync();
+        var day = Month ? _day.AddMonths(step) : _day.AddDays(7 * step);
+        Navigation.NavigateTo($"history?view={Kind}&date={day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
+        return Task.CompletedTask;
     }
 
     private async Task LoadAsync()

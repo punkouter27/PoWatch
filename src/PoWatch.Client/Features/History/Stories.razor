@@ -23,7 +23,7 @@
     @if (View is "week" or "month")
     {
         <div class="story-feed">
-            <PeriodStory Kind="@View" />
+            <PeriodStory Kind="@View" Day="@PeriodDay" />
         </div>
     }
     else
@@ -48,6 +48,7 @@
                     </Aside>
                     <ChildContent>
                         <SessionStory SessionId="@session.Id" NewestFirst="true" ChaptersOpen="true" />
+                        <SessionTranscript SessionId="@session.Id" />
                     </ChildContent>
                 </TerminalPanel>
             }
@@ -64,6 +65,12 @@
     private static readonly (string View, string Label)[] Views = [("sessions", "Sessions"), ("week", "Week"), ("month", "Month")];
 
     [SupplyParameterFromQuery(Name = "view")] public string? ViewParameter { get; set; }
+
+    /// <summary>A day in the week or month shown (?date=yyyy-MM-dd); text, so a bad link cannot break the page.</summary>
+    [SupplyParameterFromQuery(Name = "date")] public string? DateParameter { get; set; }
+
+    private DateOnly? PeriodDay =>
+        DateOnly.TryParseExact(DateParameter, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? day : null;
 
     private string View => ViewParameter is "week" or "month" ? ViewParameter : "sessions";
 

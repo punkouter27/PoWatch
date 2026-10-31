@@ -147,6 +147,36 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
     }
 
     [Fact]
+    public async Task What_the_microphone_heard_is_a_transcript_and_part_of_the_story()
+    {
+        using var client = ClientFor($"listener-{Guid.NewGuid():N}");
+        var session = (await (await client.PostAsJsonAsync("/api/sessions", new StartSessionRequestDto { TimeZoneId = "UTC" }))
+            .Content.ReadFromJsonAsync<SessionDto>())!;
+        var start = session.StartedUtc.AddSeconds(2);
+        var ingest = await client.PostAsJsonAsync($"/api/sessions/{session.Id}/batches", new IngestBatchDto
+        {
+            BatchKey = Guid.NewGuid(),
+            Ticks = [new() { StartUtc = start, PixelSamples = 40, LuminanceMean = 0.6, SoundMean = 0.3, SoundMax = 0.7 }],
+            Events =
+            [
+                new() { AtUtc = start.AddSeconds(1), Kind = "Speech", Text = "Has anyone seen my keys?" },
+                new() { AtUtc = start.AddSeconds(3), Kind = "Sound", Text = "Bark", Score = 0.8 },
+                new() { AtUtc = start.AddSeconds(4), Kind = "Speech", Text = "Found them." },
+            ]
+        });
+        Assert.Equal(HttpStatusCode.OK, ingest.StatusCode);
+
+        var heard = (await client.GetFromJsonAsync<List<HeardLineDto>>($"/api/sessions/{session.Id}/transcript"))!;
+        Assert.Equal(["Has anyone seen my keys?", "Found them."], heard.Select(l => l.Text));
+
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsync($"/api/sessions/{session.Id}/stop", null)).StatusCode);
+        var story = (await (await client.PostAsync($"/api/sessions/{session.Id}/story", null)).Content.ReadFromJsonAsync<SessionStoryDto>())!;
+        Assert.Contains("someone said: “Has anyone seen my keys?”", story.Story, StringComparison.Ordinal);
+        Assert.Contains("a dog barking", story.Story, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/sessions/{Guid.NewGuid()}/transcript")).StatusCode);
+    }
+
+    [Fact]
     public async Task A_shared_recap_reads_without_signing_in_until_it_is_taken_down()
     {
         var owner = $"sharer-{Guid.NewGuid():N}";

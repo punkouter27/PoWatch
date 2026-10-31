@@ -16,7 +16,7 @@
                 </tr>
                 <tr>
                     <td>VISITS/HR</td>
-                    <td class="r live-metric">@DisplayText.Number(Presence?.VisitsPerHour, "0.0") <ZChip Z="@Anomaly("visits/hour")?.Z" /></td>
+                    <td class="r live-metric" title="@(RateTooEarly ? "Shown once ten minutes have been observed" : null)">@(RateTooEarly ? "—" : DisplayText.Number(Presence?.VisitsPerHour, "0.0")) <ZChip Z="@(RateTooEarly ? null : Anomaly("visits/hour")?.Z)" /></td>
                     <td class="r">@DisplayText.Number(Anomaly("visits/hour")?.Mean, "0.0")</td>
                     <td><Sparkline Values="@VisitsTrend" Cyan="true" Label="Visits over the range" /></td>
                 </tr>
@@ -34,9 +34,23 @@
                 </tr>
                 <tr>
                     <td title="People · animals in frame right now">NOW</td>
-                    <td class="r" data-test="metric-people" title="people · animals"><span class="fx-tick" @key="(L.PeopleNow, L.AnimalsNow)">@L.PeopleNow · @L.AnimalsNow</span></td>
+                    <td class="r" data-test="metric-people" title="people · animals">@if (Sensing.IsRunning)
+                        {
+                            <span class="fx-tick" @key="(L.PeopleNow, L.AnimalsNow)">@L.PeopleNow · @L.AnimalsNow</span>
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }</td>
                     <td></td>
-                    <td class="term-stat-hint" title="This session: most at once, and visits">peak @L.PeakConcurrency · <span data-test="metric-visits">@L.Visits</span> visits</td>
+                    <td class="term-stat-hint" title="This session: most at once, and visits">@if (Sensing.IsRunning)
+                        {
+                            <span>peak @L.PeakConcurrency · <span data-test="metric-visits">@L.Visits</span> visits</span>
+                        }
+                        else
+                        {
+                            <span>not recording</span>
+                        }</td>
                 </tr>
             </tbody>
         </table>
@@ -54,6 +68,9 @@
 </TerminalPanel>
 
 @code {
+    /// <summary>Visits an hour from a few minutes (342/h after 55 s) says nothing; it waits for ten.</summary>
+    private bool RateTooEarly => Presence is null || Presence.SecondsObserved < 600;
+
     [Parameter, EditorRequired] public string Range { get; set; } = "today";
     [Parameter] public PresenceStatsDto? Presence { get; set; }
     [Parameter] public PatternStatsDto? Patterns { get; set; }

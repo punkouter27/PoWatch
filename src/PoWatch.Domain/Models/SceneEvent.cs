@@ -10,7 +10,13 @@ public enum SceneEventKind
     LightsOn,
     LightsOff,
     Caption,
-    Notable
+    Notable,
+
+    /// <summary>Words heard by the on-device speech model; the text is what was said.</summary>
+    Speech,
+
+    /// <summary>A sound the on-device classifier recognised; the text is its label ("Dog", "Music").</summary>
+    Sound
 }
 
 /// <summary>Which side of the frame a track crossed when it entered or left.</summary>
@@ -71,7 +77,7 @@ public sealed record SceneEvent
                 if (string.IsNullOrWhiteSpace(TrackId) || string.IsNullOrWhiteSpace(Class))
                     errors.Add($"{Kind} needs {nameof(TrackId)} and {nameof(Class)}.");
                 break;
-            case SceneEventKind.Caption or SceneEventKind.Notable:
+            case SceneEventKind.Caption or SceneEventKind.Notable or SceneEventKind.Speech or SceneEventKind.Sound:
                 if (string.IsNullOrWhiteSpace(Text))
                     errors.Add($"{Kind} needs {nameof(Text)}.");
                 break;

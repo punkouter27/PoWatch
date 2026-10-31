@@ -18,6 +18,7 @@ public sealed class StoryService(
     SessionService sessions,
     RecapService recaps,
     IStoryStore store,
+    ISensingLog sensingLog,
     IEnumerable<IChatClient> chatClients,
     TimeProvider time,
     ILogger<StoryService> logger)
@@ -58,6 +59,22 @@ public sealed class StoryService(
             Source = story?.Source,
             WrittenUtc = story?.WrittenUtc
         };
+    }
+
+    /// <summary>Every line the speech model heard in the session, in order; null when the session is not the user's.</summary>
+    public async Task<IReadOnlyList<HeardLineDto>?> TranscriptAsync(string userId, Guid sessionId, CancellationToken cancellationToken)
+    {
+        if (await sessions.GetAsync(userId, sessionId, cancellationToken) is not { } session) return null;
+        var zone = session.TimeZone;
+        var end = session.EndedUtc ?? time.GetUtcNow();
+        var lines = new List<HeardLineDto>();
+        for (var day = LocalDay.Of(session.StartedUtc, zone); day <= LocalDay.Of(end, zone); day = day.AddDays(1))
+        {
+            lines.AddRange((await sensingLog.GetEventsAsync(userId, day, cancellationToken))
+                .Where(e => e.SessionId == sessionId && e.Kind == SceneEventKind.Speech && !string.IsNullOrWhiteSpace(e.Text))
+                .Select(e => new HeardLineDto { AtUtc = e.AtUtc, Text = e.Text!.Trim() }));
+        }
+        return [.. lines.OrderBy(l => l.AtUtc)];
     }
 
     private async Task<SessionStory> CompileAsync(Session session, IReadOnlyList<StoryChapter> chapters, CancellationToken cancellationToken)

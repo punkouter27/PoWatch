@@ -17,6 +17,10 @@
 <div class="dash">
     <div class="stats-toolbar" data-test="stats-toolbar">
         <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
+        @if (_sessionMissing)
+        {
+            <span class="live-error" role="status" data-test="session-missing">That session was not found, so this is your latest one.</span>
+        }
 
         @if (Prefs.Advanced)
         {
@@ -55,7 +59,7 @@
                             <canvas class="crt" @ref="_crt" aria-hidden="true"></canvas>
                         }
 
-                        @foreach (var track in L.Tracks)
+                        @foreach (var track in Sensing.IsRunning ? L.Tracks : [])
                         {
                             <div class="live-box @(track.Label == "person" ? "live-box--person" : string.Empty)"
                                  style="left: @Pct(track.Box.X0 * 100)%; top: @Pct(track.Box.Y0 * 100)%; width: @Pct((track.Box.X1 - track.Box.X0) * 100)%; height: @Pct((track.Box.Y1 - track.Box.Y0) * 100)%;">
@@ -97,6 +101,22 @@
                     @if (L.LastError is not null)
                     {
                         <span class="live-error" role="status">@L.LastError</span>
+                    }
+                </div>
+                @* What the microphone heard, word for word (the whole transcript is on the session's story). *@
+                <div class="live-caption live-heard" data-test="live-heard">
+                    <span class="live-caption-tag">HEARD @(L.Heard.LastOrDefault()?.AtUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture) ?? "--:--:--")</span>
+                    @if (L.Heard.LastOrDefault() is { } line)
+                    {
+                        <span @key="line.AtUtc">“@line.Text”</span>
+                    }
+                    else
+                    {
+                        <span>@(!Sensing.IsRunning ? "—" : L.Demo || L.AudioStatus == "listening" ? "Listening…" : L.AudioStatus ?? "Not listening (Settings)")</span>
+                    }
+                    @if (L.LastSound is { } sound)
+                    {
+                        <span class="live-heard-sound" title="The latest sound recognised">♪ @sound</span>
                     }
                 </div>
             </ChildContent>

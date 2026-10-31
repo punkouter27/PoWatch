@@ -69,3 +69,10 @@ public sealed class PeriodStoryDto
 
     public List<DayStoryDto> Days { get; init; } = [];
 }
+
+/// <summary>A line of a session's transcript: words the on-device speech model heard.</summary>
+public sealed class HeardLineDto
+{
+    public DateTimeOffset AtUtc { get; init; }
+    public string Text { get; init; } = string.Empty;
+}

@@ -122,4 +122,21 @@ public sealed class TemplateRecapTests
         Assert.DoesNotContain("%", story, StringComparison.Ordinal);
         Assert.Null(SceneNarrator.Tell([], UtcMinus5, new Dictionary<string, string>()));
     }
+
+    [Fact]
+    public void What_was_said_and_heard_and_how_loud_it_was_are_part_of_the_story()
+    {
+        var session = Guid.NewGuid();
+        var story = SceneNarrator.Tell(
+        [
+            new() { SessionId = session, AtUtc = T0, Kind = SceneEventKind.Speech, Text = "has anyone seen my keys" },
+            new() { SessionId = session, AtUtc = T0.AddSeconds(5), Kind = SceneEventKind.Sound, Text = "Bark" },
+            new() { SessionId = session, AtUtc = T0.AddSeconds(9), Kind = SceneEventKind.Sound, Text = "Dog" },
+        ], UtcMinus5, new Dictionary<string, string>());
+        Assert.Equal("At 08:00, someone said: “Has anyone seen my keys.” The microphone picked up a dog barking.", story);
+
+        Tick At(int minute, double sound) => new() { SessionId = session, StartUtc = T0.AddMinutes(minute), LuminanceMean = 0.7, SoundMean = sound, SoundMax = sound };
+        var feel = SceneNarrator.Atmosphere([At(0, 0.1), At(1, 0.1), At(2, 0.8)], [], UtcMinus5, new Dictionary<string, string>());
+        Assert.Contains("There was a soft background murmur. The loudest moment was at 08:02.", feel, StringComparison.Ordinal);
+    }
 }

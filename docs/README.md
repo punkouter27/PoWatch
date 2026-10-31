@@ -14,6 +14,7 @@ camera ──► browser (all sensing on-device)                        server
            L1 detector      ~1 Hz RF-DETR Nano → boxes → C# tracker  ──►  POST /api/sessions/{id}/batches
            L2 VLM caption   adaptive cadence, plain-sentence prompt       every 10 s: ticks + scene events
                             + MiniLM embedding (novelty, search)
+           L3 audio         loudness 1 Hz; Whisper words; AudioSet sounds
            TickBatcher      10 s ticks, outbox (IndexedDB) + replay       │
                                                                           ▼
                                                   IngestService: raw rows + rollups (minute/hour/day/all)
@@ -22,6 +23,13 @@ camera ──► browser (all sensing on-device)                        server
            Live · History · Settings   ◄── GET /api/stats/{family}, /api/recaps, …
 ```
 
+- **Audio never leaves the device, and is never kept.** The microphone is heard in the browser
+  (`js/sensing/audio-layer.js`, `js/audio-worker.js`): a second's loudness goes into each tick
+  (`SoundMean`/`SoundMax`), a stretch of speech goes to Whisper (base, English, int8, WASM) and comes
+  back as words (a `Speech` scene event), and a loud moment that is not speech goes to an AudioSet
+  classifier (AST, int8, WASM) and comes back as a label (a `Sound` event: "Dog", "Music", "Knock").
+  Only those leave the browser. Settings' "Listening" switch (on by default, remembered per browser)
+  turns it off; the demo room has scripted words and a bark so all of it runs without a microphone.
 - **Frames never leave the device.** The only images uploaded are highlight snapshots (first sighting
   of a class, motion spikes, notable captions), capped per hour and per day. Time-lapses stay in the
   browser.
@@ -44,7 +52,10 @@ camera ──► browser (all sensing on-device)                        server
 ## Pages
 
 `/` Live, always one session: the one being recorded, until it is stopped, then it stays as the last
-session (a History link, `?session=`, opens another). One bar names it (with Advanced on, an "Ask" box
+session (a History link, `?session=`, opens another; one that is not yours, or not a session id,
+says so and shows your latest). Leaving or reloading the page ends a recording; coming back within two
+minutes shows its recap card, unless it was dismissed. Detector boxes and the "now" counts show only
+while recording, and visits an hour only once ten minutes have been observed. One bar names it (with Advanced on, an "Ask" box
 and "JSON ↓" for every number behind the grid); longer views are History's stories: on a desktop a 3×3 with the camera in the larger middle cell (one Start
 button; a synthetic demo is available whenever stopped). What is happening now touches it: key metrics
 for the session beside your usual day (σ, rhythm, trend, next busy hour) above, who is in frame with every
@@ -54,7 +65,7 @@ is there from the first paint, with a placeholder until its numbers arrive. Narr
 camera, key metrics and "In frame", and on a phone the panels after them are one swipeable strip; on a short desktop screen the camera keeps its share
 and the cells around it scroll · `/history` the stories: every session, newest first, each with the
 story of the whole session and its ten-minute chapters under it, newest first ("Older sessions" pages
-back through the latest hundred); its Week and Month tabs (`?view=week`, `?view=month`) tell one story
+back through the latest hundred); its Week and Month tabs (`?view=week`, `?view=month`, with `&date=` for the period ◀ ▶ moved to) tell one story
 of the whole Monday-to-Sunday week or calendar month, with the days it was told from under it, newest
 first, and ◀ ▶ to step back; a Stories | Days switch leads to · `/history/{yyyy-MM-dd}` the day
 view: on the left the year (with the
@@ -185,6 +196,8 @@ the camera and add up to a long-exposure PNG on the session recap; they respect
 | `GET /api/stats/{presence\|space\|objects\|patterns\|environment\|pipeline}?range=` | stat families |
 | `GET /api/stats/all?range=` | every family in one JSON document, plus the raw ticks and events for session, today or one day (Live's "All data ↓", History's "Day data ↓") |
 | `GET /api/recaps/session/{id}[.pdf]`, `GET /api/recaps/day/{date}[.pdf]?tz=[&ai=false]` | recaps and PDFs; `ai=false` answers from the template at once |
+| `GET /api/sessions/{id}/transcript` | every line the on-device speech model heard in the session |
+| `GET /api/stories/{week\|month}?date=&tz=` | the story of the week or month holding a day, told from its days |
 | `POST /api/sessions/{id}/story` | write the session's closed ten-minute chapters and, once it has ended, its story; returns both |
 | `POST /api/ask` | a plain-language question answered from the caller's own statistics (503 without an AI provider) |
 | `GET /api/ai/models`, `PUT /api/ai/models` | configured server model labels (Auto's names the model it resolves to now) and the browser's selected model; unknown selections return 400 |
@@ -242,7 +255,10 @@ copy; the owner can take it down from History or Settings, and "delete everythin
 ## Recaps
 
 `TemplateRecap` writes the paragraph as a story of the scene (`SceneNarrator`): who came in and from
-which side (regulars by name), what the caption model saw, who left, when the lights changed, with
+which side (regulars by name), what the caption model saw, what was said and which sounds were heard,
+who left, when the lights changed, then how it felt from the telemetry (light and its colour, the
+liveliest moment and the longest still stretch, where in the frame things moved, how loud it was, how
+many were in view at once, who stayed longest), with
 times as the only numbers and a long day cut to its six busiest stretches. A window without scene
 events (seeded history) gets the numbers paragraph instead (Humanizer); the numbers themselves are
 always in the recap's grid and highlights. If `AiProvider:Provider` names a
@@ -269,6 +285,10 @@ sentence (Settings; checked against the 80 detector labels and real hours, then 
 and gives the weekly digest a headline (History's "The week" and the email subject), kept only when
 it uses no number the summary lacks (`AssistService`).
 QuestPDF renders the PDF; a host without its native engine answers an explained 503.
+
+**Heard.** Live's camera cell shows the latest words and sound under the caption line; every story
+card (History, and the recap card after Stop) has its own "Heard" transcript, word for word
+(`GET /api/sessions/{id}/transcript`), apart from the story it feeds.
 
 **Session stories** (`StoryService`). Every ten minutes of a session is a chapter: a recap of just that
 stretch (whole-minute rollups, its moments), the model's version where one answers. While a session
