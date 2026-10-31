@@ -92,25 +92,26 @@ public sealed class RecapService(
     private async Task<RecapDto> WriteAsync(RecapFacts facts, CancellationToken cancellationToken)
     {
         var recap = TemplateRecap.Build(facts);
-        if (chatClients.FirstOrDefault() is not { } chat || facts.Presence.SecondsObserved <= 0) return recap;
+        if (!chatClients.Any() || facts.Presence.SecondsObserved <= 0) return recap;
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(AiTimeout);
         var prompt = RecapPrompt.User(recap);
         try
         {
-            // Identical facts give an identical prompt, which the chat client's response cache answers
-            // (RecapAi), so re-opening a past day or its PDF does not pay for the model again.
-            var response = await chat.GetResponseAsync(
-                [new ChatMessage(ChatRole.System, RecapPrompt.System), new ChatMessage(ChatRole.User, prompt)],
-                // A JSON schema, so there is no reply format to parse or guess at.
-                new ChatOptions { Temperature = 0.4f, MaxOutputTokens = 400, ResponseFormat = ChatResponseFormat.ForJsonSchema<RecapRewrite>() },
-                timeout.Token);
+            // The chosen model, then the next configured one if it fails; the number check below
+            // applies to whichever answered.
+            var (chat, rewrite) = await chatClients.FirstAnswerAsync("recap", AiTimeout, async (model, ct) =>
+            {
+                // Identical facts give an identical prompt, which the chat client's response cache answers
+                // (RecapAi), so re-opening a past day or its PDF does not pay for the model again.
+                var response = await model.GetResponseAsync(
+                    [new ChatMessage(ChatRole.System, RecapPrompt.System), new ChatMessage(ChatRole.User, prompt)],
+                    // A JSON schema, so there is no reply format to parse or guess at.
+                    new ChatOptions { Temperature = 0.4f, MaxOutputTokens = 400, ResponseFormat = ChatResponseFormat.ForJsonSchema<RecapRewrite>() },
+                    ct);
+                return (model, string.IsNullOrWhiteSpace(response.Text) ? null : JsonSerializer.Deserialize<RecapRewrite>(response.Text, JsonSerializerOptions.Web));
+            }, logger, cancellationToken);
 
-            if (string.IsNullOrWhiteSpace(response.Text)
-                || JsonSerializer.Deserialize<RecapRewrite>(response.Text, JsonSerializerOptions.Web) is not { } rewrite
-                || string.IsNullOrWhiteSpace(rewrite.Summary))
-                return recap;
+            if (rewrite is null || string.IsNullOrWhiteSpace(rewrite.Summary)) return recap;
             if (!RecapPrompt.KeepsToFacts(rewrite.Summary + ' ' + string.Join(' ', rewrite.Highlights), prompt))
             {
                 logger.LogWarning("AI recap used a number that is not in the facts; using the template recap.");
@@ -121,10 +122,8 @@ public sealed class RecapService(
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // Timeouts, transport and provider errors (the OpenAI SDK throws ClientResultException, not
-            // HttpRequestException) and a reply that is not the asked-for JSON all end the same way: the
-            // template paragraph.
-            logger.LogWarning(ex, "AI recap failed; using the template recap. Provider={Provider}", chat.GetType().Name);
+            // Every model in the chain failed (each failure is already logged): the template paragraph.
+            logger.LogWarning(ex, "AI recap failed on every model; using the template recap.");
             return recap;
         }
     }

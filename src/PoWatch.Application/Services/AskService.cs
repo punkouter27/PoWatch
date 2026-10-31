@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using PoWatch.Application.Contracts;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
@@ -13,7 +14,7 @@ namespace PoWatch.Application.Services;
 /// tools that read the same rollups and captions the pages read, so the numbers in an answer are
 /// real; without a configured chat client there is no answer at all.
 /// </summary>
-public sealed class AskService(StatsQueryService stats, ISensingLog sensingLog, TimeProvider time, IEnumerable<IChatClient> chatClients)
+public sealed class AskService(StatsQueryService stats, ISensingLog sensingLog, TimeProvider time, IEnumerable<IChatClient> chatClients, ILogger<AskService> logger)
 {
     public const int MaxQuestionLength = 300;
 
@@ -31,15 +32,29 @@ public sealed class AskService(StatsQueryService stats, ISensingLog sensingLog, 
     /// <summary>The answer, or null when no AI provider is configured.</summary>
     public async Task<string?> AskAsync(string userId, string question, string? timeZoneId, CancellationToken cancellationToken)
     {
-        if (chatClients.FirstOrDefault() is not { } chat) return null;
+        if (!chatClients.Any()) return null;
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(Timeout);
-        var ct = timeout.Token;
         var zone = LocalDay.FindZone(timeZoneId) ?? TimeZoneInfo.Utc;
         var today = LocalDay.Today(time, zone);
+        // The date goes into the prompt so "Tuesday" or "yesterday" can be resolved, and the response
+        // cache starts afresh each day.
+        var context = $"Today is {today.ToString("dddd yyyy-MM-dd", CultureInfo.InvariantCulture)} in {zone.Id}.";
 
-        AIFunction[] tools =
+        // The chosen model, then the next configured one if it fails; when both fail, the last error
+        // reaches the endpoint as before.
+        var answer = await chatClients.FirstAnswerAsync("ask", Timeout, async (chat, ct) =>
+        {
+            var response = await chat.GetResponseAsync(
+                [new ChatMessage(ChatRole.System, $"{SystemPrompt} {context}"), new ChatMessage(ChatRole.User, question)],
+                new ChatOptions { Tools = [.. Tools(userId, timeZoneId, zone, ct)], MaxOutputTokens = 400 },
+                ct);
+            return response.Text;
+        }, logger, cancellationToken);
+        // Small models bold numbers whatever they are told; the page shows plain text.
+        return answer.Replace("**", string.Empty, StringComparison.Ordinal).Trim();
+    }
+
+    private AIFunction[] Tools(string userId, string? timeZoneId, TimeZoneInfo zone, CancellationToken ct) =>
         [
             AIFunctionFactory.Create(
                 ([Description("One of: today, 7d, 30d, all")] string range) => RangeAsync(userId, range, timeZoneId, ct),
@@ -59,17 +74,6 @@ public sealed class AskService(StatsQueryService stats, ISensingLog sensingLog, 
                 "search_captions",
                 "When captions mentioning these words were written, newest first, at most 10."),
         ];
-
-        // The date goes into the prompt so "Tuesday" or "yesterday" can be resolved, and the response
-        // cache starts afresh each day.
-        var context = $"Today is {today.ToString("dddd yyyy-MM-dd", CultureInfo.InvariantCulture)} in {zone.Id}.";
-        var response = await chat.GetResponseAsync(
-            [new ChatMessage(ChatRole.System, $"{SystemPrompt} {context}"), new ChatMessage(ChatRole.User, question)],
-            new ChatOptions { Tools = [.. tools], MaxOutputTokens = 400 },
-            ct);
-        // Small models bold numbers whatever they are told; the page shows plain text.
-        return response.Text.Replace("**", string.Empty, StringComparison.Ordinal).Trim();
-    }
 
     private async Task<object> RangeAsync(string userId, string range, string? timeZoneId, CancellationToken ct)
     {

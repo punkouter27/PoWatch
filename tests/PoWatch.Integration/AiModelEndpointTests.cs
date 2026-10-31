@@ -31,6 +31,10 @@ public sealed class AiModelEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal("application/problem+json", invalid.Content.Headers.ContentType?.MediaType);
         Assert.Equal("Ollama", (await browser.GetFromJsonAsync<AiModelsDto>("/api/ai/models"))!.SelectedId);
 
+        var auto = await (await browser.PutAsJsonAsync("/api/ai/models", new SelectAiModelDto("Auto"))).Content.ReadFromJsonAsync<AiModelsDto>();
+        Assert.Equal("Auto", auto!.SelectedId);
+        Assert.NotEqual("Ollama, else cloud", auto.Models.Single(m => m.Id == "Auto").Model);
+
         await browser.PutAsJsonAsync("/api/ai/models", new SelectAiModelDto("Template"));
         Assert.Equal("Template", (await browser.GetFromJsonAsync<AiModelsDto>("/api/ai/models"))!.SelectedId);
         var noAi = await browser.PostAsJsonAsync("/api/ask", new AskRequestDto { Question = "What happened?", TimeZoneId = "UTC" });

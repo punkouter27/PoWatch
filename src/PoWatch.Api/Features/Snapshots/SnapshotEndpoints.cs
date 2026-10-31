@@ -25,16 +25,6 @@ internal static class SnapshotEndpoints
             .WithName("CreateSnapshotUpload")
             .WithSummary("A short-lived, write-only link for one highlight snapshot under the caller's own prefix.");
 
-        app.MapGet("/api/snapshots/read", async (string path, HttpContext http, ISnapshotStore store, CancellationToken ct) =>
-            {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
-                var url = await store.CreateReadUrlAsync(userId, path, ct);
-                return url is null ? Results.NotFound() : Results.Ok(new { url = url.ToString() });
-            })
-            .WithTags("Snapshots")
-            .RequireAuthorization()
-            .WithName("ReadSnapshot");
-
         app.MapGet("/api/sessions/{id:guid}/moments", async (
                 Guid id,
                 HttpContext http,

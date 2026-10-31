@@ -20,6 +20,25 @@ public sealed class AssistServiceTests
         public void Dispose() { }
     }
 
+    /// <summary>A model whose provider is down.</summary>
+    private sealed class Down : IChatClient
+    {
+        public int Calls { get; private set; }
+
+        public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            throw new HttpRequestException("provider unavailable");
+        }
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose() { }
+    }
+
     private static AssistService With(string reply) => new([new Canned(reply)], NullLogger<AssistService>.Instance);
 
     [Fact]
@@ -41,5 +60,21 @@ public sealed class AssistServiceTests
 
         // No model: nothing, and no error.
         Assert.Null(await new AssistService([], NullLogger<AssistService>.Instance).HeadlineAsync(summary, ct));
+    }
+
+    [Fact]
+    public async Task A_failing_model_hands_over_to_the_next_once_and_its_answer_is_checked_too()
+    {
+        var ct = CancellationToken.None;
+        const string summary = "The room was occupied 62% of the time, with 251 visits.";
+        var down = new Down();
+
+        Assert.Equal("251 visits and a busy room", await new AssistService(
+            [down, new Canned("""{"headline":"251 visits and a busy room"}""")], NullLogger<AssistService>.Instance).HeadlineAsync(summary, ct));
+        Assert.Equal(1, down.Calls);
+        Assert.Null(await new AssistService(
+            [down, new Canned("""{"headline":"Nine hundred visits!"}""")], NullLogger<AssistService>.Instance).HeadlineAsync(summary, ct));
+        Assert.Null(await new AssistService([down, down], NullLogger<AssistService>.Instance).HeadlineAsync(summary, ct));
+        Assert.Equal(4, down.Calls);
     }
 }

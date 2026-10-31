@@ -56,20 +56,22 @@ public sealed class AssistService(IEnumerable<IChatClient> chatClients, ILogger<
 
     private async Task<T?> AskAsync<T>(string system, string user, CancellationToken cancellationToken) where T : class
     {
-        if (chatClients.FirstOrDefault() is not { } chat) return null;
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(Timeout);
+        if (!chatClients.Any()) return null;
         try
         {
-            var response = await chat.GetResponseAsync(
-                [new ChatMessage(ChatRole.System, system), new ChatMessage(ChatRole.User, user)],
-                new ChatOptions { Temperature = 0.2f, MaxOutputTokens = 200, ResponseFormat = ChatResponseFormat.ForJsonSchema<T>() },
-                timeout.Token);
-            return string.IsNullOrWhiteSpace(response.Text) ? null : JsonSerializer.Deserialize<T>(response.Text, JsonSerializerOptions.Web);
+            // The chosen model, then the next configured one if it fails.
+            return await chatClients.FirstAnswerAsync($"assist ({typeof(T).Name})", Timeout, async (chat, ct) =>
+            {
+                var response = await chat.GetResponseAsync(
+                    [new ChatMessage(ChatRole.System, system), new ChatMessage(ChatRole.User, user)],
+                    new ChatOptions { Temperature = 0.2f, MaxOutputTokens = 200, ResponseFormat = ChatResponseFormat.ForJsonSchema<T>() },
+                    ct);
+                return string.IsNullOrWhiteSpace(response.Text) ? null : JsonSerializer.Deserialize<T>(response.Text, JsonSerializerOptions.Web);
+            }, logger, cancellationToken);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "AI assist ({Kind}) failed.", typeof(T).Name);
+            logger.LogWarning(ex, "AI assist ({Kind}) failed on every model.", typeof(T).Name);
             return null;
         }
     }

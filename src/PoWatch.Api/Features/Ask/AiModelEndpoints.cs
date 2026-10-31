@@ -12,12 +12,13 @@ internal static class AiModelEndpoints
     internal static IServiceCollection AddBrowserAiSelection(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
-        // Keep optional-client consumers unchanged; each request gets its own selection, not a global switch.
+        // Each request gets its own selection (not a global switch): the chosen model, then the next
+        // configured one should it fail. The list is lazy, so the fallback is resolved only when needed.
         services.AddScoped<IEnumerable<IChatClient>>(sp =>
         {
             var models = sp.GetRequiredService<IAiModelRegistry>();
             var http = sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
-            return models.GetClient(SelectedId(http, models)) is { } client ? [client] : [];
+            return models.Chain(SelectedId(http, models));
         });
         return services;
     }
@@ -25,7 +26,7 @@ internal static class AiModelEndpoints
     internal static IEndpointRouteBuilder MapAiModelsFeature(this IEndpointRouteBuilder app)
     {
         app.MapGet("/api/ai/models", (HttpContext http, IAiModelRegistry models) =>
-                TypedResults.Ok(new AiModelsDto(SelectedId(http, models), models.Models)))
+                TypedResults.Ok(new AiModelsDto(SelectedId(http, models), models.Describe())))
             .RequireAuthorization()
             .WithTags("AI")
             .WithName("GetAiModels")
@@ -46,7 +47,7 @@ internal static class AiModelEndpoints
                     MaxAge = TimeSpan.FromDays(365),
                     IsEssential = true
                 });
-                return TypedResults.Ok(new AiModelsDto(request.ModelId, models.Models));
+                return TypedResults.Ok(new AiModelsDto(request.ModelId, models.Describe()));
             })
             .RequireAuthorization()
             .WithTags("AI")

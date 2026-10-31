@@ -13,10 +13,13 @@ public enum AiProviderType
     Gemini,
 
     /// <summary>A local Ollama server (free, offline), see <see cref="OllamaOptions"/>.</summary>
-    Ollama
+    Ollama,
+
+    /// <summary>Ollama when it answers, else Gemini, else Azure OpenAI, else Template.</summary>
+    Auto
 }
 
-/// <summary>Picks the recap writer: Template (default), Azure OpenAI, Gemini or Ollama.</summary>
+/// <summary>Picks the recap writer: Template (default), Azure OpenAI, Gemini, Ollama or Auto.</summary>
 public sealed class AiProviderOptions
 {
     /// <summary>Selected AI provider. Defaults to Template; every model falls back to Template on failure.</summary>

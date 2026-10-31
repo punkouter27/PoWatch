@@ -1,0 +1,25 @@
+#!/bin/sh
+# PoWatch pre-commit: the CI formatting gate and the hygiene check, before a commit is made.
+# Installed by SCRIPTS/setup.ps1 (git config core.hooksPath SCRIPTS/hooks). Skip once with
+# `git commit --no-verify`; set POWATCH_HOOK_FULL=1 to check the whole solution's format instead of
+# the staged C# files only.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- '*.cs' '*.razor')
+
+if [ "${POWATCH_HOOK_FULL:-0}" = "1" ]; then
+    echo "pre-commit: dotnet format (whole solution)..."
+    dotnet format PoWatch.slnx --verify-no-changes
+elif [ -n "$staged" ]; then
+    # Whitespace and style on the staged files only: the same rules as CI, in seconds, not a minute.
+    echo "pre-commit: dotnet format (staged files)..."
+    # One argument per file is the point, so $staged stays unquoted.
+    # shellcheck disable=SC2086
+    dotnet format whitespace PoWatch.slnx --verify-no-changes --include $staged
+    # shellcheck disable=SC2086
+    dotnet format style PoWatch.slnx --verify-no-changes --include $staged
+fi
+
+echo "pre-commit: hygiene..."
+pwsh -NoProfile -File SCRIPTS/check-hygiene.ps1

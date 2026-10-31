@@ -55,8 +55,10 @@ public static class TelemetrySetup
     }
 
     /// <summary>
-    /// Registers OpenTelemetry tracing with ASP.NET Core instrumentation, a console exporter,
-    /// and an Azure Monitor (App Insights) exporter when the connection string is configured.
+    /// Registers OpenTelemetry tracing with ASP.NET Core instrumentation and an Azure Monitor (App
+    /// Insights) exporter when the connection string is configured. There is no console exporter: it
+    /// printed every span to stdout in every environment, burying the Serilog lines App Service's log
+    /// stream shows, and the request log already says what a span would.
     /// </summary>
     public static IServiceCollection AddPoWatchTelemetry(this IServiceCollection services, IConfiguration configuration)
     {
@@ -73,8 +75,7 @@ public static class TelemetrySetup
             {
                 tracing
                     .AddAspNetCoreInstrumentation()
-                    .AddSource("PoWatch.*")
-                    .AddConsoleExporter();
+                    .AddSource("PoWatch.*");
 
                 if (!string.IsNullOrWhiteSpace(aiConnectionString))
                 {

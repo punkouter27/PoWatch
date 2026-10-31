@@ -52,9 +52,17 @@ public sealed class SnapshotE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
         Assert.Null(moments[1].ImageUrl);
         Assert.Equal(HttpStatusCode.OK, (await storage.GetAsync(moments[0].ImageUrl!)).StatusCode);
 
-        // Someone else's snapshot path or session is simply not found.
-        Assert.Equal(HttpStatusCode.NotFound, (await stranger.GetAsync($"/api/snapshots/read?path={Uri.EscapeDataString(upload.Path)}")).StatusCode);
+        // Someone else's session is simply not found, and naming someone else's snapshot path in one's
+        // own moment yields no image link.
         Assert.Equal(HttpStatusCode.NotFound, (await stranger.GetAsync($"/api/sessions/{session.Id}/moments")).StatusCode);
+        var theirs = (await (await stranger.PostAsJsonAsync("/api/sessions", new StartSessionRequestDto { TimeZoneId = "UTC" }))
+            .Content.ReadFromJsonAsync<SessionDto>())!;
+        (await stranger.PostAsJsonAsync($"/api/sessions/{theirs.Id}/batches", new IngestBatchDto
+        {
+            BatchKey = Guid.NewGuid(),
+            Events = [new() { AtUtc = theirs.StartedUtc.AddSeconds(2), Kind = "Notable", Text = "Borrowed cat", Score = 0.9, ImagePath = upload.Path }]
+        })).EnsureSuccessStatusCode();
+        Assert.Null((await stranger.GetFromJsonAsync<List<MomentDto>>($"/api/sessions/{theirs.Id}/moments"))!.Single().ImageUrl);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync("/api/snapshots?day=someday", null)).StatusCode);
     }
 }
