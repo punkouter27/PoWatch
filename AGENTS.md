@@ -2,24 +2,27 @@
 
 Rules for any agent working in this repository.
 
-- **Branching.** Do all work on `master`. Use another branch only when specifically asked to.
-- **Restart after changes.** After any code change, restart the app and verify it comes back up successfully.
-- **Project overview.** Check the `docs/` folder in the repo root for an overall summary of the project.
-- **Configuration and secrets.** Do not use `dotnet user-secrets` to store data locally. Put it in
-  `appsettings*.json`, or in Azure Key Vault if one exists.
-- **Git sync.** When syncing, create a short commit message in casual American slang that reads like
-  a human wrote it (not technical), then push.
-- **TL;DR.** Any answer longer than 100 words ends with a TL;DR summary of about 20 words.
-- **Three-level TL;DR for code changes.** When a code change is over 20 lines, summarize it at three
-  levels: (1) Toddler, (2) Child, (3) Adult.
-- **Tests.** Do not run the full test suite after code changes. Run only the tests related to the
-  change, or none at all if the change is simple.
-- **Automate, don't delegate.** Avoid asking the user to type CLI commands or click through a web
-  GUI when you can do it yourself.
-- **Warnings are errors.** Treat compile warnings as errors and fix them.
-- **Big deletions.** If a prompt removes more than 100 lines of code overall, mention it.
-- **UI screenshots.** When the UI changes, take annotated screenshots of the old and new UI with the
-  changes marked. Put them in an HTML file in the `SCREENSHOTS` folder and give its valid full path.
+### 1. Git & Workflow
+* **Stay on `master`:** Commit directly to `master`. Create branches only when specifically asked.
+* **Casual Commits:** Write short, natural commit messages using informal American phrasing. Auto-commit and push on sync.
+
+### 2. Running, Testing & Clean Code
+* **Run Only Related Tests:** Test only what was touched. Skip tests for minor edits; never run the whole test suite.
+* **Zero Warnings:** Fix all build warnings immediately. Treat every warning as a failure.
+
+### 3. Architecture & Setup
+* **Keep Docs Updated:** Check `DOCS/` and `README.md` first to get an overview of app quickly (if they exist)
+* **Fully Automated:** Run all builds, scripts, and setup commands directly. Do not ask the user to run terminal commands.
+
+### 4. UI & Output Rules
+* **UI Previews:** For visual changes, save before-and-after HTML mockups to `SCREENSHOTS/{YYMMDD}-{feature}.html` / Annotate screenshots and show in a single PNG the before and after with notes
+* **Clarifying Questions:** If modifying more than 100 lines and no pending questions exist, list 3 key follow-up questions about future direction or logic.
+* **Required Footers:**
+  * **Short Recap:** If your response is over 100 words, add a recap under 20 words at the very end.
+  * **3-Level Summary:** If a code change is over 20 lines, add 3 single-sentence summaries:
+    * *Toddler:* Explain the idea simply.
+    * *Child:* Explain what the app actually does now.
+    * *Adult:* Explain how it was built.
 
 ## CI/CD and Azure (same section in every Po repo)
 
