@@ -7,7 +7,7 @@ namespace PoWatch.E2EAPI;
 public sealed class RecapE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE2EFactory>
 {
     [Fact]
-    public async Task Sessions_and_days_get_a_readable_recap_without_any_ai_configured()
+    public async Task Days_get_a_readable_recap_and_sessions_a_pdf_without_any_ai_configured()
     {
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Fake-User", $"recap-{Guid.NewGuid():N}");
@@ -29,21 +29,13 @@ public sealed class RecapE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE2EF
             ]
         })).EnsureSuccessStatusCode();
 
-        var recap = await client.GetFromJsonAsync<RecapDto>($"/api/recaps/session/{session.Id}");
-        Assert.NotNull(recap);
-        Assert.Equal("template", recap!.Source);
-        Assert.StartsWith("Session #", recap.Title, StringComparison.Ordinal);
-        Assert.Contains("one visit", recap.Summary, StringComparison.Ordinal);
-        Assert.Contains(recap.Numbers, n => n is { Label: "Visits", Value: "1" });
-        Assert.Contains(recap.Highlights, h => h.Contains("cat", StringComparison.Ordinal));
-        Assert.Equal("First cat of the session", Assert.Single(recap.Moments).Text);
-
         var day = DateOnly.FromDateTime(at.UtcDateTime);
         var daily = await client.GetFromJsonAsync<RecapDto>($"/api/recaps/day/{day:yyyy-MM-dd}?tz=UTC");
-        Assert.Contains(daily!.Numbers, n => n is { Label: "Visits", Value: "1" });
-        Assert.Single(daily.Moments);
+        Assert.Equal("template", daily!.Source);
+        Assert.Contains(daily.Numbers, n => n is { Label: "Visits", Value: "1" });
+        Assert.Contains(daily.Highlights, h => h.Contains("cat", StringComparison.Ordinal));
+        Assert.Equal("First cat of the session", Assert.Single(daily.Moments).Text);
 
-        Assert.Equal(HttpStatusCode.NotFound, (await stranger.GetAsync($"/api/recaps/session/{session.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/recaps/day/yesterday")).StatusCode);
 
         await AssertPdfAsync(await client.GetAsync($"/api/recaps/session/{session.Id}.pdf"));

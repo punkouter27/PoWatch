@@ -7,7 +7,7 @@
 // captioned against the same frames on an RTX 5070 Ti laptop (2026-10-17), and minicpm-v, the default,
 // was nearly as accurate as qwen3-vl at a third of the time. Models that made things up, stalled,
 // came back empty or filled the GPU were left out. Keys are Ollama tags.
-export const OLLAMA_CAPTION_MODELS = ['minicpm-v', 'qwen3-vl:8b-instruct', 'qwen2.5vl:7b'];
+const OLLAMA_CAPTION_MODELS = ['minicpm-v', 'qwen3-vl:8b-instruct', 'qwen2.5vl:7b'];
 
 export function isOllamaModel(key) {
   return OLLAMA_CAPTION_MODELS.includes(key);

@@ -92,13 +92,6 @@ public static class RecapAi
         public IReadOnlyList<AiModelDto> Models { get; }
         public string DefaultId { get; }
 
-        public IChatClient? GetClient(string id) => id switch
-        {
-            TemplateId => null,
-            AutoId => Chain(id).FirstOrDefault(),
-            _ => _clients[id]
-        };
-
         public IEnumerable<IChatClient> Chain(string id)
         {
             if (id == AutoId)

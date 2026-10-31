@@ -31,58 +31,26 @@ public sealed class ViewportFitE2ETests
     }
 
     [Fact]
-    public async Task Live_Room_body_fits_within_viewport()
+    public async Task Live_Stories_and_System_bodies_fit_within_every_viewport()
     {
-        foreach (var scenario in PhoneAndDesktopViewports())
+        if (PlaywrightFixture.BaseUrl is null) return;
+        foreach (var (name, open) in new (string, Func<IPage, Task>)[]
         {
-            int width = (int)scenario[0];
-            int height = (int)scenario[1];
-            if (PlaywrightFixture.BaseUrl is null) return;
-            await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser, "/");
-            await page.SetViewportSizeAsync(width, height);
-            await page.WaitForTimeoutAsync(1000);
-
-            await AssertBodyFitsViewportAsync(page);
-            await page.AssertNoBlazorErrorAsync();
-
-        }
-    }
-
-    [Fact]
-    public async Task History_body_fits_within_viewport()
-    {
-        foreach (var scenario in PhoneAndDesktopViewports())
+            // Live opens on sign-in; its panels need a beat longer to settle than the other pages.
+            ("Live", page => page.WaitForTimeoutAsync(1000)),
+            ("Stories", async page => { await page.GoToAsync("/stories", "STORIES"); await page.WaitForTimeoutAsync(500); }),
+            ("System", async page => { await page.GoToSystemAsync(); await page.WaitForTimeoutAsync(500); }),
+        })
         {
-            int width = (int)scenario[0];
-            int height = (int)scenario[1];
-            if (PlaywrightFixture.BaseUrl is null) return;
-            await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser);
-            await page.SetViewportSizeAsync(width, height);
-            await page.GoToAsync("/stories", "STORIES");
-            await page.WaitForTimeoutAsync(500);
+            foreach (var scenario in PhoneAndDesktopViewports())
+            {
+                await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser);
+                await page.SetViewportSizeAsync((int)scenario[0], (int)scenario[1]);
+                await open(page);
 
-            await AssertBodyFitsViewportAsync(page);
-            await page.AssertNoBlazorErrorAsync();
-
-        }
-    }
-
-    [Fact]
-    public async Task System_body_fits_within_viewport()
-    {
-        foreach (var scenario in PhoneAndDesktopViewports())
-        {
-            int width = (int)scenario[0];
-            int height = (int)scenario[1];
-            if (PlaywrightFixture.BaseUrl is null) return;
-            await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser);
-            await page.SetViewportSizeAsync(width, height);
-            await page.GoToSystemAsync();
-            await page.WaitForTimeoutAsync(500);
-
-            await AssertBodyFitsViewportAsync(page);
-            await page.AssertNoBlazorErrorAsync();
-
+                await AssertBodyFitsViewportAsync(page, $"{name} at {scenario[0]}×{scenario[1]}");
+                await page.AssertNoBlazorErrorAsync();
+            }
         }
     }
 
@@ -132,7 +100,7 @@ public sealed class ViewportFitE2ETests
         await page.AssertNoBlazorErrorAsync();
     }
 
-    private static async Task AssertBodyFitsViewportAsync(IPage page)
+    private static async Task AssertBodyFitsViewportAsync(IPage page, string where)
     {
         var size = await page.EvaluateAsync<int[]>("() => [document.documentElement.clientWidth, document.documentElement.clientHeight, document.documentElement.scrollHeight]");
         // Some pages legitimately scroll a panel internally (Live panels, History day
@@ -142,7 +110,7 @@ public sealed class ViewportFitE2ETests
         var overflow = size[2] - size[1];
         Assert.True(
             overflow <= 2,
-            $"Body exceeds viewport by {overflow} px (viewport={size[1]}, scrollHeight={size[2]}, width={size[0]}). " +
+            $"{where}: body exceeds viewport by {overflow} px (viewport={size[1]}, scrollHeight={size[2]}, width={size[0]}). " +
             "A page that scrolls the body pushes the chrome out of view on a kiosk — re-check the page's overflow contract.");
     }
 

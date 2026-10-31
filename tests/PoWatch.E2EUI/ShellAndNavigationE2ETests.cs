@@ -9,7 +9,7 @@ namespace PoWatch.E2EUI;
 public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
 {
     [Fact]
-    public async Task The_terminal_shell_renders_header_and_keys()
+    public async Task The_terminal_shell_renders_header_and_keys_and_the_keys_navigate()
     {
         if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -18,6 +18,13 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("STANDBY");
         await Assertions.Expect(page.GetByTestId("settings-menu")).ToBeVisibleAsync();
+
+        await page.GetByTestId("nav-stories").ClickAsync();
+        await page.ExpectSectionAsync("STORIES");
+        await page.GetByTestId("nav-days").ClickAsync();
+        await page.ExpectSectionAsync("DAYS");
+        await page.GetByTestId("nav-live").ClickAsync();
+        await page.ExpectSectionAsync("LIVE");
         await page.AssertNoBlazorErrorAsync();
     }
 
@@ -68,22 +75,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("advanced-toggle")).ToHaveAttributeAsync("aria-checked", "false");
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToHaveCountAsync(0);
         await page.AssertNoBlazorErrorAsync();
-    }
-
-    [Fact]
-    public async Task The_key_bar_navigates()
-    {
-        if (PlaywrightFixture.BaseUrl is null) return;
-        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
-
-        await page.GetByTestId("nav-stories").ClickAsync();
-        await page.ExpectSectionAsync("STORIES");
-
-        await page.GetByTestId("nav-days").ClickAsync();
-        await page.ExpectSectionAsync("DAYS");
-
-        await page.GetByTestId("nav-live").ClickAsync();
-        await page.ExpectSectionAsync("LIVE");
     }
 
     [Fact]

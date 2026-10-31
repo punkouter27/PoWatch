@@ -195,18 +195,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     }
 
     [Fact]
-    public async Task The_system_page_reports_runtime_and_inference_state()
-    {
-        if (PlaywrightFixture.BaseUrl is null) return;
-        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
-        await page.GoToSystemAsync();
-
-        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Inference engine" }))
-            .ToBeVisibleAsync();
-    }
-
-    [Fact]
-    public async Task The_system_page_lists_every_connection_with_a_verdict()
+    public async Task The_system_page_reports_inference_state_and_every_connection_with_a_verdict()
     {
         if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -217,6 +206,10 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         // after it is a race with the first fetch.
         await Assertions.Expect(page.GetByTestId("health-check-list")).ToBeVisibleAsync(new() { Timeout = 30000 });
         Assert.True(await page.GetByTestId("health-check").CountAsync() > 0);
+
+        await page.OpenSystemTabAsync("Engine");
+        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Inference engine" }))
+            .ToBeVisibleAsync();
     }
 
     [Fact]

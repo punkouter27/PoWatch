@@ -12,15 +12,6 @@ internal static class RecapEndpoints
     {
         var group = app.MapGroup("/api/recaps").WithTags("Recaps").RequireAuthorization();
 
-        group.MapGet("/session/{id:guid}", async (Guid id, HttpContext http, RecapService recaps, CancellationToken ct) =>
-            {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
-                var recap = await recaps.ForSessionAsync(userId, id, ct);
-                return recap is null ? Results.NotFound() : Results.Ok(recap);
-            })
-            .WithName("SessionRecap")
-            .WithSummary("A readable recap of one session: a paragraph, headline numbers and the best moments.");
-
         group.MapGet("/session/{id:guid}.pdf", async (Guid id, HttpContext http, RecapService recaps, ISessionRepository sessions, ILogger<Program> logger, CancellationToken ct) =>
             {
                 if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();

@@ -7,7 +7,7 @@
 // and the signature of a small model stuck in a loop.
 const DENY = new Set(['yes', 'no', 'ok', 'yeah', 'yep', 'nope', 'none', 'true', 'false', 'maybe', 'unanswerable', 'unknown']);
 
-export function hasRepetition(text) {
+function hasRepetition(text) {
   const counts = Object.create(null);
   for (const w of text.toLowerCase().split(/\s+/)) {
     if (w.length < 2) continue;

@@ -207,7 +207,7 @@ the camera and add up to a long-exposure PNG on the session recap; they respect
 | `POST /api/sessions/{id}/batches` | tick + event ingest (idempotent by `batchKey`) |
 | `GET /api/stats/{presence\|space\|objects\|patterns\|environment\|pipeline}?range=` | stat families |
 | `GET /api/stats/all?range=` | every family in one JSON document, plus the raw ticks and events for session, today or one day (Live's "All data ↓", Days' "Day data ↓") |
-| `GET /api/recaps/session/{id}[.pdf]`, `GET /api/recaps/day/{date}[.pdf]?tz=[&ai=false]` | recaps and PDFs; `ai=false` answers from the template at once |
+| `GET /api/recaps/session/{id}.pdf`, `GET /api/recaps/day/{date}[.pdf]?tz=[&ai=false]` | recaps and PDFs; `ai=false` answers from the template at once |
 | `GET /api/sessions/{id}/transcript` | every line the on-device speech model heard in the session |
 | `GET /api/stories/{week\|month}?date=&tz=` | the story of the week or month holding a day, told from its days |
 | `POST /api/sessions/{id}/story` | write the session's closed ten-minute chapters and, once it has ended, its story; returns both |

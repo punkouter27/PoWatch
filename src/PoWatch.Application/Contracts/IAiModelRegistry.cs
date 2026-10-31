@@ -11,8 +11,6 @@ public interface IAiModelRegistry
 
     string DefaultId { get; }
 
-    IChatClient? GetClient(string id);
-
     /// <summary>
     /// The clients to try for a selection, in order: the chosen model (Auto's pick for Auto), then the
     /// next configured one. Lazy, so the fallback is resolved only after the first one failed; empty
