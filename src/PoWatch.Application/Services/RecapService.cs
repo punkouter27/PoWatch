@@ -40,6 +40,27 @@ public sealed class RecapService(
         return await WriteAsync(facts, cancellationToken);
     }
 
+    /// <summary>A recap of part of a session, [<paramref name="fromUtc"/>, <paramref name="toUtc"/>): one story chapter.</summary>
+    /// <param name="useAi">False returns the template recap without asking the model.</param>
+    public async Task<RecapDto> ForStretchAsync(string userId, Session session, DateTimeOffset fromUtc, DateTimeOffset toUtc, string title, bool useAi, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        var zone = session.TimeZone;
+        // Whole minute buckets, so neighbouring chapters never count the same minute; the last one
+        // runs to the end of the session's final minute, as the session range does.
+        var windowTo = toUtc == session.EndedUtc ? toUtc.AddMinutes(1) : toUtc;
+        var window = new StatsWindow(StatsRange.Session,
+            RollupBuckets.StartUtc(RollupGrain.Minute, fromUtc, zone),
+            RollupBuckets.StartUtc(RollupGrain.Minute, windowTo, zone),
+            RollupGrain.Minute, zone);
+
+        var from = TimeZoneInfo.ConvertTime(fromUtc, zone);
+        var to = TimeZoneInfo.ConvertTime(toUtc, zone);
+        var moments = (await MomentsAsync(userId, session, cancellationToken)).Where(m => m.AtUtc >= fromUtc && m.AtUtc < toUtc).ToList();
+        var facts = await GatherAsync(userId, window, title, $"{from:HH:mm}–{to:HH:mm}", moments, cancellationToken);
+        return useAi ? await WriteAsync(facts, cancellationToken) : TemplateRecap.Build(facts);
+    }
+
     /// <param name="useAi">False returns the template recap without asking the model.</param>
     public async Task<RecapDto?> ForDayAsync(string userId, DateOnly day, string? timeZoneId, CancellationToken cancellationToken, bool useAi = true)
     {

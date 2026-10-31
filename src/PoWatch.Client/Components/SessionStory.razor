@@ -1,0 +1,63 @@
+@* A session's story (StoryService on the server): a chapter for every ten minutes, joined into one
+   story once the session has ended, with the chapters under it. Loading it writes whatever is due. *@
+@using System.Globalization
+@inject PoWatchApiClient Api
+
+<div class="session-story" data-test="session-story">
+    @if (_loading)
+    {
+        <p class="term-empty">Writing the story…</p>
+    }
+    else if (_story is null)
+    {
+        <p class="term-empty">The story could not be loaded.</p>
+    }
+    else
+    {
+        @if (_story.Story is { } text)
+        {
+            @foreach (var paragraph in text.Split("\n\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                <p class="session-story-text" data-test="session-story-text">@paragraph</p>
+            }
+        }
+        else if (_story.Chapters.Count == 0)
+        {
+            <p class="term-empty">The first chapter is written ten minutes in.</p>
+        }
+
+        @if (_story.Chapters.Count > 0)
+        {
+            @* Folded once there is a story; open while the session runs, when the chapters are all there is. *@
+            <details class="session-story-chapters" open="@(_story.Story is null)">
+                <summary>@(_story.Chapters.Count == 1 ? "1 CHAPTER" : $"{_story.Chapters.Count} CHAPTERS")</summary>
+                <ol>
+                    @foreach (var chapter in _story.Chapters)
+                    {
+                        <li><span class="num">@Time(chapter.FromUtc)–@Time(chapter.ToUtc)</span> @chapter.Text</li>
+                    }
+                </ol>
+            </details>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Guid SessionId { get; set; }
+
+    private Guid _loaded;
+    private bool _loading = true;
+    private SessionStoryDto? _story;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SessionId == _loaded) return;
+        (_loaded, _loading, _story) = (SessionId, true, null);
+        var id = SessionId;
+        var story = await Api.UpdateStoryAsync(id);
+        if (id != SessionId) return;
+        (_story, _loading) = (story, false);
+    }
+
+    private static string Time(DateTimeOffset at) => at.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+}

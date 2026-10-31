@@ -32,6 +32,9 @@
                     <StatCell Label="Moments" Value="@_moments.Count.ToString(CultureInfo.InvariantCulture)" />
                 </div>
 
+                @* Asking for the story writes whatever is due: after Stop, the last chapter and the story itself. *@
+                <SessionStory SessionId="@recap.Session.Id" />
+
                 @if (recap.Exposure is { } exposure)
                 {
                     <figure class="away-exposure" data-test="away-exposure">

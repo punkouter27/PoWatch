@@ -21,6 +21,13 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
     private static readonly TimeSpan FlushEvery = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan DemoStep = TimeSpan.FromMilliseconds(250);
 
+    /// <summary>
+    /// How often the server is asked to write the session's next story chapter (StoryService), offset
+    /// by <see cref="ChapterSettle"/> so each ten minutes has closed and its last batches have landed.
+    /// </summary>
+    private static readonly TimeSpan ChapterEvery = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan ChapterSettle = TimeSpan.FromSeconds(30);
+
     private readonly CentroidTracker _tracker = new();
     private TickBatcher _batcher = new(time);
     private VlmScheduler _vlm = new(time);
@@ -150,6 +157,7 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         }
 
         _ = RunLoopAsync(FlushEvery, FlushAsync, _cts.Token);
+        _ = ChapterLoopAsync(session.Id, _cts.Token);
         _ = RunLoopAsync(demo ? DemoStep : TimeSpan.FromSeconds(1), demo ? DemoTickAsync : VlmTickAsync, _cts.Token);
         Notify();
         return null;
@@ -519,6 +527,20 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
 
         Live.PendingBatches = left;
         Notify();
+    }
+
+    /// <summary>Asks for a chapter every ten minutes; a missed one is written by the next call, or when the session ends.</summary>
+    private async Task ChapterLoopAsync(Guid sessionId, CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(ChapterSettle, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        await RunLoopAsync(ChapterEvery, c => api.UpdateStoryAsync(sessionId, c), ct);
     }
 
     private static async Task RunLoopAsync(TimeSpan period, Func<CancellationToken, Task> step, CancellationToken ct)

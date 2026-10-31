@@ -746,6 +746,16 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .away-exposure img { width: min(100%, 640px); aspect-ratio: 16 / 9; border: 1px solid var(--term-line); border-radius: 2px; }
 .away-exposure figcaption { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font: 11px var(--term-mono); letter-spacing: 0.06em; color: var(--term-muted); }
 
+/* A session's story: the chapters joined into prose, the chapters themselves folded under it. */
+.session-story { margin: 12px 0 0; display: grid; gap: 8px; max-width: 80ch; }
+.session-story-text { margin: 0; line-height: 1.55; color: var(--term-text); font: var(--fs-sm) var(--term-mono); }
+.session-story-chapters summary { cursor: pointer; color: var(--term-dim); font: var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; }
+.session-story-chapters ol { margin: 8px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; font: var(--fs-sm) var(--term-mono); color: var(--term-muted); line-height: 1.45; }
+.session-story-chapters .num { color: var(--term-accent); margin-right: 6px; }
+/* The story row wraps (the session cells do not), and on a phone, where rows become cards, spans the card. */
+.history-sessions .term-table .history-story-row td { padding-top: 0; white-space: normal; grid-column: 1 / -1; }
+.history-story-row .session-story { margin-top: 4px; }
+
 @media (prefers-reduced-motion: reduce) {
     .fx-type { animation: none; }
 }
@@ -782,6 +792,9 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     background: linear-gradient(100deg, var(--term-panel) 30%, var(--term-panel-2) 50%, var(--term-panel) 70%) 0 0 / 200% 100%;
     animation: fx-shimmer 1.4s linear infinite;
 }
+
+/* A stat panel whose numbers have not arrived yet. */
+.stats-pending { min-height: 120px; border-radius: var(--term-radius); }
 
 /* The dial: --p is a registered integer, so the conic fill and the counter both animate to it. */
 @property --p { syntax: '<integer>'; inherits: true; initial-value: 0; }
@@ -975,15 +988,35 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .dash-grid .live-camera, .dash-grid .term-panel.dash-wide { grid-column: span 2; }
 }
 
-/* A desktop shows everything at once in four rows that share the height under the bar: the camera takes
-   2×2, key metrics and "In frame" are two rows tall beside it, and the last two rows hold the motion grid
-   and the six stat panels (colours and captions take two cells, so their words never clip). Charts flex
-   to fit; the feed and the motion grid keep 16:9 (the boxes are placed in frame percentages). */
+/* A desktop shows everything at once as a 3×3 under the bar, the camera in the middle with the larger
+   middle row and column. What is happening now touches it (key metrics above, the motion grid left,
+   motion energy right, "In frame" below); the longer views take the corners. Charts flex to fit; the
+   feed and the motion grid keep 16:9 (the boxes are placed in frame percentages). */
 @media (min-width: 1280px) and (min-height: 700px) {
     .dash { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
     .dash:has(> .stats-answer) { grid-template-rows: auto auto minmax(0, 1fr); }
-    .dash-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); min-height: 0; }
-    .dash-grid .live-camera, .dash-grid .live-tall { grid-row: span 2; }
+    .dash-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
+        grid-template-rows: minmax(240px, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
+        grid-template-areas:
+            "space   metrics curve"
+            "heat    camera  energy"
+            "week    inframe env";
+        min-height: 0;
+    }
+    .dash-grid .live-camera { grid-area: camera; }
+    .dash-grid .cell-metrics { grid-area: metrics; }
+    .dash-grid .cell-inframe { grid-area: inframe; }
+    .dash-grid .cell-heat { grid-area: heat; }
+    .dash-grid .cell-energy { grid-area: energy; }
+    .dash-grid .cell-space { grid-area: space; }
+    .dash-grid .cell-curve { grid-area: curve; }
+    .dash-grid .cell-week { grid-area: week; }
+    .dash-grid .term-panel.cell-env { grid-area: env; }
+    .dash-grid .stats-pending { min-height: 0; height: 100%; }
+    /* Short screens: the light curve keeps a readable height and the room's cell scrolls under it, as key metrics would. */
+    .dash-grid .cell-env > .term-panel-body, .dash-grid .cell-metrics > .term-panel-body { overflow-y: auto; }
+    .dash-grid .cell-env .rz-chart { flex: 1 0 110px; }
     .dash-grid .term-skeleton { height: auto !important; }
     .dash-grid .term-stats .term-stat-hint { display: none; }
     .dash-grid .term-panel-body:has(> .rz-chart), .dash-grid .term-panel-body:has(> .live-heat), .live-camera > .term-panel-body { display: flex; flex-direction: column; overflow: hidden; }
@@ -1256,6 +1289,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 /* A text link inside a table, with a target a finger can hit. */
 .term-link { display: inline-block; padding: 4px 6px; margin: -4px -6px; color: var(--term-accent); text-decoration: none; }
 .term-link:hover { text-decoration: underline; }
+button.term-link { background: none; border: 0; font: inherit; cursor: pointer; }
 
 /* Loading placeholders the height of what replaces them, so nothing below jumps when it lands. */
 .history-skel-day { height: 104px !important; }

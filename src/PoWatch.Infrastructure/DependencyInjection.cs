@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddSingleton<IUserDataStore, AzureUserDataStore>();
         services.AddSingleton<IProfileStore, AzureProfileStore>();
         services.AddSingleton<IShareStore, AzureShareStore>();
+        services.AddSingleton<IStoryStore, AzureStoryStore>();
 
         // One long-lived client for Open-Meteo; pooled connections are recycled so DNS changes still land.
         services.AddSingleton<IWeatherSource>(sp => new OpenMeteoWeatherSource(

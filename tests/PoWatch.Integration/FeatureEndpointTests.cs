@@ -116,6 +116,30 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
     }
 
     [Fact]
+    public async Task A_stopped_session_gets_its_chapters_joined_into_one_story_written_once()
+    {
+        using var client = ClientFor($"storyteller-{Guid.NewGuid():N}");
+        var session = await ObserveAsync(client);
+
+        // Running and under ten minutes: no chapter has closed, so there is nothing to tell yet.
+        var running = (await (await client.PostAsync($"/api/sessions/{session.Id}/story", null)).Content.ReadFromJsonAsync<SessionStoryDto>())!;
+        Assert.Empty(running.Chapters);
+        Assert.Null(running.Story);
+
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsync($"/api/sessions/{session.Id}/stop", null)).StatusCode);
+        var told = (await (await client.PostAsync($"/api/sessions/{session.Id}/story", null)).Content.ReadFromJsonAsync<SessionStoryDto>())!;
+        var chapter = Assert.Single(told.Chapters);
+        Assert.NotEqual(TemplateRecap.NothingObserved, chapter.Text);
+        Assert.Contains(chapter.Text, told.Story, StringComparison.Ordinal);
+
+        // Stored, not rewritten on the next read.
+        var again = (await (await client.PostAsync($"/api/sessions/{session.Id}/story", null)).Content.ReadFromJsonAsync<SessionStoryDto>())!;
+        Assert.Equal(told.WrittenUtc, again.WrittenUtc);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsync($"/api/sessions/{Guid.NewGuid()}/story", null)).StatusCode);
+    }
+
+    [Fact]
     public async Task A_shared_recap_reads_without_signing_in_until_it_is_taken_down()
     {
         var owner = $"sharer-{Guid.NewGuid():N}";

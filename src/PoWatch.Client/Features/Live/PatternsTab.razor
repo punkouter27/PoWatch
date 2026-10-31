@@ -1,38 +1,36 @@
 @inherits StatsTabBase<PatternStatsDto>
 
-@if (Data is null)
-{
-    @if (Loading)
+@* "Today vs usual" by the number (σ, rhythm, trend) is in Live's key metrics; these are its shapes. *@
+<TerminalPanel Title="Today's curve vs usual" Class="cell-curve" Test="@(Data is null ? null : "stats-patterns")">
+    @if (Data is null)
     {
-        <Skeleton Heights="@([220, 220])" />
+        <StatsPending Loading="@Loading" Empty="No pattern stats yet." />
     }
     else
     {
-        <p class="term-empty">No pattern stats yet.</p>
+        <RadzenChart aria-label="Occupancy by hour, today against the usual day">
+            <RadzenLineSeries Data="@_curve" CategoryProperty="@nameof(Hour.Label)" ValueProperty="@nameof(Hour.Usual)" Title="Usual" LineType="LineType.Dashed" />
+            <RadzenColumnSeries Data="@_curve" CategoryProperty="@nameof(Hour.Label)" ValueProperty="@nameof(Hour.Today)" Title="Today" />
+            @* Every sixth hour is labelled: 24 two-digit labels ran into one another. *@
+            <RadzenCategoryAxis Formatter="@(v => v is string hour && int.Parse(hour, System.Globalization.CultureInfo.InvariantCulture) % 6 == 0 ? hour + ":00" : string.Empty)" />
+            <RadzenValueAxis Min="0" Max="1" FormatString="{0:0%}" />
+            <RadzenLegend Position="LegendPosition.Top" />
+        </RadzenChart>
     }
-}
-else
-{
-    @* "Today vs usual" by the number (σ, rhythm, trend) is in Live's key metrics; these are its shapes. *@
-    <div class="term-grid" data-test="stats-patterns">
-        <TerminalPanel Title="Today's curve vs usual">
-            <RadzenChart aria-label="Occupancy by hour, today against the usual day">
-                <RadzenLineSeries Data="@_curve" CategoryProperty="@nameof(Hour.Label)" ValueProperty="@nameof(Hour.Usual)" Title="Usual" LineType="LineType.Dashed" />
-                <RadzenColumnSeries Data="@_curve" CategoryProperty="@nameof(Hour.Label)" ValueProperty="@nameof(Hour.Today)" Title="Today" />
-                @* Every sixth hour is labelled: 24 two-digit labels ran into one another. *@
-                <RadzenCategoryAxis Formatter="@(v => v is string hour && int.Parse(hour, System.Globalization.CultureInfo.InvariantCulture) % 6 == 0 ? hour + ":00" : string.Empty)" />
-                <RadzenValueAxis Min="0" Max="1" FormatString="{0:0%}" />
-                <RadzenLegend Position="LegendPosition.Top" />
-            </RadzenChart>
-        </TerminalPanel>
+</TerminalPanel>
 
-        <TerminalPanel Title="Hour × weekday (28 days)">
-            <HeatGrid Values="@Data.HourByWeekday.SelectMany(d => d).ToList()" Columns="24" Rows="7"
-                      Label="Occupancy by weekday and hour" CellTitle="@((i, v) => $"{Days[i / 24]} {i % 24:00}:00 · {v:P0}")" />
-            <div class="stats-axis"><span>ROWS SUN → SAT</span><span>COLUMNS 00:00 → 23:00</span></div>
-        </TerminalPanel>
-    </div>
-}
+<TerminalPanel Title="Hour × weekday (28 days)" Class="cell-week">
+    @if (Data is null)
+    {
+        <StatsPending Loading="@Loading" Empty="No pattern stats yet." />
+    }
+    else
+    {
+        <HeatGrid Values="@Data.HourByWeekday.SelectMany(d => d).ToList()" Columns="24" Rows="7"
+                  Label="Occupancy by weekday and hour" CellTitle="@((i, v) => $"{Days[i / 24]} {i % 24:00}:00 · {v:P0}")" />
+        <div class="stats-axis"><span>ROWS SUN → SAT</span><span>COLUMNS 00:00 → 23:00</span></div>
+    }
+</TerminalPanel>
 
 @code {
     public sealed record Hour(string Label, double Today, double Usual);

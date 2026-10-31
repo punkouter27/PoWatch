@@ -44,10 +44,13 @@ camera ──► browser (all sensing on-device)                        server
 ## Pages
 
 `/` Live, one screen under one bar (range picker: Session · Today · Week · Month · All, plus a Day picker for any single day (`?range=day&date=`); with Advanced on, an "Ask" box and "JSON ↓" for
-every number behind the grid): a 4×4 grid of the camera (2×2, one Start button; a synthetic demo is
-available whenever stopped), key metrics for the range beside your usual day (σ, rhythm, trend, next busy hour), who is in
-frame with every class seen in the range, then the live motion grid and six stat panels. On a phone the
-panels after "In frame" are one swipeable strip · `/history/{yyyy-MM-dd}` on the left the year (with the
+every number behind the grid): on a desktop a 3×3 with the camera in the larger middle cell (one Start
+button; a synthetic demo is available whenever stopped). What is happening now touches it: key metrics
+for the range beside your usual day (σ, rhythm, trend, next busy hour) above, who is in frame with every
+class seen in the range below, the live motion grid left and motion energy right. The corners hold
+Space, today's curve vs usual, hour × weekday and Environment (light, colours, captions). Every panel
+is there from the first paint, with a placeholder until its numbers arrive. Narrower screens stack the
+camera, key metrics and "In frame", and on a phone the panels after them are one swipeable strip · `/history/{yyyy-MM-dd}` on the left the year (with the
 weather's effect, once a place is set), the day's numbers, weather and its week against the week
 before, and the day's sessions; on the right two tabs (recap with motion and captions, plus JSON/PDF and a
 share link with Advanced on; replay, with the day's moments and time-lapse under it); on a desktop each column scrolls on its own · `/regulars` a
@@ -175,6 +178,7 @@ the camera and add up to a long-exposure PNG on the session recap; they respect
 | `GET /api/stats/{presence\|space\|objects\|patterns\|environment\|pipeline}?range=` | stat families |
 | `GET /api/stats/all?range=` | every family in one JSON document, plus the raw ticks and events for session, today or one day (Live's "All data ↓", History's "Day data ↓") |
 | `GET /api/recaps/session/{id}[.pdf]`, `GET /api/recaps/day/{date}[.pdf]?tz=[&ai=false]` | recaps and PDFs; `ai=false` answers from the template at once |
+| `POST /api/sessions/{id}/story` | write the session's closed ten-minute chapters and, once it has ended, its story; returns both |
 | `POST /api/ask` | a plain-language question answered from the caller's own statistics (503 without an AI provider) |
 | `GET /api/ai/models`, `PUT /api/ai/models` | configured server model labels (Auto's names the model it resolves to now) and the browser's selected model; unknown selections return 400 |
 | `POST /api/ask/rule` | a watch rule drafted from a sentence, for the caller to confirm (422 when it is not a rule, 503 without an AI provider) |
@@ -202,7 +206,8 @@ partition — production logs a warning at startup when that is the case.
 ## Storage
 
 Azure Table Storage (Azurite locally), partitioned by user: `PoWatchSessions`, `PoWatchTicks`,
-`PoWatchSceneEvents`, `PoWatchIngestLedger`, `PoWatchRollups`, `PoWatchRegulars`, `PoWatchProfiles`;
+`PoWatchSceneEvents`, `PoWatchIngestLedger`, `PoWatchRollups`, `PoWatchRegulars`, `PoWatchProfiles`,
+`PoWatchStories` (row `{session}|c0003` per chapter, `{session}|story`);
 `PoWatchShares` is keyed by token (and deleted by owner on "delete everything").
 Blob containers: `snapshots`, `dataprotection-keys`. Storage is required: Azurite locally (docker
 compose) and in tests (Testcontainers).
@@ -253,6 +258,18 @@ sentence (Settings; checked against the 80 detector labels and real hours, then 
 and gives the weekly digest a headline (History's "The week" and the email subject), kept only when
 it uses no number the summary lacks (`AssistService`).
 QuestPDF renders the PDF; a host without its native engine answers an explained 503.
+
+**Session stories** (`StoryService`). Every ten minutes of a session is a chapter: a recap of just that
+stretch (whole-minute rollups, its moments), the model's version where one answers. While a session
+runs, the browser asks for the next chapter every ten minutes (`SensingSession`, 30 s after each mark
+so the last batches have landed). Once the session has ended, its short last chapter is written and
+the chapters are joined into one story, in order: by the model under the same number check
+(`RecapPrompt.StorySystem`), or else the chapters with their times, quiet chapters left out. Each call
+writes only what has fallen due, so a missed one is caught up by the next; a backlog (a sleeping tab,
+a session closed as stale) is written from the template, with the model kept for the newest chapter.
+The story shows on the recap card after Stop and under "story ▾" in History's sessions; both ask for
+it, so a session closed without Stop gets its story the first time someone opens it. Stories are kept
+like rollups: retention does not prune them, "delete everything" does.
 
 **Captions.** On this machine, chosen per browser in Settings (`js/caption-models.js`). The worker asks
 the local Ollama server (`localhost:11434`) for MiniCPM-V (the default: nearly Qwen3-VL's accuracy at a

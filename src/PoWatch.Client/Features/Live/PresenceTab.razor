@@ -1,34 +1,25 @@
 @inherits StatsTabBase<PresenceStatsDto>
 
-@if (Data is null)
-{
-    @if (Loading)
-    {
-        <Skeleton Heights="@([220])" />
-    }
-    else
-    {
-        <p class="term-empty">No presence stats for this range yet.</p>
-    }
-}
-else
-{
-    @* The headline numbers are Live's key metrics; this family adds the shape of the range. *@
-    <div class="term-grid" data-test="stats-presence">
-        <TerminalPanel Title="Motion energy">
-            <Aside>@Data.Window.Grain.ToUpperInvariant() BUCKETS</Aside>
-            <ChildContent>
-                <RadzenChart aria-label="Motion over the range">
-                    <RadzenAreaSeries Data="@_points" CategoryProperty="@nameof(Point.At)" ValueProperty="@nameof(Point.Motion)" Title="Mean motion" Smooth="false" />
-                    <RadzenLineSeries Data="@_points" CategoryProperty="@nameof(Point.At)" ValueProperty="@nameof(Point.Occupancy)" Title="Occupancy (rolling)" />
-                    <RadzenCategoryAxis Formatter="@FormatAxis" />
-                    <RadzenValueAxis Min="0" FormatString="{0:0.00}" />
-                    <RadzenLegend Position="LegendPosition.Top" />
-                </RadzenChart>
-            </ChildContent>
-        </TerminalPanel>
-    </div>
-}
+@* The headline numbers are Live's key metrics; this family adds the shape of the range. *@
+<TerminalPanel Title="Motion energy" Class="cell-energy" Test="@(Data is null ? null : "stats-presence")">
+    <Aside>@(Data is null ? null : $"{Data.Window.Grain.ToUpperInvariant()} BUCKETS")</Aside>
+    <ChildContent>
+        @if (Data is null)
+        {
+            <StatsPending Loading="@Loading" Empty="No presence stats for this range yet." />
+        }
+        else
+        {
+            <RadzenChart aria-label="Motion over the range">
+                <RadzenAreaSeries Data="@_points" CategoryProperty="@nameof(Point.At)" ValueProperty="@nameof(Point.Motion)" Title="Mean motion" Smooth="false" />
+                <RadzenLineSeries Data="@_points" CategoryProperty="@nameof(Point.At)" ValueProperty="@nameof(Point.Occupancy)" Title="Occupancy (rolling)" />
+                <RadzenCategoryAxis Formatter="@FormatAxis" />
+                <RadzenValueAxis Min="0" FormatString="{0:0.00}" />
+                <RadzenLegend Position="LegendPosition.Top" />
+            </RadzenChart>
+        }
+    </ChildContent>
+</TerminalPanel>
 
 @code {
     public sealed record Point(DateTime At, double Motion, double Occupancy);

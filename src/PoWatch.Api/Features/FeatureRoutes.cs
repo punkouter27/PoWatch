@@ -12,6 +12,7 @@ using PoWatch.Api.Features.Sessions;
 using PoWatch.Api.Features.Shares;
 using PoWatch.Api.Features.Snapshots;
 using PoWatch.Api.Features.Stats;
+using PoWatch.Api.Features.Stories;
 using PoWatch.Api.Features.Weather;
 
 namespace PoWatch.Api.Features;
@@ -28,6 +29,7 @@ internal static class FeatureRoutes
         app.MapSnapshotsFeature();
         app.MapRegularsFeature();
         app.MapRecapsFeature();
+        app.MapStoriesFeature();
         app.MapStatsFeature();
         app.MapAskFeature();
         app.MapAiModelsFeature();

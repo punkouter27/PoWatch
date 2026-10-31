@@ -2,12 +2,31 @@ using Microsoft.Extensions.Time.Testing;
 using PoWatch.Application.Contracts;
 using PoWatch.Application.Services;
 using PoWatch.Domain.Models;
+using PoWatch.Domain.Services;
 
 namespace PoWatch.Unit;
 
 public sealed class SessionServiceTests
 {
     private static readonly DateTimeOffset StartUtc = new(2026, 10, 17, 17, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void Story_chapters_close_every_ten_minutes_and_the_last_one_when_the_session_ends()
+    {
+        // Running 25 minutes: two full chapters; the third is still open.
+        var running = StoryChapters.Closed(StartUtc, null, StartUtc.AddMinutes(25));
+        Assert.Equal([0, 1], running.Select(c => c.Index));
+        Assert.Equal(StartUtc.AddMinutes(10), running[0].ToUtc);
+        Assert.Equal(StartUtc.AddMinutes(20), running[1].ToUtc);
+
+        // Ended at 25 minutes: the short last chapter closes with it.
+        var ended = StoryChapters.Closed(StartUtc, StartUtc.AddMinutes(25), StartUtc.AddHours(1));
+        Assert.Equal((2, StartUtc.AddMinutes(20), StartUtc.AddMinutes(25)), ended[^1]);
+        Assert.Equal(3, ended.Count);
+
+        Assert.Empty(StoryChapters.Closed(StartUtc, null, StartUtc.AddMinutes(9)));
+        Assert.Empty(StoryChapters.Closed(StartUtc, StartUtc, StartUtc));
+    }
 
     [Fact]
     public async Task Stale_sessions_are_closed_at_their_last_activity()

@@ -2,7 +2,7 @@
 @inject SensingSession Sensing
 
 @{ var census = CensusRows(); }
-<TerminalPanel Title="In frame" Class="live-tall" Test="live-tracks" Flush="true">
+<TerminalPanel Title="In frame" Class="cell-inframe" Test="live-tracks" Flush="true">
     <Aside>@L.Tracks.Count NOW · @census.Count CLASSES</Aside>
     <ChildContent>
         @if (L.Tracks.Count > 0)

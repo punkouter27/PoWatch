@@ -35,11 +35,15 @@ public sealed class AzureStorageOptions
     [Required, MinLength(3)]
     public string SharesTable { get; init; } = "PoWatchShares";
 
+    /// <summary>Each session's ten-minute chapters and its finished story.</summary>
+    [Required, MinLength(3)]
+    public string StoriesTable { get; init; } = "PoWatchStories";
+
     /// <summary>
     /// Every table the app keeps: created at startup, and purged when a user deletes their data (shares
     /// are keyed by token, so the purge also deletes them by owner).
     /// </summary>
-    public string[] AllTables() => [SessionsTable, TicksTable, SceneEventsTable, IngestLedgerTable, RollupsTable, RegularsTable, ProfilesTable, SharesTable];
+    public string[] AllTables() => [SessionsTable, TicksTable, SceneEventsTable, IngestLedgerTable, RollupsTable, RegularsTable, ProfilesTable, SharesTable, StoriesTable];
 
     /// <summary>Highlight snapshots, at {user}/{yyyyMMdd}/{id}.jpg.</summary>
     [Required, MinLength(3)]

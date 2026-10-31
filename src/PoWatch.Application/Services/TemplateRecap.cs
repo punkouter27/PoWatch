@@ -23,6 +23,9 @@ public sealed record RecapFacts(
 /// </summary>
 public static class TemplateRecap
 {
+    /// <summary>The whole summary of a window in which nothing was observed.</summary>
+    public const string NothingObserved = "Nothing was observed in this window.";
+
     public static RecapDto Build(RecapFacts facts)
     {
         ArgumentNullException.ThrowIfNull(facts);
@@ -56,7 +59,7 @@ public static class TemplateRecap
     private static string Summary(RecapFacts facts)
     {
         var p = facts.Presence;
-        if (p.SecondsObserved <= 0) return "Nothing was observed in this window.";
+        if (p.SecondsObserved <= 0) return NothingObserved;
 
         var parts = new List<string>
         {

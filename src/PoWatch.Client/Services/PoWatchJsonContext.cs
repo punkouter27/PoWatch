@@ -19,6 +19,7 @@ namespace PoWatch.Client.Services;
 [JsonSerializable(typeof(StartSessionRequestDto))]
 [JsonSerializable(typeof(SessionDto))]
 [JsonSerializable(typeof(List<SessionDto>))]
+[JsonSerializable(typeof(SessionStoryDto))]
 [JsonSerializable(typeof(IngestBatchDto))]
 [JsonSerializable(typeof(IngestBatchResultDto))]
 [JsonSerializable(typeof(PixelSamplePayload))]

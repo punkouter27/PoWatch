@@ -14,7 +14,7 @@ public sealed partial class Live
     private static readonly string[] Edges = ["Left", "Top", "Right", "Bottom"];
 
     /// <summary>The phone strip's keys, in the order the panels appear.</summary>
-    private static readonly string[] Pages = ["Grid", "Energy", "Space", "Curve", "Week", "Light", "Colour"];
+    private static readonly string[] Pages = ["Grid", "Energy", "Space", "Curve", "Week", "Room"];
 
     private const string DayFormat = "yyyy-MM-dd";
     private string _range = "today";

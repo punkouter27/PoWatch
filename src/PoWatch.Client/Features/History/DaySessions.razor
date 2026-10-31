@@ -1,6 +1,6 @@
 @using System.Globalization
 
-@* The day's camera sessions, each linking to its stats on Live. *@
+@* The day's camera sessions, each linking to its stats on Live and opening its story in place. *@
 <TerminalPanel Title="Sessions" Class="history-sessions" Test="history-sessions" Flush="true">
     <Aside>@Sessions.Count ON THIS DAY</Aside>
     <ChildContent>
@@ -16,7 +16,7 @@
         {
             @* A table on a desktop; on a phone each row becomes a small card (term-table--cards). *@
             <table class="term-table term-table--cards">
-                <thead><tr><th>Session</th><th>From</th><th>To</th><th class="r">Length</th><th></th></tr></thead>
+                <thead><tr><th>Session</th><th>From</th><th>To</th><th class="r">Length</th><th></th><th></th></tr></thead>
                 <tbody>
                     @foreach (var s in Sessions)
                     {
@@ -26,7 +26,16 @@
                             <td data-label="To">@(s.EndedUtc?.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture) ?? "running")</td>
                             <td data-label="Length" class="r">@DisplayText.Duration(s.DurationSeconds)</td>
                             <td class="r"><a class="term-link" href="?session=@s.Id" title="Open this session's stats on Live">stats →</a></td>
+                            <td class="r">
+                                <button type="button" class="term-link" @onclick="() => Toggle(s.Id)" aria-expanded="@(_open == s.Id ? "true" : "false")" data-test="session-story-toggle">
+                                    @(_open == s.Id ? "story ▴" : "story ▾")
+                                </button>
+                            </td>
                         </tr>
+                        @if (_open == s.Id)
+                        {
+                            <tr class="history-story-row"><td colspan="6"><SessionStory SessionId="@s.Id" /></td></tr>
+                        }
                     }
                 </tbody>
             </table>
@@ -39,4 +48,9 @@
 
     /// <summary>False while the day is loading: a placeholder instead of "no sessions".</summary>
     [Parameter] public bool Loaded { get; set; }
+
+    /// <summary>The one session whose story is open, if any.</summary>
+    private Guid? _open;
+
+    private void Toggle(Guid id) => _open = _open == id ? null : id;
 }

@@ -90,6 +90,13 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     private static string DayRecapPath(DateOnly day, string timeZoneId, bool pdf) =>
         $"api/recaps/day/{Day(day)}{(pdf ? ".pdf" : string.Empty)}?tz={Uri.EscapeDataString(timeZoneId)}";
 
+    /// <summary>
+    /// Writes the session's chapters that are due (and, once it has ended, its story) and returns them;
+    /// null on failure. Can take a while when a model writes the story.
+    /// </summary>
+    public Task<SessionStoryDto?> UpdateStoryAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
+        ReadAsync(ct => httpClient.PostAsync($"api/sessions/{sessionId}/story", content: null, ct), Json.SessionStoryDto, cancellationToken);
+
     public async Task<IReadOnlyList<MomentDto>> GetMomentsAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         await ReadAsync(ct => httpClient.GetAsync($"api/sessions/{sessionId}/moments", ct), Json.ListMomentDto, cancellationToken) ?? [];
 
