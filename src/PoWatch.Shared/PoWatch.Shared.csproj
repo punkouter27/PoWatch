@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <IsTrimmable>true</IsTrimmable>
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <!-- Runs in the browser too: IsAotCompatible turns on the trim, AOT and single-file analyzers. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
 </Project>

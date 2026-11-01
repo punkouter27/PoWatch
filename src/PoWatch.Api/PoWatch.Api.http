@@ -1,57 +1,80 @@
-@PoWatch.Api_HostAddress = http://localhost:80
+@baseUrl = http://localhost
 
-### ─── Health ────────────────────────────────────────────────────────────────
+### ─── Sign in (Development) ─────────────────────────────────────────────────
+# Becomes the guest; the cookie it sets signs every request below.
 
-GET {{PoWatch.Api_HostAddress}}/health
-Accept: application/json
+GET {{baseUrl}}/auth/login/fake?returnUrl=/
 
 ###
 
-### ─── Sessions & ingest ─────────────────────────────────────────────────────
-# Dev: FakeAuth accepts any X-Fake-User.
+# Fill the guest with 60 days of history (once per user)
+POST {{baseUrl}}/api/dev/seed?days=60&tz=America/New_York
 
-POST {{PoWatch.Api_HostAddress}}/api/sessions
-X-Fake-User: dev
+### ─── Health ────────────────────────────────────────────────────────────────
+
+GET {{baseUrl}}/health
+Accept: application/json
+
+### ─── Sessions ──────────────────────────────────────────────────────────────
+
+POST {{baseUrl}}/api/sessions
 Content-Type: application/json
 
 { "timeZoneId": "UTC" }
 
 ###
 
-GET {{PoWatch.Api_HostAddress}}/api/sessions
-X-Fake-User: dev
+GET {{baseUrl}}/api/sessions
+
+### ─── Stats, recaps, regulars ───────────────────────────────────────────────
+
+GET {{baseUrl}}/api/stats/presence?range=today
 
 ###
 
-### ─── Stats, recaps ───────────────────────────────────────────────
-
-GET {{PoWatch.Api_HostAddress}}/api/stats/presence?range=today
-X-Fake-User: dev
+GET {{baseUrl}}/api/recaps/day/2026-09-25?tz=UTC
 
 ###
 
-GET {{PoWatch.Api_HostAddress}}/api/recaps/day/2026-09-25?tz=UTC
-X-Fake-User: dev
+GET {{baseUrl}}/api/regulars
+
+### ─── AI models ─────────────────────────────────────────────────────────────
+
+# Safe model labels and this browser's selection
+GET {{baseUrl}}/api/ai/models
 
 ###
 
-GET {{PoWatch.Api_HostAddress}}/api/regulars
-X-Fake-User: dev
+# Use the local Ollama model for later requests
+PUT {{baseUrl}}/api/ai/models
+Content-Type: application/json
+
+{"modelId":"Ollama"}
 
 ###
 
-### ─── Diagnostics ────────────────────────────────────────────────────────────
+# Deterministic recaps
+PUT {{baseUrl}}/api/ai/models
+Content-Type: application/json
 
-# Get masked system health snapshot (CPU, memory, storage status, masked credentials)
-GET {{PoWatch.Api_HostAddress}}/api/diagnostics/status
+{"modelId":"Template"}
+
+###
+
+# An unknown model is refused with a 400 Problem Details response
+PUT {{baseUrl}}/api/ai/models
+Content-Type: application/json
+
+{"modelId":"not-configured"}
+
+### ─── Diagnostics ───────────────────────────────────────────────────────────
+
+# Masked system health snapshot (CPU, memory, storage status, masked credentials)
+GET {{baseUrl}}/api/diagnostics/status
 Accept: application/json
 
 ###
-
-### ─── OpenAPI / Scalar ───────────────────────────────────────────────────────
 
 # OpenAPI spec JSON (Development only)
-GET {{PoWatch.Api_HostAddress}}/openapi/v1.json
+GET {{baseUrl}}/openapi/v1.json
 Accept: application/json
-
-###

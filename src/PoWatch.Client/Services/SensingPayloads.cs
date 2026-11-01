@@ -18,7 +18,6 @@ public sealed class DetectorInfoPayload
     public string Device { get; init; } = string.Empty;
     /// <summary>The precision that passed calibration: fp16 or fp32 on WebGPU, q8 or fp32 on WASM.</summary>
     public string? Dtype { get; init; }
-    public double LoadMs { get; init; }
 }
 
 public sealed class VlmResultPayload
