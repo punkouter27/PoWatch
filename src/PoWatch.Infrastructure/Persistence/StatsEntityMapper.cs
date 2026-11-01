@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Azure.Data.Tables;
 using PoWatch.Domain.Models;
 
@@ -47,11 +49,11 @@ internal static class StatsEntityMapper
         ["LuminanceMean"] = tick.LuminanceMean,
         ["SoundMean"] = tick.SoundMean,
         ["SoundMax"] = tick.SoundMax,
-        ["Palette"] = JsonSerializer.Serialize(tick.Palette),
+        ["Palette"] = ToJson(tick.Palette),
         ["MotionGrid"] = Pack(tick.MotionGrid.ToArray()),
         ["PresenceGrid"] = Pack(tick.PresenceGrid.ToArray()),
-        ["Classes"] = JsonSerializer.Serialize(tick.Classes),
-        ["ActiveTrackIds"] = JsonSerializer.Serialize(tick.ActiveTrackIds)
+        ["Classes"] = ToJson(tick.Classes),
+        ["ActiveTrackIds"] = ToJson(tick.ActiveTrackIds)
     };
 
     public static Tick ToTick(TableEntity e) => new()
@@ -140,5 +142,32 @@ internal static class StatsEntityMapper
         data is null ? [] : MemoryMarshal.Cast<byte, float>(data).ToArray();
 
     public static T? Json<T>(TableEntity e, string column) =>
-        e.GetString(column) is { Length: > 0 } json ? JsonSerializer.Deserialize<T>(json) : default;
+        e.GetString(column) is { Length: > 0 } json ? JsonSerializer.Deserialize(json, StoreJson.Info<T>()) : default;
+
+    public static string ToJson<T>(T value) => JsonSerializer.Serialize(value, StoreJson.Info<T>());
+}
+
+/// <summary>
+/// Source-generated JSON for the table columns that hold a collection, in the default (PascalCase)
+/// shape every stored row was written in. Each column's declared type is listed here.
+/// </summary>
+[JsonSerializable(typeof(IReadOnlyList<int>))]
+[JsonSerializable(typeof(List<int>))]
+[JsonSerializable(typeof(IReadOnlyList<string>))]
+[JsonSerializable(typeof(List<string>))]
+[JsonSerializable(typeof(IReadOnlyDictionary<string, ClassCount>))]
+[JsonSerializable(typeof(Dictionary<string, ClassCount>))]
+[JsonSerializable(typeof(IReadOnlyDictionary<string, ClassTotals>))]
+[JsonSerializable(typeof(Dictionary<string, ClassTotals>))]
+[JsonSerializable(typeof(IReadOnlyDictionary<string, RegularTotals>))]
+[JsonSerializable(typeof(Dictionary<string, RegularTotals>))]
+[JsonSerializable(typeof(IReadOnlyDictionary<int, long>))]
+[JsonSerializable(typeof(Dictionary<int, long>))]
+[JsonSerializable(typeof(IReadOnlyDictionary<FrameEdge, long>))]
+[JsonSerializable(typeof(Dictionary<FrameEdge, long>))]
+internal sealed partial class StoreJson : JsonSerializerContext
+{
+    public static JsonTypeInfo<T> Info<T>() =>
+        Default.GetTypeInfo(typeof(T)) as JsonTypeInfo<T>
+        ?? throw new InvalidOperationException($"{typeof(T)} is not registered in {nameof(StoreJson)}.");
 }

@@ -32,7 +32,7 @@ public sealed class ShareService(IShareStore shares, RecapService recaps, StatsQ
             Day = day,
             CreatedUtc = now,
             ExpiresUtc = now.AddDays(days),
-            Content = JsonSerializer.Serialize(recap with { Moments = [] })
+            Content = JsonSerializer.Serialize(recap with { Moments = [] }, ShareJson.Default.RecapDto)
         };
         await shares.AddAsync(share, cancellationToken);
         return share;
@@ -42,7 +42,7 @@ public sealed class ShareService(IShareStore shares, RecapService recaps, StatsQ
     public async Task<(RecapDto Recap, DateTimeOffset ExpiresUtc)?> ReadAsync(string token, CancellationToken cancellationToken)
     {
         if (!IsToken(token) || await shares.GetAsync(token, cancellationToken) is not { } share || !share.IsLive(time.GetUtcNow())) return null;
-        return JsonSerializer.Deserialize<RecapDto>(share.Content) is { } recap ? (recap, share.ExpiresUtc) : null;
+        return JsonSerializer.Deserialize(share.Content, ShareJson.Default.RecapDto) is { } recap ? (recap, share.ExpiresUtc) : null;
     }
 
     /// <summary>The caller's links that still work, newest first.</summary>

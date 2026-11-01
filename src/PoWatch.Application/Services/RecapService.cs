@@ -133,9 +133,9 @@ public sealed class RecapService(
                 var response = await model.GetResponseAsync(
                     [new ChatMessage(ChatRole.System, RecapPrompt.System), new ChatMessage(ChatRole.User, prompt)],
                     // A JSON schema, so there is no reply format to parse or guess at.
-                    new ChatOptions { Temperature = 0.4f, MaxOutputTokens = 400, ResponseFormat = ChatResponseFormat.ForJsonSchema<RecapRewrite>() },
+                    new ChatOptions { Temperature = 0.4f, MaxOutputTokens = 400, ResponseFormat = ChatResponseFormat.ForJsonSchema<RecapRewrite>(AiReplyJson.Default.Options) },
                     ct);
-                return (model, string.IsNullOrWhiteSpace(response.Text) ? null : JsonSerializer.Deserialize<RecapRewrite>(response.Text, JsonSerializerOptions.Web));
+                return (model, string.IsNullOrWhiteSpace(response.Text) ? null : JsonSerializer.Deserialize(response.Text, AiReplyJson.Default.RecapRewrite));
             }, logger, cancellationToken);
 
             if (rewrite is null || string.IsNullOrWhiteSpace(rewrite.Summary)) return recap;

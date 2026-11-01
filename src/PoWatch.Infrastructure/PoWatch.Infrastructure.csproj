@@ -2,6 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <!-- Turns on the trim, AOT and single-file analyzers; warnings are errors. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <!-- Binds options (Get<T>) with generated code instead of reflection. It skips init-only
+         properties, so the options it binds (AiProvider, AzureOpenAi, Gemini, Ollama) use set. -->
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
   </PropertyGroup>
 
   <ItemGroup>

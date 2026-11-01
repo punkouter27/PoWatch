@@ -23,5 +23,5 @@ public enum AiProviderType
 public sealed class AiProviderOptions
 {
     /// <summary>Selected AI provider. Defaults to Template; every model falls back to Template on failure.</summary>
-    public AiProviderType Provider { get; init; } = AiProviderType.Template;
+    public AiProviderType Provider { get; set; } = AiProviderType.Template;
 }

@@ -86,15 +86,15 @@ internal static class RollupMapper
             ["PeakConcurrency"] = r.PeakConcurrency,
             ["Grid"] = StatsEntityMapper.Pack(r.Grid.Span),
             ["PresenceGrid"] = StatsEntityMapper.Pack(r.PresenceGrid.Span),
-            ["Classes"] = JsonSerializer.Serialize(r.Classes),
-            ["Palette"] = JsonSerializer.Serialize(r.Palette),
+            ["Classes"] = StatsEntityMapper.ToJson(r.Classes),
+            ["Palette"] = StatsEntityMapper.ToJson(r.Palette),
             ["Visits"] = r.Visits,
             ["Captions"] = r.Captions,
-            ["DwellHistogram"] = JsonSerializer.Serialize(r.DwellHistogram),
+            ["DwellHistogram"] = StatsEntityMapper.ToJson(r.DwellHistogram),
             ["DwellMaxSeconds"] = r.DwellMaxSeconds,
-            ["Entries"] = JsonSerializer.Serialize(r.Entries),
-            ["Exits"] = JsonSerializer.Serialize(r.Exits),
-            ["Regulars"] = JsonSerializer.Serialize(r.Regulars)
+            ["Entries"] = StatsEntityMapper.ToJson(r.Entries),
+            ["Exits"] = StatsEntityMapper.ToJson(r.Exits),
+            ["Regulars"] = StatsEntityMapper.ToJson(r.Regulars)
         };
         WriteStat(entity, "Motion", r.Motion);
         WriteStat(entity, "MotionPeak", r.MotionPeak);

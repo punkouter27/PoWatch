@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using PoWatch.Shared.Models;
@@ -34,7 +35,7 @@ public sealed class AssistService(IEnumerable<IChatClient> chatClients, ILogger<
     public async Task<RuleDraftDto?> DraftRuleAsync(string sentence, CancellationToken cancellationToken)
     {
         var labels = string.Join(", ", DetectorLabels.Coco.Order(StringComparer.Ordinal));
-        var draft = await AskAsync<RuleReply>($"{RuleSystem} Labels: {labels}.", $"<sentence>{Fence(sentence)}</sentence>", cancellationToken);
+        var draft = await AskAsync($"{RuleSystem} Labels: {labels}.", $"<sentence>{Fence(sentence)}</sentence>", AiReplyJson.Default.RuleReply, cancellationToken);
         if (draft is null) return null;
 
         var label = draft.Class?.Trim() ?? string.Empty;
@@ -47,13 +48,13 @@ public sealed class AssistService(IEnumerable<IChatClient> chatClients, ILogger<
     public async Task<string?> HeadlineAsync(string summary, CancellationToken cancellationToken)
     {
         var facts = $"<summary>{Fence(summary)}</summary>";
-        var reply = await AskAsync<HeadlineReply>(HeadlineSystem, facts, cancellationToken);
+        var reply = await AskAsync(HeadlineSystem, facts, AiReplyJson.Default.HeadlineReply, cancellationToken);
         var headline = reply?.Headline?.Trim().Trim('"');
         if (string.IsNullOrWhiteSpace(headline) || headline.Length > 90) return null;
         return RecapPrompt.KeepsToFacts(headline, facts) ? headline : null;
     }
 
-    private async Task<T?> AskAsync<T>(string system, string user, CancellationToken cancellationToken) where T : class
+    private async Task<T?> AskAsync<T>(string system, string user, JsonTypeInfo<T> json, CancellationToken cancellationToken) where T : class
     {
         if (!chatClients.Any()) return null;
         try
@@ -63,9 +64,9 @@ public sealed class AssistService(IEnumerable<IChatClient> chatClients, ILogger<
             {
                 var response = await chat.GetResponseAsync(
                     [new ChatMessage(ChatRole.System, system), new ChatMessage(ChatRole.User, user)],
-                    new ChatOptions { Temperature = 0.2f, MaxOutputTokens = 200, ResponseFormat = ChatResponseFormat.ForJsonSchema<T>() },
+                    new ChatOptions { Temperature = 0.2f, MaxOutputTokens = 200, ResponseFormat = ChatResponseFormat.ForJsonSchema<T>(json.Options) },
                     ct);
-                return string.IsNullOrWhiteSpace(response.Text) ? null : JsonSerializer.Deserialize<T>(response.Text, JsonSerializerOptions.Web);
+                return string.IsNullOrWhiteSpace(response.Text) ? null : JsonSerializer.Deserialize(response.Text, json);
             }, logger, cancellationToken);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -79,7 +80,7 @@ public sealed class AssistService(IEnumerable<IChatClient> chatClients, ILogger<
     private static string Fence(string text) =>
         new([.. (text ?? string.Empty).Select(c => char.IsControl(c) || c is '<' or '>' ? ' ' : c)]);
 
-    private sealed record RuleReply(string Class, int FromHour, int ToHour);
+    internal sealed record RuleReply(string Class, int FromHour, int ToHour);
 
-    private sealed record HeadlineReply(string Headline);
+    internal sealed record HeadlineReply(string Headline);
 }
