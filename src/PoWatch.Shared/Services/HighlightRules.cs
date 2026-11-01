@@ -1,6 +1,5 @@
-using PoWatch.Shared.Services.Tracking;
 
-namespace PoWatch.Shared.Services.Sensing;
+namespace PoWatch.Shared.Services;
 
 /// <summary>Why a moment deserves a snapshot, and how strongly.</summary>
 public sealed record Highlight(string Reason, double Score);

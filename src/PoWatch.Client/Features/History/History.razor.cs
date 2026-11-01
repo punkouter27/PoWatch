@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using PoWatch.Client.Services;
 using PoWatch.Shared.Models;
-using PoWatch.Shared.Services.Recaps;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Client.Features.History;
 

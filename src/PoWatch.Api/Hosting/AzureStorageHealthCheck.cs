@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PoWatch.Infrastructure.Persistence;
 
-namespace PoWatch.Api.HealthChecks;
+namespace PoWatch.Api.Hosting;
 
 // Lists one table through the app's own storage client, so the probe checks the same endpoint and
 // credential every store uses, and reuses that credential's cached token instead of fetching a new one.

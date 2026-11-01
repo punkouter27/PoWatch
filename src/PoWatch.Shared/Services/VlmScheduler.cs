@@ -1,6 +1,5 @@
-using PoWatch.Shared.Services.Cadence;
 
-namespace PoWatch.Shared.Services.Sensing;
+namespace PoWatch.Shared.Services;
 
 /// <summary>
 /// Decides when the vision model runs next. The pixel layer's motion is smoothed and mapped through

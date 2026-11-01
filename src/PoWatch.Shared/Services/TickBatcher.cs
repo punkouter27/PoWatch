@@ -1,7 +1,6 @@
 using PoWatch.Shared.Models;
-using PoWatch.Shared.Services.Tracking;
 
-namespace PoWatch.Shared.Services.Sensing;
+namespace PoWatch.Shared.Services;
 
 /// <summary>One pixel-layer measurement from the browser.</summary>
 public sealed record PixelSample(DateTimeOffset AtUtc, double Motion, double Luminance, IReadOnlyList<float> Grid, IReadOnlyList<int> Palette);

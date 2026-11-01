@@ -2,8 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using PoWatch.Shared.Models;
-using PoWatch.Shared.Services.Recaps;
-using PoWatch.Shared.Services.Sensing;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Application.Services;
 

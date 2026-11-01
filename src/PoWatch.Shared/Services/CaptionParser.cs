@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace PoWatch.Shared.Services.Sensing;
+namespace PoWatch.Shared.Services;
 
 /// <summary>A vision-model caption reduced to the parts the stats use.</summary>
 public sealed record ParsedCaption(string Text, IReadOnlyList<string> Activities, string? Weather, bool Notable);

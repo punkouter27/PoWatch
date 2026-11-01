@@ -3,7 +3,7 @@ using Azure.Security.KeyVault.Secrets;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PoWatch.Infrastructure.Runtime;
 
-namespace PoWatch.Api.HealthChecks;
+namespace PoWatch.Api.Hosting;
 
 /// <summary>
 /// Health check that verifies Azure Key Vault connectivity using Managed Identity.

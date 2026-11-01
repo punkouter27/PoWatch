@@ -1,4 +1,3 @@
-using PoWatch.Api.Hosting;
 using PoWatch.Api.Security;
 using PoWatch.Application.Contracts;
 using PoWatch.Application.Services;

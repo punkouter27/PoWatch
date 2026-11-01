@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using PoWatch.Shared.Models;
 
-namespace PoWatch.Api.Hosting;
+namespace PoWatch.Api.Features.Shares;
 
 /// <summary>
 /// The public page behind a shared recap link: plain server-rendered HTML (link previews do not run

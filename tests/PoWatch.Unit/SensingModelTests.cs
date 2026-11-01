@@ -1,5 +1,5 @@
 using PoWatch.Domain.Models;
-using PoWatch.Shared.Services.Sensing;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Unit;
 

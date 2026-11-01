@@ -1,6 +1,5 @@
-using PoWatch.Shared.Services.Tracking;
 
-namespace PoWatch.Shared.Services.Sensing;
+namespace PoWatch.Shared.Services;
 
 /// <summary>One synthetic moment: what the pixel layer, the detector and (sometimes) the VLM would report.</summary>
 public sealed record SyntheticFrame(PixelSample Pixels, IReadOnlyList<Detection> Detections, string? Caption);

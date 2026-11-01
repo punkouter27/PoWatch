@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using PoWatch.Application.Options;
 using PoWatch.Infrastructure;
 
-namespace PoWatch.Api.HealthChecks;
+namespace PoWatch.Api.Hosting;
 
 /// <summary>
 /// The two public operations probes: <c>/health</c> (each registered check, the deploy gate) and

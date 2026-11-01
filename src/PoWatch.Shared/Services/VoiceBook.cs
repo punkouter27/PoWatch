@@ -1,4 +1,4 @@
-namespace PoWatch.Shared.Services.Sensing;
+namespace PoWatch.Shared.Services;
 
 /// <summary>A regular's voice: the mean of the speaker embeddings heard from them, unit length.</summary>
 public sealed class VoicePrint

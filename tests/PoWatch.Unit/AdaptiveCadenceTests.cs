@@ -1,4 +1,4 @@
-using PoWatch.Shared.Services.Cadence;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Unit;
 

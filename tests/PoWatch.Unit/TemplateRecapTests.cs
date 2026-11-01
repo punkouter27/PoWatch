@@ -1,7 +1,7 @@
 using PoWatch.Application.Services;
 using PoWatch.Domain.Models;
 using PoWatch.Shared.Models;
-using PoWatch.Shared.Services.Recaps;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Unit;
 

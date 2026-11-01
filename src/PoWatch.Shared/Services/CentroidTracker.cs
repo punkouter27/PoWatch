@@ -1,4 +1,4 @@
-namespace PoWatch.Shared.Services.Tracking;
+namespace PoWatch.Shared.Services;
 
 /// <summary>One detector box, with coordinates normalised to [0, 1] of the frame, and optionally its colour signature.</summary>
 public sealed record Detection(string Label, double Score, double X0, double Y0, double X1, double Y1, IReadOnlyList<float>? Signature = null)

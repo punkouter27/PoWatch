@@ -5,7 +5,7 @@ using PoWatch.Application.Contracts;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 using PoWatch.Shared.Models;
-using PoWatch.Shared.Services.Recaps;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Application.Services;
 

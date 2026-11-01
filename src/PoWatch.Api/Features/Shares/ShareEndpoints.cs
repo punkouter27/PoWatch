@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Caching.Hybrid;
-using PoWatch.Api.Hosting;
+using PoWatch.Api.Features.Recaps;
 using PoWatch.Api.Security;
 using PoWatch.Application.Services;
 using PoWatch.Shared.Models;

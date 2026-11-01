@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Serilog.Context;
 
-namespace PoWatch.Api.Middleware;
+namespace PoWatch.Api.Hosting;
 
 /// <summary>
 /// Middleware that ensures every request has a Correlation ID.

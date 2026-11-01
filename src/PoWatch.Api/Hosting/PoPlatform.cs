@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 
-namespace PoWatch.Api.Platform;
+namespace PoWatch.Api.Hosting;
 
 /// <summary>
 /// The conventions every Po app shares. Generated from <c>po-shared/src/PoPlatform.cs.tmpl</c> -

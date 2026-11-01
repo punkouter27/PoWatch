@@ -1,4 +1,3 @@
-using PoWatch.Api.Platform;
 using System.Globalization;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
@@ -7,7 +6,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
-namespace PoWatch.Api.Observability;
+namespace PoWatch.Api.Hosting;
 
 public static class TelemetrySetup
 {

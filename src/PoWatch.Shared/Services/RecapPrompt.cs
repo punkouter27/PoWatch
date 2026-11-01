@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using PoWatch.Shared.Models;
 
-namespace PoWatch.Shared.Services.Recaps;
+namespace PoWatch.Shared.Services;
 
 /// <summary>What a model returns for a recap: its own paragraph and, optionally, reworded highlights.</summary>
 public sealed record RecapRewrite(string Summary, List<string> Highlights);

@@ -1,4 +1,4 @@
-namespace PoWatch.Shared.Services.Sensing;
+namespace PoWatch.Shared.Services;
 
 /// <summary>The 80 COCO classes the detector (RF-DETR, RT-DETR) can report.</summary>
 public static class DetectorLabels

@@ -1,4 +1,4 @@
-namespace PoWatch.Shared.Services.Cadence;
+namespace PoWatch.Shared.Services;
 
 /// <summary>
 /// Maps a frame-diff score to a poll interval. The score is the fraction of bytes that changed

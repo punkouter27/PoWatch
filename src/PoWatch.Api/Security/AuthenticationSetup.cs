@@ -1,9 +1,9 @@
-using PoWatch.Api.Platform;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
+using PoWatch.Api.Hosting;
 using PoWatch.Application.Options;
 
 namespace PoWatch.Api.Security;

@@ -1,6 +1,5 @@
 using PoWatch.Shared.Models;
-using PoWatch.Shared.Services.Sensing;
-using PoWatch.Shared.Services.Tracking;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Client.Services;
 

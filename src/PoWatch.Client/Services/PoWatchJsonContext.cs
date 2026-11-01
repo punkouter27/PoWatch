@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using PoWatch.Shared.Models;
-using PoWatch.Shared.Services.Sensing;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Client.Services;
 

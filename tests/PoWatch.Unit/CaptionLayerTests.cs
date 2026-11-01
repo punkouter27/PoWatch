@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Time.Testing;
-using PoWatch.Shared.Services.Cadence;
-using PoWatch.Shared.Services.Sensing;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Unit;
 
