@@ -25,12 +25,15 @@
     });
   }
 
+  // Page resize and scroll only move the feed while it is docked, so the listeners live that long.
   function dock(video, slot) {
     _video = video;
     _slot = slot;
     _observer?.disconnect();
     _observer = new ResizeObserver(place);
     _observer.observe(slot);
+    addEventListener('resize', place);
+    addEventListener('scroll', place, true);
     place();
   }
 
@@ -38,11 +41,10 @@
     _slot = null;
     _observer?.disconnect();
     _observer = null;
+    removeEventListener('resize', place);
+    removeEventListener('scroll', place, true);
     if (_video) _video.style.visibility = 'hidden';
   }
-
-  addEventListener('resize', place);
-  addEventListener('scroll', place, true);
 
   // "While you were away": tell .NET when the tab comes back after being hidden for a while.
   let _hiddenAt = null;
