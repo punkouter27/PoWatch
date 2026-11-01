@@ -1,0 +1,161 @@
+@inherits SettingsTab
+
+@if (Prefs.Advanced || _rules.Count > 0)
+{
+    <TerminalPanel Title="Watch rules" Test="watch-rules">
+        <Aside>@_rules.Count OF @WatchRules.Max</Aside>
+        <ChildContent>
+            @foreach (var rule in _rules)
+            {
+                <div class="rule-row">
+                    <span>@rule</span>
+                    <button class="term-icon-button" @onclick="() => RemoveRuleAsync(rule)" aria-label="@($"Remove rule: {rule}")">✕</button>
+                </div>
+            }
+            @if (_rules.Count < WatchRules.Max)
+            {
+                <form class="rule-form" @onsubmit="AddRuleAsync">
+                    <label class="visually-hidden" for="rule-class">Alert me when this appears</label>
+                    <select id="rule-class" @bind="_ruleClass">
+                        <option value="person">person</option>
+                        <option value="cat">cat</option>
+                        <option value="dog">dog</option>
+                        <option value="@WatchRules.Any">anything</option>
+                    </select>
+                    <label class="visually-hidden" for="rule-from">From hour</label>
+                    <input id="rule-from" type="number" min="0" max="23" @bind="_ruleFrom" />
+                    <span aria-hidden="true">→</span>
+                    <label class="visually-hidden" for="rule-to">Until hour</label>
+                    <input id="rule-to" type="number" min="0" max="23" @bind="_ruleTo" />
+                    <button type="submit" class="term-button" data-test="rule-add">Add</button>
+                </form>
+                @* Or in plain words: the server's model drafts the rule, which shows here to confirm before it is kept. *@
+                <form class="rule-form rule-form--words" @onsubmit="DraftRuleAsync" data-test="rule-words">
+                    <label class="visually-hidden" for="rule-words">Describe a rule in your own words</label>
+                    <input id="rule-words" @bind="_ruleWords" @bind:event="oninput" maxlength="@RuleDraftRequestDto.MaxLength" autocomplete="off"
+                           placeholder="Or say it: tell me if a dog shows up at night" disabled="@_drafting" />
+                    <button type="submit" class="term-button" disabled="@(_drafting || string.IsNullOrWhiteSpace(_ruleWords))">@(_drafting ? "…" : "Draft")</button>
+                </form>
+                @if (_draft is { } draft)
+                {
+                    <div class="rule-row rule-row--draft" data-test="rule-draft">
+                        <span>@draft</span>
+                        <span>
+                            <button class="term-button" @onclick="KeepDraftAsync" data-test="rule-draft-keep">Keep</button>
+                            <button class="term-icon-button" @onclick="() => _draft = null" aria-label="Discard the drafted rule">✕</button>
+                        </span>
+                    </div>
+                }
+                else if (_draftError is not null)
+                {
+                    <p class="term-stat-hint" role="status">@_draftError</p>
+                }
+            }
+            <p class="term-stat-hint">Alerts land in the bell. Hours are local; the same hour twice means any time. @(_notifications ?? "They also show as desktop notifications if you allow them.")</p>
+        </ChildContent>
+    </TerminalPanel>
+}
+<TerminalPanel Title="Weekly email" Test="settings-email" Flush="true">
+    <ChildContent>
+        @if (_profile is null)
+        {
+            <p class="term-empty">@(_profileLoaded ? "Could not load your settings — the server did not answer." : "Loading…")</p>
+        }
+        else
+        {
+            <div class="settings-list">
+                <button class="term-menu-item" role="switch" aria-checked="@(_profile.DigestEmail ? "true" : "false")" @onclick="ToggleDigestEmailAsync"
+                        disabled="@(_saving || !_profile.DigestEmailAvailable)" data-test="digest-toggle">
+                    <span>Weekly email <i>@(_profile.DigestEmailAvailable ? (_profile.DigestEmail ? $"Mondays, to {_profile.Email}" : "the week in review, Monday mornings") : "this server cannot send email; the week is on Stories")</i></span>
+                    <b>@(_profile.DigestEmail ? "ON" : "OFF")</b>
+                </button>
+            </div>
+            @if (_profileMessage is not null)
+            {
+                <p class="term-stat-hint settings-note" role="status">@_profileMessage</p>
+            }
+        }
+    </ChildContent>
+</TerminalPanel>
+@if (!Prefs.Advanced && _rules.Count == 0)
+{
+    <p class="term-stat-hint settings-note">Watch rules ("a person between 22 and 6") are a power feature: turn them on under Look.</p>
+}
+
+@code {
+    private List<WatchRule> _rules = [];
+    private string? _notifications;
+    private string _ruleClass = "person";
+    private int _ruleFrom = 22;
+    private int _ruleTo = 6;
+    private string _ruleWords = string.Empty;
+    private bool _drafting;
+    private WatchRule? _draft;
+    private string? _draftError;
+
+    private ProfileDto? _profile;
+    private bool _profileLoaded;
+    private bool _saving;
+    private string? _profileMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var profile = Api.GetProfileAsync();
+        _rules = await WatchRules.LoadAsync(JS);
+        (_profile, _profileLoaded) = (await profile, true);
+    }
+
+    private async Task ToggleDigestEmailAsync()
+    {
+        if (_profile is null) return;
+        var done = _profile.DigestEmail ? "The weekly email is off." : "The weekly email is on.";
+        _saving = true;
+        var saved = await SaveProfileAsync(_profile, p => new() { RetentionDays = p.RetentionDays, Place = p.Place, DigestEmail = !p.DigestEmail });
+        if (saved is not null) _profile = saved;
+        _profileMessage = saved is null ? "Could not save — nothing was changed." : done;
+        _saving = false;
+    }
+
+    private async Task DraftRuleAsync()
+    {
+        if (_drafting || string.IsNullOrWhiteSpace(_ruleWords)) return;
+        (_drafting, _draft, _draftError) = (true, null, null);
+        var draft = await Api.DraftRuleAsync(_ruleWords.Trim());
+        _draft = draft is null ? null : new WatchRule(draft.Class, draft.FromHour, draft.ToHour);
+        _draftError = draft is null ? "That did not read as a rule, or this server has no AI model. Try: a person between 22 and 6." : null;
+        _drafting = false;
+    }
+
+    private async Task KeepDraftAsync()
+    {
+        if (_draft is not { } rule) return;
+        (_ruleClass, _ruleFrom, _ruleTo, _draft, _ruleWords) = (rule.Class, rule.FromHour, rule.ToHour, null, string.Empty);
+        await AddRuleAsync();
+    }
+
+    private async Task AddRuleAsync()
+    {
+        var rule = new WatchRule(_ruleClass, Math.Clamp(_ruleFrom, 0, 23), Math.Clamp(_ruleTo, 0, 23));
+        if (!_rules.Contains(rule)) _rules.Add(rule);
+        await SaveRulesAsync();
+        // Asking needs a click, and this is one: the first rule is the moment the permission makes sense.
+        _notifications = await JS.TryInvokeAsync<string>("powatchCues.allowNotifications") switch
+        {
+            "granted" => "Desktop notifications are on.",
+            "denied" => "Desktop notifications are blocked for this site; alerts still show in the bell and play a sound.",
+            _ => null
+        };
+    }
+
+    private Task RemoveRuleAsync(WatchRule rule)
+    {
+        _rules.Remove(rule);
+        return SaveRulesAsync();
+    }
+
+    private async Task SaveRulesAsync()
+    {
+        await WatchRules.SaveAsync(JS, _rules);
+        Sensing.Rules = [.. _rules];
+    }
+}

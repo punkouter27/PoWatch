@@ -671,10 +671,11 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 /* ── While you were away ───────────────────────────────────────────────── */
 
 /* The recap card floats over the page (top right, under the header), so Live's grid keeps the whole
-   screen; it scrolls inside itself when the story is long. */
+   screen; it scrolls inside itself when the story is long. Above the phone tab bar (30), below the
+   header (40) so the bell and Settings drawers, which hang from it, open over the card. */
 .away-card {
     position: fixed;
-    z-index: 45;
+    z-index: 35;
     top: 56px;
     right: 12px;
     width: min(560px, calc(100vw - 24px));

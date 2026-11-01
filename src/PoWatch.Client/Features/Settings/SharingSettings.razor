@@ -1,0 +1,39 @@
+@using System.Globalization
+@inherits SettingsTab
+
+<TerminalPanel Title="Shared recaps" Test="settings-shares">
+    <Aside>@(_shares?.Count ?? 0) LIVE</Aside>
+    <ChildContent>
+        @if (_shares is null)
+        {
+            <p class="term-empty">Could not load your links.</p>
+        }
+        else if (_shares.Count == 0)
+        {
+            <p class="term-empty">@(Prefs.Advanced
+                ? "No shared recaps. Share a day from its recap on Days; the link works without signing in until it expires."
+                : "No shared recaps. Sharing a day's recap is a power feature: turn it on under Look.")</p>
+        }
+        else
+        {
+            @foreach (var share in _shares)
+            {
+                <div class="rule-row" data-test="share-row">
+                    <span><a class="term-link" href="@share.Path" target="_blank" rel="noopener">@share.Day.ToString("ddd d MMM", CultureInfo.CurrentCulture)</a> <i class="term-stat-hint">UNTIL @share.ExpiresUtc.ToLocalTime().ToString("d MMM HH:mm", CultureInfo.CurrentCulture)</i></span>
+                    <button class="term-icon-button" @onclick="() => RevokeAsync(share)" aria-label="@($"Take down the link to {share.Day:d MMM}")" title="Take the link down" data-test="share-revoke">✕</button>
+                </div>
+            }
+        }
+    </ChildContent>
+</TerminalPanel>
+
+@code {
+    private List<ShareDto>? _shares = [];
+
+    protected override async Task OnInitializedAsync() => _shares = (await Api.ListSharesAsync())?.ToList();
+
+    private async Task RevokeAsync(ShareDto share)
+    {
+        if (await Api.RevokeShareAsync(share.Token)) _shares?.Remove(share);
+    }
+}

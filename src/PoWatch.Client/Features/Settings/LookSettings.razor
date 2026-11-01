@@ -1,0 +1,63 @@
+@inherits SettingsTab
+
+<TerminalPanel Title="Look and feel" Test="settings-preferences" Flush="true">
+    <Aside>REMEMBERED IN THIS BROWSER</Aside>
+    <ChildContent>
+        <div class="settings-list">
+            <button class="term-menu-item" @onclick="ToggleThemeAsync" data-test="theme-toggle">
+                <span>Theme</span><b>@_theme.ToUpperInvariant()</b>
+            </button>
+            <button class="term-menu-item" @onclick="CycleSoundAsync" data-test="sound-toggle">
+                <span>Sound cues <i>off · low · mid · high</i></span><b>@_sound.ToUpperInvariant()</b>
+            </button>
+            <button class="term-menu-item" role="switch" aria-checked="@(Prefs.Advanced ? "true" : "false")" @onclick="() => Prefs.SetAdvancedAsync(JS, !Prefs.Advanced)" data-test="advanced-toggle">
+                <span>Show power features <i>Ask, downloads, sharing, watch rules, weather, the 3D year, visual effects</i></span><b>@(Prefs.Advanced ? "ON" : "OFF")</b>
+            </button>
+            @if (Prefs.Advanced)
+            {
+                <button class="term-menu-item" onclick="powatchMenus.openPalette()" data-test="open-palette">
+                    <span>Commands and shortcuts</span><b>CTRL K</b>
+                </button>
+            }
+            <button class="term-menu-item" @onclick="ResetAsync" data-test="settings-reset">
+                <span>Reset to defaults <i>dark, low sound, captions and listening on, power features off; rules and account settings stay</i></span><b>↺</b>
+            </button>
+        </div>
+    </ChildContent>
+</TerminalPanel>
+
+@code {
+    private string _theme = "dark";
+    private string _sound = "low";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var theme = await JS.TryInvokeAsync<string>("powatchTheme.get");
+        if (!string.IsNullOrEmpty(theme)) _theme = theme;
+        _sound = await JS.TryInvokeAsync<string>("powatchCues.level") ?? _sound;
+    }
+
+    private async Task ToggleThemeAsync()
+    {
+        var next = await JS.TryInvokeAsync<string>("powatchTheme.toggle");
+        _theme = string.IsNullOrEmpty(next) ? (_theme == "dark" ? "light" : "dark") : next;
+    }
+
+    private async Task CycleSoundAsync() => _sound = await JS.TryInvokeAsync<string>("powatchCues.cycle") ?? _sound;
+
+    /// <summary>Back to the starting values for this browser's choices; watch rules and the account's settings are data, not choices, and stay.</summary>
+    private async Task ResetAsync()
+    {
+        if (_theme != "dark") await ToggleThemeAsync();
+        for (var i = 0; i < 4 && _sound != "low"; i++) await CycleSoundAsync();
+        if (!Sensing.Captions) await SetCaptionsAsync(true);
+        if (!Sensing.Listening) await SetListeningAsync(true);
+        if (Sensing.CaptionModel != CaptionModels.Default)
+        {
+            Sensing.CaptionModel = CaptionModels.Default;
+            await JS.TryInvokeVoidAsync("localStorage.setItem", CaptionModels.Key, Sensing.CaptionModel);
+        }
+
+        await Prefs.SetAdvancedAsync(JS, false);
+    }
+}

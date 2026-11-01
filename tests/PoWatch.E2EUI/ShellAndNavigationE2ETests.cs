@@ -98,7 +98,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         var before = await page.GetAttributeAsync("html", "data-theme");
-        await page.OpenSettingsAsync();
+        await page.OpenSettingsAsync("look");
         await page.GetByTestId("theme-toggle").ClickAsync();
         await page.WaitForTimeoutAsync(400);
         var after = await page.GetAttributeAsync("html", "data-theme");
