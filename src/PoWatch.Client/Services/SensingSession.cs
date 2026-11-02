@@ -191,15 +191,10 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
             await js.TryInvokeVoidAsync("powatchFeed.undock");
     }
 
-    /// <summary>The session's long-exposure print so far (fx.js), or null when nobody has moved.</summary>
-    public Task<string?> ExposureAsync() => js.TryInvokeAsync<string>("powatchFx.exposure", Live.Demo ? null : Feed);
-
     /// <summary>Stops the session and leaves its recap in <see cref="Recap"/>, whichever control stopped it.</summary>
     public async Task StopAsync()
     {
         if (_cts is null) return;
-        // Taken before stopping, while the camera still has a frame to print the paths over.
-        var exposure = await ExposureAsync();
         await _cts.CancelAsync();
         _cts.Dispose();
         _cts = null;
@@ -222,7 +217,7 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
                 Live.Session = stopped;
                 await js.TryInvokeVoidAsync("powatchOutbox.unguard");
             }
-            Recap = new SessionRecap(Live.Session, null, exposure);
+            Recap = new SessionRecap(Live.Session, null);
         }
 
         Cue("stop");

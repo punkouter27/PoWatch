@@ -27,7 +27,6 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<SensingSession>();
 builder.Services.AddScoped<StatsFeed>();
 builder.Services.AddScoped<DrawerState>();
-builder.Services.AddScoped<UiPrefs>();
 builder.Services.AddRadzenComponents();
 
 // BFF auth: server cookie holds the session; client derives state from /auth/me.

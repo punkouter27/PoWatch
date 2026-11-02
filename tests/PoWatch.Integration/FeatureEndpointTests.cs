@@ -227,8 +227,19 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
     [Fact]
     public async Task The_replay_has_each_observed_minute_with_its_grid_and_the_days_events()
     {
-        using var client = ClientFor($"replay-{Guid.NewGuid():N}");
-        await ObserveAsync(client);
+        var user = $"replay-{Guid.NewGuid():N}";
+        using var client = ClientFor(user);
+        var session = await ObserveAsync(client);
+
+        // T1 came in unrecognised and left as Sam: the replay names the entrance too.
+        await factory.Services.GetRequiredService<IRegularStore>().UpsertAsync(
+            new Regular { Id = "sam", UserId = user, Class = "person", Number = 1, Name = "Sam" }, CancellationToken.None);
+        var exit = await client.PostAsJsonAsync($"/api/sessions/{session.Id}/batches", new IngestBatchDto
+        {
+            BatchKey = Guid.NewGuid(),
+            Events = [new() { AtUtc = session.StartedUtc.AddSeconds(9), Kind = "TrackExit", TrackId = "T1", Class = "person", Edge = "Right", RegularId = "sam" }]
+        });
+        Assert.Equal(HttpStatusCode.OK, exit.StatusCode);
 
         var replay = await client.GetFromJsonAsync<ReplayDayDto>($"/api/stats/replay?date={TodayUtc:yyyy-MM-dd}&tz=UTC");
         Assert.NotNull(replay);
@@ -238,7 +249,8 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal(255, grids[40]); // the busiest cell
         Assert.Contains(replay.Events, e => e is { Kind: "caption", Text: "A person crosses the room." });
         Assert.Contains(replay.Events, e => e is { Kind: "moment" });
-        Assert.Contains(replay.Events, e => e is { Kind: "enter", Class: "person" });
+        Assert.Contains(replay.Events, e => e is { Kind: "enter", Class: "person", Who: "Sam" });
+        Assert.Contains(replay.Events, e => e is { Kind: "exit", Who: "Sam" });
 
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/stats/replay?date=yesterday")).StatusCode);
     }

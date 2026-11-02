@@ -6,12 +6,11 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject StatsFeed Feed
-@inject UiPrefs Prefs
 
 <PageTitle>PoWatch</PageTitle>
 
 @* Everything on one screen, always about one session: the one recording now, else the latest (or the
-   one a Journal link names, ?session=). One bar (which session; with Advanced on, the question box and
+   one a Journal link names, ?session=). One bar (which session, the question box and
    the download), then a 3×3 around the camera (CSS dissolves each family's own grid into this one). Under
    the camera runs its narration: everything seen, said and heard, and who came and went. On a phone the
    panels after "In frame" become a strip you swipe through. Longer views live in the Journal. *@
@@ -23,22 +22,19 @@
             <span class="live-error" role="status" data-test="session-missing">That session was not found, so this is your latest one.</span>
         }
 
-        @if (Prefs.Advanced)
-        {
-            <div class="stats-ask-row">
-                <form class="stats-ask" @onsubmit="AskAsync" data-test="stats-ask">
-                    <label class="visually-hidden" for="ask">Ask a question about your stats</label>
-                    <input id="ask" @bind="_question" @bind:event="oninput" maxlength="300" autocomplete="off" placeholder="Ask: when is it usually busiest?" disabled="@_asking" />
-                    <button type="submit" class="term-button" disabled="@(_asking || string.IsNullOrWhiteSpace(_question))">@(_asking ? "…" : "Ask")</button>
-                </form>
-                @* The grid shows the headlines; this file has every number behind them. *@
-                <a class="term-button" href="@PoWatchApiClient.AllStatsUrl(_query)" download="PoWatch-session.json"
-                   title="Every number for this session, as one JSON file" aria-label="Download every number for this session (JSON)" data-test="stats-json">JSON ↓</a>
-            </div>
-        }
+        <div class="stats-ask-row">
+            <form class="stats-ask" @onsubmit="AskAsync" data-test="stats-ask">
+                <label class="visually-hidden" for="ask">Ask a question about your stats</label>
+                <input id="ask" @bind="_question" @bind:event="oninput" maxlength="300" autocomplete="off" placeholder="Ask: when is it usually busiest?" disabled="@_asking" />
+                <button type="submit" class="term-button" disabled="@(_asking || string.IsNullOrWhiteSpace(_question))">@(_asking ? "…" : "Ask")</button>
+            </form>
+            @* The grid shows the headlines; this file has every number behind them. *@
+            <a class="term-button" href="@PoWatchApiClient.AllStatsUrl(_query)" download="PoWatch-session.json"
+               title="Every number for this session, as one JSON file" aria-label="Download every number for this session (JSON)" data-test="stats-json">JSON ↓</a>
+        </div>
     </div>
 
-    @if (_answer is not null && Prefs.Advanced)
+    @if (_answer is not null)
     {
         <p class="stats-answer" role="status" data-test="stats-answer"><b>ANSWER</b> @_answer</p>
     }
@@ -52,14 +48,6 @@
                 @* The camera element itself lives in the layout and is docked over this slot. *@
                 <div class="live-stage">
                     <div class="live-feed" @ref="_slot">
-                        @if (Prefs.Advanced)
-                        {
-                            @* Comet trails of everyone in frame, drawn by fx.js. *@
-                            <canvas class="fx-trails" data-fx-trails aria-hidden="true"></canvas>
-                            @* The tube switching on and off (crt.js): over the picture, under nothing else. *@
-                            <canvas class="crt" @ref="_crt" aria-hidden="true"></canvas>
-                        }
-
                         @foreach (var track in Sensing.IsRunning ? L.Tracks : [])
                         {
                             <div class="live-box @(track.Label == "person" ? "live-box--person" : string.Empty)"
@@ -94,7 +82,7 @@
         </TerminalPanel>
 
         <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend"
-                    OnExplain="@(Prefs.Advanced ? EventCallback.Factory.Create(this, ExplainAsync) : default)" Asking="@_asking" />
+                    OnExplain="@EventCallback.Factory.Create(this, ExplainAsync)" Asking="@_asking" />
         <InFrame Objects="@_objects" />
 
         @* On a phone the rest is a strip you swipe through, with keys to jump; elsewhere it melts into the grid. *@
@@ -110,15 +98,7 @@
                 <Aside>16×9 · EDGES TODAY</Aside>
                 <ChildContent>
                     <div class="live-heat">
-                        @if (_shaderHeat && Prefs.Advanced)
-                        {
-                            @* Drawn by heat-gl.js (a WebGL2 shader) after every render; the plain grid is the simple view and the fallback. *@
-                            <canvas @ref="_heat" class="heat-gl" role="img" aria-label="Where motion is happening right now" data-test="heat-gl"></canvas>
-                        }
-                        else
-                        {
-                            <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
-                        }
+                        <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
                     </div>
                     <div class="live-edges">
                         @foreach (var edge in Edges)

@@ -51,28 +51,23 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     }
 
     [Fact]
-    public async Task The_app_starts_simple_and_Advanced_in_Settings_adds_the_extras()
+    public async Task Ask_downloads_and_watch_rules_are_there_from_the_start()
     {
         if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
-        await Assertions.Expect(page.GetByTestId("stats-toolbar")).ToBeVisibleAsync();
-        await Assertions.Expect(page.GetByTestId("stats-ask")).ToHaveCountAsync(0);
-        await Assertions.Expect(page.GetByTestId("stats-json")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByTestId("stats-json")).ToBeVisibleAsync();
 
-        // Look, alerts, shared links and the account all sit under Settings' Account tab.
+        // Look, alerts, shared links and the account all sit under Settings' Account tab; there is no mode to switch.
         await page.OpenSettingsAsync("account");
-        await Assertions.Expect(page.GetByTestId("watch-rules")).ToHaveCountAsync(0);
-        await page.GetByTestId("advanced-toggle").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("advanced-toggle")).ToHaveAttributeAsync("aria-checked", "true");
         await Assertions.Expect(page.GetByTestId("watch-rules")).ToBeVisibleAsync();
-        await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeAttachedAsync();
-        await Assertions.Expect(page.GetByTestId("stats-json")).ToBeAttachedAsync();
+        await Assertions.Expect(page.GetByTestId("weather-place")).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByTestId("advanced-toggle")).ToHaveCountAsync(0);
 
-        // Reset puts every browser choice back, power features included.
+        // Reset puts every browser choice back.
         await page.GetByTestId("settings-reset").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("advanced-toggle")).ToHaveAttributeAsync("aria-checked", "false");
-        await Assertions.Expect(page.GetByTestId("stats-ask")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("theme-toggle")).ToContainTextAsync("DARK");
         await page.AssertNoBlazorErrorAsync();
     }
 

@@ -37,17 +37,6 @@
                 @* Asking for the story writes whatever is due: after Stop, the last chapter and the story itself. *@
                 <SessionStory SessionId="@recap.Session.Id" />
 
-                @if (recap.Exposure is { } exposure)
-                {
-                    <figure class="away-exposure" data-test="away-exposure">
-                        <img src="@exposure" alt="Long exposure: every path walked through the frame this session" />
-                        <figcaption>
-                            LONG EXPOSURE · every path this session
-                            <a class="term-button" href="@exposure" download="PoWatch-exposure-@(tag[1..]).png">PNG ↓</a>
-                        </figcaption>
-                    </figure>
-                }
-
                 @if (_moments.Count > 0)
                 {
                     <ol class="moment-list moment-list--snaps">

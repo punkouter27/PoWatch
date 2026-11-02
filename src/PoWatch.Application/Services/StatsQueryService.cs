@@ -90,13 +90,29 @@ public sealed class StatsQueryService(IRollupStore rollups, ISensingLog sensingL
                 Luminance = m.Luminance.Mean
             }).ToList(),
             Grids = Convert.ToBase64String(grids),
-            Events = (await eventsRead).OrderBy(e => e.AtUtc).Select(e => ReplayEvent(e, names)).OfType<ReplayEventDto>().ToList()
+            Events = ReplayEvents(await eventsRead, names)
         };
     }
 
-    private static ReplayEventDto? ReplayEvent(SceneEvent e, Dictionary<string, string> names)
+    /// <summary>
+    /// The events as replay lines, in time order. Recognition lands a moment after a track comes in, so its
+    /// entry is usually posted without a regular: it takes the one the same track was recognised as later.
+    /// </summary>
+    private static List<ReplayEventDto> ReplayEvents(IReadOnlyList<SceneEvent> events, Dictionary<string, string> names)
     {
-        var who = e.RegularId is { } id ? names.GetValueOrDefault(id) : null;
+        var regularOfTrack = events
+            .Where(e => e.TrackId is not null && e.RegularId is not null)
+            .GroupBy(e => (e.SessionId, e.TrackId))
+            .ToDictionary(g => g.Key, g => g.First().RegularId!);
+        return events.OrderBy(e => e.AtUtc)
+            .Select(e => ReplayEvent(e, e.RegularId ?? (e.TrackId is null ? null : regularOfTrack.GetValueOrDefault((e.SessionId, e.TrackId))), names))
+            .OfType<ReplayEventDto>()
+            .ToList();
+    }
+
+    private static ReplayEventDto? ReplayEvent(SceneEvent e, string? regularId, Dictionary<string, string> names)
+    {
+        var who = regularId is { } id ? names.GetValueOrDefault(id) : null;
         return e.Kind switch
         {
             SceneEventKind.Caption when e.Text is not null => new() { AtUtc = e.AtUtc, Kind = "caption", Text = e.Text },

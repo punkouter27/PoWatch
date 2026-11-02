@@ -110,12 +110,21 @@ public sealed class LiveSensingState
             _classesSeen[entered.Label] = _classesSeen.GetValueOrDefault(entered.Label) + 1;
             if (!CentroidTracker.IsPresence(entered.Label)) continue;
             Visits++;
-            Narrate(new TimelineEntry(nowUtc, "enter", entered.Label));
+            Narrate(new TimelineEntry(nowUtc, "enter", entered.Label, RegularFor(entered.TrackId)?.DisplayName, TrackId: entered.TrackId));
         }
 
         // Called before the tracker forgets them, so a recognised regular leaves by name.
         foreach (var exited in frame.Exited.Where(t => CentroidTracker.IsPresence(t.Label)))
-            Narrate(new TimelineEntry(nowUtc, "exit", exited.Label, RegularFor(exited.TrackId)?.DisplayName));
+            Narrate(new TimelineEntry(nowUtc, "exit", exited.Label, RegularFor(exited.TrackId)?.DisplayName, TrackId: exited.TrackId));
+    }
+
+    /// <summary>Recognition lands a moment after a track comes in: its lines so far take the name.</summary>
+    private void NameLines(string trackId, string name)
+    {
+        for (var i = 0; i < _narration.Count; i++)
+        {
+            if (_narration[i].TrackId == trackId && _narration[i].Who != name) _narration[i] = _narration[i] with { Who = name };
+        }
     }
 
     private readonly Dictionary<string, RegularDto> _regularByTrack = new(StringComparer.Ordinal);
@@ -129,7 +138,11 @@ public sealed class LiveSensingState
     /// <summary>The name of a regular seen this session, by id; null when they have not been.</summary>
     public string? RegularNamed(string regularId) => _regularByTrack.Values.FirstOrDefault(r => r.Id == regularId)?.DisplayName;
 
-    public void AssignRegular(string trackId, RegularDto regular) => _regularByTrack[trackId] = regular;
+    public void AssignRegular(string trackId, RegularDto regular)
+    {
+        _regularByTrack[trackId] = regular;
+        NameLines(trackId, regular.DisplayName);
+    }
 
     public void ForgetTrack(string trackId) => _regularByTrack.Remove(trackId);
 
@@ -148,7 +161,10 @@ public sealed class LiveSensingState
     public void Rename(RegularDto regular)
     {
         foreach (var trackId in _regularByTrack.Where(kv => kv.Value.Id == regular.Id).Select(kv => kv.Key).ToList())
+        {
             _regularByTrack[trackId] = regular;
+            NameLines(trackId, regular.DisplayName);
+        }
         _prompts.RemoveAll(p => p.Regular.Id == regular.Id);
     }
 
@@ -186,4 +202,4 @@ public sealed record NamingPrompt(RegularDto Regular, string? SnapshotDataUrl, D
 /// What the recap card shows: the session, how long the tab was away (null when the session just
 /// stopped), and the long-exposure PNG data URL (null when nobody moved).
 /// </summary>
-public sealed record SessionRecap(SessionDto Session, TimeSpan? AwayFor, string? Exposure);
+public sealed record SessionRecap(SessionDto Session, TimeSpan? AwayFor);

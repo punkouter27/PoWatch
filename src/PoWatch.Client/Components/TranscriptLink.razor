@@ -1,0 +1,17 @@
+@* Downloads lines of what happened as a plain-text transcript (TimelineEntry.Transcript). The text rides in
+   the link itself (a data: URL), so saving needs no script and no round trip. Nothing to save, no link. *@
+@if (Entries.Count > 0)
+{
+    <a class="term-button transcript-link" href="@Href" download="@FileName" title="Save these @Entries.Count lines as a text file" data-test="transcript-download">Text ↓</a>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<TimelineEntry> Entries { get; set; } = [];
+
+    /// <summary>The first line of the file.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired] public string FileName { get; set; } = string.Empty;
+
+    private string Href => "data:text/plain;charset=utf-8," + Uri.EscapeDataString(TimelineEntry.Transcript(Title, Entries));
+}

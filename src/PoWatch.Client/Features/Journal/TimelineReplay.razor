@@ -63,14 +63,16 @@
         }
 
         <h3 class="history-sub">Timeline · @_lines.Count @(_lines.Count == 1 ? "line" : "lines")</h3>
+        var shown = _lines.Where(e => TimelineEntry.Passes(e, _filter)).ToList();
         <div class="moment-filters" role="group" aria-label="Show only">
             @foreach (var (key, label, _) in TimelineEntry.Filters)
             {
                 <button type="button" class="term-button @(_filter == key ? "term-button--on" : null)" aria-pressed="@(_filter == key ? "true" : "false")"
                         @onclick="() => _filter = key" data-test="@($"timeline-filter-{key}")">@label</button>
             }
+            @* What is shown, filter and all. *@
+            <TranscriptLink Entries="@shown" Title="@TranscriptTitle" FileName="@TranscriptFile" />
         </div>
-        var shown = _lines.Where(e => TimelineEntry.Passes(e, _filter)).ToList();
         @if (shown.Count == 0)
         {
             <p class="term-empty">@(_lines.Count == 0 ? "Nothing was written down: no captions, words or sounds were kept." : "Nothing of that kind.")</p>
@@ -108,6 +110,14 @@
 
     /// <summary>The minute to open on (Unix ms), e.g. from a caption search; null opens on the first observed minute.</summary>
     [Parameter] public long? StartAt { get; set; }
+
+    private string TranscriptTitle => From is { } from && To is { } to
+        ? $"PoWatch · session {from.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)}–{to.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture)}"
+        : $"PoWatch · {Day.ToString("dddd d MMMM yyyy", CultureInfo.CurrentCulture)}";
+
+    private string TranscriptFile => From is { } from
+        ? $"powatch-session-{from.ToLocalTime().ToString("yyyy-MM-dd-HHmm", CultureInfo.InvariantCulture)}.txt"
+        : $"powatch-{Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}.txt";
 
     private ElementReference _root;
     private (DateOnly, DateTimeOffset?, DateTimeOffset?)? _shown;

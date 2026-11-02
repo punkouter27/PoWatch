@@ -1,36 +1,19 @@
-@* The Journal's index: the year (click a day; with Advanced on, a 3D skyline), the week's and month's
+@* The Journal's index: the year (click a day), the week's and month's
    stories, then every day that has sessions, newest first, with its sessions inside it. What the reader
    shows is lit. A session that saw nothing for under ten seconds (a Start and a quick Stop) is noise here. *@
 @using System.Globalization
 @inject PoWatchApiClient Api
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
-@inject UiPrefs Prefs
-@implements IDisposable
 
 <div class="journal-index">
     <TerminalPanel Title="The year" Test="history-calendar">
         <Aside>
             @(Patterns?.Calendar.Count ?? 0) DAYS
-            @if (Prefs.Advanced)
-            {
-                <span class="history-view" role="group" aria-label="Year view">
-                    <button class="term-button @(_year3d ? null : "term-button--on")" aria-pressed="@(_year3d ? "false" : "true")" @onclick="() => SetYearViewAsync(false)" data-test="year-2d">2D</button>
-                    <button class="term-button @(_year3d ? "term-button--on" : null)" aria-pressed="@(_year3d ? "true" : "false")" @onclick="() => SetYearViewAsync(true)" data-test="year-3d">3D</button>
-                </span>
-            }
         </Aside>
         <ChildContent>
-            @if (_year3d && Prefs.Advanced)
-            {
-                <YearSkyline Values="@_skyValues" Wet="@_skyWet" Labels="@_skyLabels" Selected="@CellFor(Day)" OnPick="@(i => Open(DayFor(i)))" />
-            }
-            else
-            {
-                <HeatGrid Values="@_calendarCells" Columns="53" Rows="7" Label="Daily occupancy over the last year"
-                          Selected="@CellFor(Day)" OnCellClick="@(i => Open(DayFor(i)))"
-                          CellTitle="@((i, v) => CellLabel(i, v))" />
-            }
+            <HeatGrid Values="@_calendarCells" Columns="53" Rows="7" Label="Daily occupancy over the last year"
+                      Selected="@CellFor(Day)" OnCellClick="@(i => Open(DayFor(i)))"
+                      CellTitle="@((i, v) => CellLabel(i, v))" />
             @if (Weather?.Insight is { } insight)
             {
                 <p class="history-insight" data-test="weather-insight">@insight.Sentence</p>
@@ -94,7 +77,6 @@
     /// <summary>The server lists at most this many of the latest sessions.</summary>
     private const int MaxTake = 100;
 
-    private const string YearViewKey = "powatch:year-view";
 
     [Parameter] public PatternStatsDto? Patterns { get; set; }
     [Parameter] public WeatherYearDto? Weather { get; set; }
@@ -116,31 +98,21 @@
     private int _take = Page;
     private IReadOnlyList<SessionDto>? _sessions;
     private List<(DateOnly Day, List<SessionDto> Sessions)> _days = [];
-    private bool _year3d;
     private PatternStatsDto? _calendarFor;
-    private WeatherYearDto? _skylineFor;
+    private WeatherYearDto? _weatherFor;
     private Dictionary<DateOnly, WeatherDayDto> _weatherByDay = [];
     private List<double> _calendarCells = [];
-    private IReadOnlyList<double> _skyValues = [];
-    private IReadOnlyList<bool> _skyWet = [];
-    private IReadOnlyList<string> _skyLabels = [];
 
-    protected override async Task OnInitializedAsync()
-    {
-        Prefs.Changed += OnPrefsChanged;
-        _year3d = await JS.TryInvokeAsync<string>("localStorage.getItem", YearViewKey) == "3d";
-        await LoadSessionsAsync();
-    }
+    protected override Task OnInitializedAsync() => LoadSessionsAsync();
 
     protected override void OnParametersSet()
     {
         // Rebuilt only when a new answer arrives, not on every render of the page.
-        if (!ReferenceEquals(Patterns, _calendarFor) || !ReferenceEquals(Weather, _skylineFor))
+        if (!ReferenceEquals(Patterns, _calendarFor) || !ReferenceEquals(Weather, _weatherFor))
         {
-            (_calendarFor, _skylineFor) = (Patterns, Weather);
+            (_calendarFor, _weatherFor) = (Patterns, Weather);
             _weatherByDay = Weather?.Days.ToDictionary(d => d.Date) ?? [];
             BuildCalendar();
-            BuildSkyline();
         }
     }
 
@@ -193,23 +165,4 @@
         }
         _calendarCells = [.. cells];
     }
-
-    /// <summary>The calendar as the skyline wants it: −1 marks days still to come, so they get no tower.</summary>
-    private void BuildSkyline()
-    {
-        var cells = Enumerable.Range(0, _calendarCells.Count).ToList();
-        _skyValues = cells.Select(i => DayFor(i) is null ? -1 : _calendarCells[i]).ToList();
-        _skyWet = cells.Select(i => DayFor(i) is { } d && _weatherByDay.GetValueOrDefault(d) is { Wet: true }).ToList();
-        _skyLabels = cells.Select(i => CellLabel(i, _calendarCells[i])).ToList();
-    }
-
-    private async Task SetYearViewAsync(bool threeD)
-    {
-        _year3d = threeD;
-        await JS.TryInvokeVoidAsync("localStorage.setItem", YearViewKey, threeD ? "3d" : "2d");
-    }
-
-    private void OnPrefsChanged() => InvokeAsync(StateHasChanged);
-
-    public void Dispose() => Prefs.Changed -= OnPrefsChanged;
 }

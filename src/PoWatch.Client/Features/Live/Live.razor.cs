@@ -21,10 +21,7 @@ public sealed partial class Live
     private bool _asking;
 
     private ElementReference _slot;
-    private ElementReference _crt;
-    private ElementReference _heat;
     private ElementReference _more;
-    private bool _shaderHeat = true;
     private IReadOnlyList<double> _occupancyTrend = [];
     private IReadOnlyList<double> _visitsTrend = [];
     private DotNetObjectReference<Live>? _self;
@@ -61,7 +58,6 @@ public sealed partial class Live
         _wasRunning = Sensing.IsRunning;
         Sensing.Changed += OnSensingChanged;
         Feed.Changed += OnStatsChanged;
-        Prefs.Changed += OnPrefsChanged;
         _ = Feed.EnsureConnectedAsync();
         _refresh = new CancellationTokenSource();
         _ = RefreshLoopAsync(_refresh.Token);
@@ -115,12 +111,6 @@ public sealed partial class Live
             await DockFeedAsync();
         }
 
-        if (_shaderHeat && Prefs.Advanced && !await JS.TryInvokeAsync<bool>("powatchHeat.draw", _heat, L.Heat, 16, 9))
-        {
-            _shaderHeat = false;
-            StateHasChanged();
-        }
-
         // ?start=camera|demo (header Start, or a typed URL) works whether or not Live was already open.
         if (StartMode is not { } mode || Sensing.IsRunning || _starting) return;
         Navigation.NavigateTo("", replace: true);
@@ -156,9 +146,6 @@ public sealed partial class Live
 
             InvokeAsync(async () =>
             {
-                // On: the tube is black before the picture docks under it. Off: the picture stays until it is dark.
-                if (Prefs.Advanced && Sensing.IsRunning) _ = JS.TryInvokeVoidAsync("powatchCrt.power", _crt, true);
-                else if (Prefs.Advanced) await JS.TryInvokeVoidAsync("powatchCrt.power", _crt, false);
                 await DockFeedAsync();
                 await RefreshStatsAsync();
             });
@@ -171,8 +158,6 @@ public sealed partial class Live
         _lastRender = now;
         InvokeAsync(StateHasChanged);
     }
-
-    private void OnPrefsChanged() => InvokeAsync(StateHasChanged);
 
     private void OnStatsChanged(StatsChangedDto change)
     {
@@ -198,7 +183,7 @@ public sealed partial class Live
             && DateTimeOffset.UtcNow - ended < TimeSpan.FromMinutes(2)
             && await JS.TryInvokeAsync<string>("localStorage.getItem", PoWatch.Client.Components.AwayCard.DismissedKey) != last.Id.ToString())
         {
-            Sensing.Recap = new SessionRecap(last, null, null);
+            Sensing.Recap = new SessionRecap(last, null);
         }
 
         await RefreshStatsAsync();
@@ -241,7 +226,7 @@ public sealed partial class Live
     {
         if (!Sensing.IsRunning || Sensing.Live.Session is not { } session) return;
         var refreshed = await Api.ListSessionsAsync(5);
-        Sensing.Recap = new SessionRecap(refreshed.FirstOrDefault(s => s.Id == session.Id) ?? session, TimeSpan.FromSeconds(secondsAway), await Sensing.ExposureAsync());
+        Sensing.Recap = new SessionRecap(refreshed.FirstOrDefault(s => s.Id == session.Id) ?? session, TimeSpan.FromSeconds(secondsAway));
     }
 
     private Task DockFeedAsync() => Sensing.DockFeedAsync(_slot);
@@ -254,7 +239,6 @@ public sealed partial class Live
     {
         Sensing.Changed -= OnSensingChanged;
         Feed.Changed -= OnStatsChanged;
-        Prefs.Changed -= OnPrefsChanged;
         await JS.TryInvokeVoidAsync("powatchFeed.undock");
         await JS.TryInvokeVoidAsync("powatchFeed.unwatchReturn");
         _self?.Dispose();

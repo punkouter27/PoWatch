@@ -7,17 +7,11 @@
             <button class="term-menu-item" @onclick="ToggleThemeAsync" data-test="theme-toggle">
                 <span>Theme</span><b>@_theme.ToUpperInvariant()</b>
             </button>
-            <button class="term-menu-item" role="switch" aria-checked="@(Prefs.Advanced ? "true" : "false")" @onclick="() => Prefs.SetAdvancedAsync(JS, !Prefs.Advanced)" data-test="advanced-toggle">
-                <span>Show power features <i>Ask, downloads, sharing, watch rules, weather, the 3D year, visual effects</i></span><b>@(Prefs.Advanced ? "ON" : "OFF")</b>
+            <button class="term-menu-item" onclick="powatchMenus.openPalette()" data-test="open-palette">
+                <span>Commands and shortcuts</span><b>CTRL K</b>
             </button>
-            @if (Prefs.Advanced)
-            {
-                <button class="term-menu-item" onclick="powatchMenus.openPalette()" data-test="open-palette">
-                    <span>Commands and shortcuts</span><b>CTRL K</b>
-                </button>
-            }
             <button class="term-menu-item" @onclick="ResetAsync" data-test="settings-reset">
-                <span>Reset to defaults <i>dark, low sound, captions and listening on, power features off; rules and account settings stay</i></span><b>↺</b>
+                <span>Reset to defaults <i>dark, low sound, captions and listening on; rules and account settings stay</i></span><b>↺</b>
             </button>
         </div>
     </ChildContent>
@@ -52,7 +46,5 @@
             Sensing.CaptionModel = CaptionModels.Default;
             await JS.TryInvokeVoidAsync("localStorage.setItem", CaptionModels.Key, Sensing.CaptionModel);
         }
-
-        await Prefs.SetAdvancedAsync(JS, false);
     }
 }

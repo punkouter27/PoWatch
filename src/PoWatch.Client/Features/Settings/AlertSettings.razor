@@ -1,60 +1,57 @@
 @inherits SettingsTab
 
-@if (Prefs.Advanced || _rules.Count > 0)
-{
-    <TerminalPanel Title="Watch rules" Test="watch-rules">
-        <Aside>@_rules.Count OF @WatchRules.Max</Aside>
-        <ChildContent>
-            @foreach (var rule in _rules)
+<TerminalPanel Title="Watch rules" Test="watch-rules">
+    <Aside>@_rules.Count OF @WatchRules.Max</Aside>
+    <ChildContent>
+        @foreach (var rule in _rules)
+        {
+            <div class="rule-row">
+                <span>@rule</span>
+                <button class="term-icon-button" @onclick="() => RemoveRuleAsync(rule)" aria-label="@($"Remove rule: {rule}")">✕</button>
+            </div>
+        }
+        @if (_rules.Count < WatchRules.Max)
+        {
+            <form class="rule-form" @onsubmit="AddRuleAsync">
+                <label class="visually-hidden" for="rule-class">Alert me when this appears</label>
+                <select id="rule-class" @bind="_ruleClass">
+                    <option value="person">person</option>
+                    <option value="cat">cat</option>
+                    <option value="dog">dog</option>
+                    <option value="@WatchRules.Any">anything</option>
+                </select>
+                <label class="visually-hidden" for="rule-from">From hour</label>
+                <input id="rule-from" type="number" min="0" max="23" @bind="_ruleFrom" />
+                <span aria-hidden="true">→</span>
+                <label class="visually-hidden" for="rule-to">Until hour</label>
+                <input id="rule-to" type="number" min="0" max="23" @bind="_ruleTo" />
+                <button type="submit" class="term-button" data-test="rule-add">Add</button>
+            </form>
+            @* Or in plain words: the server's model drafts the rule, which shows here to confirm before it is kept. *@
+            <form class="rule-form rule-form--words" @onsubmit="DraftRuleAsync" data-test="rule-words">
+                <label class="visually-hidden" for="rule-words">Describe a rule in your own words</label>
+                <input id="rule-words" @bind="_ruleWords" @bind:event="oninput" maxlength="@RuleDraftRequestDto.MaxLength" autocomplete="off"
+                       placeholder="Or say it: tell me if a dog shows up at night" disabled="@_drafting" />
+                <button type="submit" class="term-button" disabled="@(_drafting || string.IsNullOrWhiteSpace(_ruleWords))">@(_drafting ? "…" : "Draft")</button>
+            </form>
+            @if (_draft is { } draft)
             {
-                <div class="rule-row">
-                    <span>@rule</span>
-                    <button class="term-icon-button" @onclick="() => RemoveRuleAsync(rule)" aria-label="@($"Remove rule: {rule}")">✕</button>
+                <div class="rule-row rule-row--draft" data-test="rule-draft">
+                    <span>@draft</span>
+                    <span>
+                        <button class="term-button" @onclick="KeepDraftAsync" data-test="rule-draft-keep">Keep</button>
+                        <button class="term-icon-button" @onclick="() => _draft = null" aria-label="Discard the drafted rule">✕</button>
+                    </span>
                 </div>
             }
-            @if (_rules.Count < WatchRules.Max)
+            else if (_draftError is not null)
             {
-                <form class="rule-form" @onsubmit="AddRuleAsync">
-                    <label class="visually-hidden" for="rule-class">Alert me when this appears</label>
-                    <select id="rule-class" @bind="_ruleClass">
-                        <option value="person">person</option>
-                        <option value="cat">cat</option>
-                        <option value="dog">dog</option>
-                        <option value="@WatchRules.Any">anything</option>
-                    </select>
-                    <label class="visually-hidden" for="rule-from">From hour</label>
-                    <input id="rule-from" type="number" min="0" max="23" @bind="_ruleFrom" />
-                    <span aria-hidden="true">→</span>
-                    <label class="visually-hidden" for="rule-to">Until hour</label>
-                    <input id="rule-to" type="number" min="0" max="23" @bind="_ruleTo" />
-                    <button type="submit" class="term-button" data-test="rule-add">Add</button>
-                </form>
-                @* Or in plain words: the server's model drafts the rule, which shows here to confirm before it is kept. *@
-                <form class="rule-form rule-form--words" @onsubmit="DraftRuleAsync" data-test="rule-words">
-                    <label class="visually-hidden" for="rule-words">Describe a rule in your own words</label>
-                    <input id="rule-words" @bind="_ruleWords" @bind:event="oninput" maxlength="@RuleDraftRequestDto.MaxLength" autocomplete="off"
-                           placeholder="Or say it: tell me if a dog shows up at night" disabled="@_drafting" />
-                    <button type="submit" class="term-button" disabled="@(_drafting || string.IsNullOrWhiteSpace(_ruleWords))">@(_drafting ? "…" : "Draft")</button>
-                </form>
-                @if (_draft is { } draft)
-                {
-                    <div class="rule-row rule-row--draft" data-test="rule-draft">
-                        <span>@draft</span>
-                        <span>
-                            <button class="term-button" @onclick="KeepDraftAsync" data-test="rule-draft-keep">Keep</button>
-                            <button class="term-icon-button" @onclick="() => _draft = null" aria-label="Discard the drafted rule">✕</button>
-                        </span>
-                    </div>
-                }
-                else if (_draftError is not null)
-                {
-                    <p class="term-stat-hint" role="status">@_draftError</p>
-                }
+                <p class="term-stat-hint" role="status">@_draftError</p>
             }
-            <p class="term-stat-hint">Alerts land in the bell. Hours are local; the same hour twice means any time. @(_notifications ?? "They also show as desktop notifications if you allow them.")</p>
-        </ChildContent>
-    </TerminalPanel>
-}
+        }
+        <p class="term-stat-hint">Alerts land in the bell. Hours are local; the same hour twice means any time. @(_notifications ?? "They also show as desktop notifications if you allow them.")</p>
+    </ChildContent>
+</TerminalPanel>
 <TerminalPanel Title="Weekly email" Test="settings-email" Flush="true">
     <ChildContent>
         @if (_profile is null)
@@ -77,10 +74,6 @@
         }
     </ChildContent>
 </TerminalPanel>
-@if (!Prefs.Advanced && _rules.Count == 0)
-{
-    <p class="term-stat-hint settings-note">Watch rules ("a person between 22 and 6") are a power feature: turn them on under Look.</p>
-}
 
 @code {
     private List<WatchRule> _rules = [];

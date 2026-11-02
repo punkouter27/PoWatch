@@ -6,17 +6,15 @@ using PoWatch.Shared.Models;
 
 namespace PoWatch.Client.Features.Settings;
 
-/// <summary>One tab of <see cref="SettingsPanel"/>: redraws when the browser's choices or the session change.</summary>
+/// <summary>One tab of <see cref="SettingsPanel"/>: redraws when the session changes.</summary>
 public abstract class SettingsTab : ComponentBase, IDisposable
 {
-    [Inject] protected UiPrefs Prefs { get; set; } = default!;
     [Inject] protected SensingSession Sensing { get; set; } = default!;
     [Inject] protected PoWatchApiClient Api { get; set; } = default!;
     [Inject] protected IJSRuntime JS { get; set; } = default!;
 
     protected override void OnInitialized()
     {
-        Prefs.Changed += OnChanged;
         Sensing.Changed += OnChanged;
     }
 
@@ -24,7 +22,6 @@ public abstract class SettingsTab : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        Prefs.Changed -= OnChanged;
         Sensing.Changed -= OnChanged;
         GC.SuppressFinalize(this);
     }

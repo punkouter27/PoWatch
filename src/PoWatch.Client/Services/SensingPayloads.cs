@@ -34,22 +34,6 @@ public sealed class VlmResultPayload
 /// <summary>The caption worker's actual model and backend, separate from the pending selection.</summary>
 public sealed record InferenceStatusPayload(string? ModelKey, string LoadState, string? Device, string? LoadError);
 
-/// <summary>What the comet trails (wwwroot/js/fx.js) need from a live session, a few times a second.</summary>
-public sealed class FxFramePayload
-{
-    public bool Running { get; init; }
-    public List<FxTrackPayload> Tracks { get; init; } = [];
-}
-
-/// <summary>A person or animal in frame: its track and the centre of its box, normalised to [0, 1].</summary>
-public sealed class FxTrackPayload
-{
-    public string Id { get; init; } = string.Empty;
-    public string Label { get; init; } = string.Empty;
-    public double X { get; init; }
-    public double Y { get; init; }
-}
-
 /// <summary>One batch waiting in the outbox (outbox.js), as its JSON text.</summary>
 public sealed class OutboxEntryPayload
 {

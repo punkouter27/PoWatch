@@ -33,6 +33,9 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         // nonzero live counters within 15 s, with no camera, GPU or model, and the comings and goings written down.
         await Assertions.Expect(page.GetByTestId("metric-visits")).Not.ToHaveTextAsync("0", new() { Timeout = 15_000 });
         await Assertions.Expect(page.GetByTestId("narration-lines").Locator("[data-kind=enter]").First).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        // The narration saves as plain text, a line per thing that happened.
+        await Assertions.Expect(page.GetByTestId("live-narration").GetByTestId("transcript-download"))
+            .ToHaveAttributeAsync("href", new System.Text.RegularExpressions.Regex("^data:text/plain;charset=utf-8,PoWatch.*came%20in"));
 
         await page.GetByTestId("header-stop").ClickAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("STANDBY");
@@ -116,7 +119,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     {
         if (PlaywrightFixture.BaseUrl is null) return;
         var user = $"history-{Guid.NewGuid():N}";
-        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: user, advanced: true);
+        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: user);
 
         // Real ingest (not the seed), so today has the minute rollups a day view reads. Ingest refuses
         // ticks outside their session (no backdating), so only today has a recorded session.
@@ -148,14 +151,9 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("session-page")).ToBeVisibleAsync(new() { Timeout = 30_000 });
         await Assertions.Expect(page.GetByTestId("reader-timeline").GetByTestId("replay-scrub")).ToBeVisibleAsync(new() { Timeout = 30_000 });
 
-        // The day opens in the same reader; the year turns into a 3D skyline and back (the browser remembers which).
+        // The day opens in the same reader.
         await page.GetByTestId("journal-day").First.ClickAsync();
         await Assertions.Expect(page.GetByTestId("history-calendar")).ToBeVisibleAsync();
-        await page.GetByTestId("year-3d").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("year-skyline")).ToBeVisibleAsync();
-        await Assertions.Expect(page.GetByTestId("skyline-fly")).ToBeVisibleAsync();
-        await page.GetByTestId("year-2d").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("year-skyline")).Not.ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("history-occupancy")).ToContainTextAsync("%", new() { Timeout = 30_000 });
 
         // The day's recap reads as a sentence and downloads as a real PDF.

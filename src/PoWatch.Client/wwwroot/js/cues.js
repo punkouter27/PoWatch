@@ -9,7 +9,7 @@
     const ORDER = ['off', 'low', 'mid', 'high'];
 
     // Each note: [frequency Hz, starts at s, lasts s, waveform, glides to Hz?, loudness ×?].
-    // Start and stop are the tube switching on and off (crt.js): a thump and a glide up, a glide down and a thump.
+    // Start and stop: a thump and a glide up, a glide down and a thump.
     const CUES = {
         start: [[62, 0, 0.12, 'triangle'], [320, 0.03, 0.42, 'sine', 1900, 0.45], [880, 0.45, 0.16, 'sine']],
         stop: [[1900, 0, 0.36, 'sine', 240, 0.45], [62, 0.34, 0.14, 'triangle']],

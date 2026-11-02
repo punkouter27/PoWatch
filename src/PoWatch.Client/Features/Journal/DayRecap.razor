@@ -1,11 +1,9 @@
 @* The top of a day in the Journal: the day in a paragraph (the template first, a model's rewording when
-   one arrives), with Advanced on its downloads and a share link. *@
+   one arrives), its downloads and a share link. *@
 @using System.Globalization
 @inject PoWatchApiClient Api
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
-@inject UiPrefs Prefs
-@implements IDisposable
 
 @if (Recap is null || Presence is not { SecondsObserved: > 0 })
 {
@@ -34,16 +32,13 @@ else
         }
         <div class="history-recap-foot">
             <span class="term-stat-hint">WRITTEN BY @Recap.Source.ToUpperInvariant()@(Rewriting ? " · A MODEL IS REWORDING IT…" : string.Empty)</span>
-            @if (Prefs.Advanced)
+            <span class="term-btn-group" role="group" aria-label="Download this day">
+                <a class="term-button" href="@PoWatchApiClient.AllStatsUrl(StatsQuery.ForDay(Day))" download="PoWatch-@(DayKey).json" title="Every tick, event and stat stored for this day" data-test="history-day-json">JSON ↓</a>
+                <a class="term-button" href="@PoWatchApiClient.DayRecapPdfUrl(Day, TimeZoneInfo.Local.Id)" download="PoWatch-@(DayKey).pdf" title="This recap as a PDF" data-test="history-recap-pdf">PDF ↓</a>
+            </span>
+            @if (_share is null)
             {
-                <span class="term-btn-group" role="group" aria-label="Download this day">
-                    <a class="term-button" href="@PoWatchApiClient.AllStatsUrl(StatsQuery.ForDay(Day))" download="PoWatch-@(DayKey).json" title="Every tick, event and stat stored for this day" data-test="history-day-json">JSON ↓</a>
-                    <a class="term-button" href="@PoWatchApiClient.DayRecapPdfUrl(Day, TimeZoneInfo.Local.Id)" download="PoWatch-@(DayKey).pdf" title="This recap as a PDF" data-test="history-recap-pdf">PDF ↓</a>
-                </span>
-                @if (_share is null)
-                {
-                    <button class="term-button" @onclick="ShareAsync" disabled="@_sharing" title="A read-only page of this recap that works without signing in, for 7 days" data-test="history-share">@(_sharing ? "Sharing…" : "Share ↗")</button>
-                }
+                <button class="term-button" @onclick="ShareAsync" disabled="@_sharing" title="A read-only page of this recap that works without signing in, for 7 days" data-test="history-share">@(_sharing ? "Sharing…" : "Share ↗")</button>
             }
         </div>
         @if (_share is { } share)
@@ -78,15 +73,11 @@ else
 
     private string DayKey => Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-    protected override void OnInitialized() => Prefs.Changed += OnPrefsChanged;
-
     protected override void OnParametersSet()
     {
         // A link belongs to the day it was made for.
         if (Day != _shareDay) (_share, _shareError, _copied, _shareDay) = (null, null, false, Day);
     }
-
-    private void OnPrefsChanged() => InvokeAsync(StateHasChanged);
 
     private string ShareUrl(ShareDto share) => Navigation.BaseUri + share.Path;
 
@@ -105,6 +96,4 @@ else
         if (await Api.RevokeShareAsync(share.Token)) (_share, _copied) = (null, false);
         else _shareError = "Could not take the link down — try again, or from Settings.";
     }
-
-    public void Dispose() => Prefs.Changed -= OnPrefsChanged;
 }

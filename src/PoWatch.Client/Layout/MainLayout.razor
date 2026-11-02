@@ -4,12 +4,10 @@
 @inject IJSRuntime JS
 @inject SensingSession Sensing
 @inject DrawerState Drawers
-@inject UiPrefs Prefs
 
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
-@* With Advanced on, the background drifts very slowly (terminal.css, paused by fx.js while a caption generates). *@
-<div class="term-shell @(Prefs.Advanced ? "term-shell--fluid" : null)">
+<div class="term-shell">
     <TerminalHeader ShowStart="@(!_live)" />
 
     @* App.razor moves focus here after every navigation, so keyboard and screen-reader users land in the page. *@
@@ -36,7 +34,6 @@
 @* The camera feed lives here, not on the Live page, so it keeps playing (and the session keeps
    sampling) on every page; Live docks it over its camera panel. *@
 <video @ref="_feed" class="term-feed" autoplay muted playsinline aria-label="Live camera feed"></video>
-<FxBridge />
 <AmbientBridge />
 <BuildStamp />
 @* Host for chart hover tooltips; without it RadzenChart never shows one. *@
@@ -51,7 +48,6 @@
     protected override void OnInitialized()
     {
         Nav.LocationChanged += OnLocationChanged;
-        Prefs.Changed += OnPrefsChanged;
         _live = IsLive(Nav.Uri);
     }
 
@@ -60,7 +56,6 @@
         if (!firstRender) return;
         Sensing.Feed = _feed;
         await JS.TryInvokeVoidAsync("powatchMenus.setup");
-        await Prefs.LoadAsync(JS);
         // Remembered per browser: whether camera sessions also run the caption model.
         if (await JS.TryInvokeAsync<string>("localStorage.getItem", CaptionsKey) == "off") Sensing.Captions = false;
         if (await JS.TryInvokeAsync<string>("localStorage.getItem", ListeningKey) == "off") Sensing.Listening = false;
@@ -77,8 +72,6 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private void OnPrefsChanged() => InvokeAsync(StateHasChanged);
-
     public const string CaptionsKey = "powatch:captions";
     public const string ListeningKey = "powatch:listening";
 
@@ -87,9 +80,5 @@
     /// <summary>The first path segment: "" for Live, "journal", "settings", …</summary>
     private static string Section(string uri) => new Uri(uri).AbsolutePath.Trim('/').Split('/')[0];
 
-    public void Dispose()
-    {
-        Nav.LocationChanged -= OnLocationChanged;
-        Prefs.Changed -= OnPrefsChanged;
-    }
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
 }

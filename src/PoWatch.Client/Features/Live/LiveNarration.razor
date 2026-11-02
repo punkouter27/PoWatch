@@ -7,15 +7,16 @@
 @implements IDisposable
 
 <div class="live-lines" data-test="live-narration">
+    @{ var lines = Lines().ToList(); }
     <div class="live-lines-head">
         <span>NARRATION</span>
         <span class="term-stat-hint">@Status</span>
+        <TranscriptLink Entries="@lines" Title="@TranscriptTitle" FileName="@TranscriptFile" />
     </div>
     @if (Sensing.Live.LastError is { } error && Recording)
     {
         <p class="live-error" role="status">@error</p>
     }
-    @{ var lines = Lines().ToList(); }
     @if (lines.Count == 0)
     {
         <p class="term-empty" data-test="narration-empty">@Empty</p>
@@ -36,11 +37,18 @@
     [Parameter] public Guid SessionId { get; set; }
 
     private Guid _loaded;
+    private DateTimeOffset? _startedUtc;
     private List<TimelineEntry> _kept = [];
     private bool _wasRecording;
     private DateTimeOffset _lastRender;
 
     private LiveSensingState L => Sensing.Live;
+
+    private DateTimeOffset? Started => Recording ? L.Session?.StartedUtc : _startedUtc;
+
+    private string TranscriptTitle => $"PoWatch · session {(Started ?? DateTimeOffset.Now).ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)}";
+
+    private string TranscriptFile => $"powatch-session-{(Started ?? DateTimeOffset.Now).ToLocalTime().ToString("yyyy-MM-dd-HHmm", CultureInfo.InvariantCulture)}.txt";
 
     private bool Recording => Sensing.IsRunning && L.Session?.Id == SessionId;
 
@@ -85,6 +93,7 @@
         (_loaded, _kept) = (SessionId, []);
         var id = SessionId;
         if (await Api.GetSessionAsync(id) is not { } session) return;
+        _startedUtc = session.StartedUtc;
         // A session's lines are its days' events inside its own start and end.
         var end = session.EndedUtc ?? DateTimeOffset.UtcNow;
         var days = new List<DateOnly>();

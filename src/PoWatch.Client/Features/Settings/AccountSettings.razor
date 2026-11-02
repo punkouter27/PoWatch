@@ -18,38 +18,35 @@
                     <span>Raw detail kept <i>replays, captions, moments; charts and totals stay forever</i></span><b>@RetentionLabel(_profile.RetentionDays)</b>
                 </button>
             </div>
-            @if (Prefs.Advanced || _profile.Place is not null)
-            {
-                <div class="settings-place" data-test="weather-place">
-                    <span>Weather from <i>daily weather beside each day</i></span>
-                    @if (_profile.Place is { } place)
-                    {
-                        <b>@place.Name.ToUpperInvariant()</b>
-                        <button class="term-icon-button" @onclick="ClearPlaceAsync" disabled="@_saving" aria-label="Stop showing weather" title="Stop showing weather">✕</button>
-                    }
-                    else
-                    {
-                        <b>OFF</b>
-                    }
-                </div>
-                <form class="settings-search" @onsubmit="SearchPlacesAsync">
-                    <label class="visually-hidden" for="place-search">Find a town or city</label>
-                    <input id="place-search" @bind="_placeQuery" placeholder="Find a town or city…" autocomplete="off" maxlength="80" data-test="place-search" />
-                    <button type="submit" class="term-button" disabled="@_searching" data-test="place-search-go">@(_searching ? "…" : "Find")</button>
-                </form>
-                @if (_places is { } places)
+            <div class="settings-place" data-test="weather-place">
+                <span>Weather from <i>daily weather beside each day</i></span>
+                @if (_profile.Place is { } place)
                 {
-                    @if (places.Count == 0)
-                    {
-                        <p class="term-stat-hint">NO PLACE BY THAT NAME</p>
-                    }
-                    <ul class="settings-results" data-test="place-results">
-                        @foreach (var found in places)
-                        {
-                            <li><button class="term-menu-item" @onclick="() => SavePlaceAsync(found)" disabled="@_saving"><span>@found.Name <i>@found.Detail</i></span><b>USE</b></button></li>
-                        }
-                    </ul>
+                    <b>@place.Name.ToUpperInvariant()</b>
+                    <button class="term-icon-button" @onclick="ClearPlaceAsync" disabled="@_saving" aria-label="Stop showing weather" title="Stop showing weather">✕</button>
                 }
+                else
+                {
+                    <b>OFF</b>
+                }
+            </div>
+            <form class="settings-search" @onsubmit="SearchPlacesAsync">
+                <label class="visually-hidden" for="place-search">Find a town or city</label>
+                <input id="place-search" @bind="_placeQuery" placeholder="Find a town or city…" autocomplete="off" maxlength="80" data-test="place-search" />
+                <button type="submit" class="term-button" disabled="@_searching" data-test="place-search-go">@(_searching ? "…" : "Find")</button>
+            </form>
+            @if (_places is { } places)
+            {
+                @if (places.Count == 0)
+                {
+                    <p class="term-stat-hint">NO PLACE BY THAT NAME</p>
+                }
+                <ul class="settings-results" data-test="place-results">
+                    @foreach (var found in places)
+                    {
+                        <li><button class="term-menu-item" @onclick="() => SavePlaceAsync(found)" disabled="@_saving"><span>@found.Name <i>@found.Detail</i></span><b>USE</b></button></li>
+                    }
+                </ul>
             }
             @if (_profileMessage is not null)
             {

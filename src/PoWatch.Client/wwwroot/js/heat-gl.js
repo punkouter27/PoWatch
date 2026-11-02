@@ -1,4 +1,4 @@
-// The Live (and replay) motion grid as a WebGL2 fragment shader: the 16×9 grid is one small texture,
+// The replay's motion grid as a WebGL2 fragment shader: the 16×9 grid is one small texture,
 // sampled bilinearly (LINEAR filtering) so cells blend into each other, with a soft two-ring glow
 // around hot spots, faint cell lines and scanlines on top — a thermal-camera look. Values ease toward each new frame, so the picture flows instead of stepping four times a
 // second. Honours prefers-reduced-motion (no easing, no shimmer). draw() returns false when WebGL2

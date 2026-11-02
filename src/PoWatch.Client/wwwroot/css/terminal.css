@@ -17,7 +17,7 @@
 }
 
 :root {
-    /* Colours the canvases read (heat-gl, skyline, replay) stay plain hex. */
+    /* Colours the canvases read (heat-gl, replay) stay plain hex. */
     --term-bg: #030a12;
     --term-surface: #0a1724;
     --term-panel: rgba(110, 190, 255, 0.06);
@@ -613,6 +613,8 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .live-lines { border-top: 1px solid var(--term-line); }
 .live-lines-head { display: flex; align-items: center; gap: 10px; padding: 6px 10px 2px; font: 600 11px var(--term-mono); letter-spacing: 0.08em; color: var(--term-accent); }
 .live-lines-head .term-stat-hint { margin-left: auto; font-weight: 400; }
+.live-lines-head .transcript-link { min-height: 22px; padding: 0 8px; font-size: var(--fs-xs); letter-spacing: 0.04em; }
+.moment-filters .transcript-link { margin-left: auto; }
 .live-lines .moment-list { max-height: 5.4em; overflow-y: auto; }
 .live-lines .moment { padding-top: 3px; padding-bottom: 3px; }
 .live-lines .term-empty { margin: 0; padding: 6px 10px 8px; }
@@ -743,19 +745,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 .recap-summary { margin: 0 0 8px; font-size: 14px; line-height: 1.5; color: var(--term-text); max-width: 90ch; }
 .recap-highlights { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: var(--fs-md); color: var(--term-muted); }
-
-/* ── Scene effects (fx.js) ────────────────────────────────────────────── */
-
-
-.fx-trails { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
-/* Above the boxes and the standby panel while it plays; hidden the rest of the time (crt.js). */
-.crt { position: absolute; inset: 0; z-index: 5; width: 100%; height: 100%; pointer-events: none; visibility: hidden; }
-
-/* Teletype: each new caption types itself out, --chars steps at 30 ms. */
-
-.away-exposure { margin: 12px 0 0; display: grid; gap: 6px; }
-.away-exposure img { width: min(100%, 640px); aspect-ratio: 16 / 9; border: 1px solid var(--term-line); border-radius: 2px; }
-.away-exposure figcaption { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font: 11px var(--term-mono); letter-spacing: 0.06em; color: var(--term-muted); }
 
 /* A session's story: the chapters joined into prose, the chapters themselves folded under it. */
 .session-story { margin: 12px 0 0; display: grid; gap: 8px; max-width: 80ch; }
@@ -958,7 +947,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 /* ── Live: shader grid, composite metric cells ────────────────────────── */
 
-.heat-gl { display: block; width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--term-line); border-radius: 2px; background: var(--term-bg); }
 .live-metric { white-space: nowrap; }
 .live-metric .term-z { margin-left: 6px; }
 .live-explain { margin: 0 10px 10px; min-height: 28px; font-size: var(--fs-xs); }
@@ -1240,16 +1228,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .replay-stage { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(180px, 0.8fr); }
 }
 
-.history-view { display: inline-flex; gap: 2px; margin-left: 8px; vertical-align: middle; }
-.history-view .term-button { min-height: 28px; min-width: 32px; padding: 0 7px; font-size: var(--fs-xs); }
 .term-button--on { border-color: var(--term-accent); color: var(--term-accent); }
-.skyline { position: relative; }
-.skyline-canvas { display: block; width: 100%; aspect-ratio: 16 / 7; border: 1px solid var(--term-line); border-radius: var(--term-radius); cursor: grab; touch-action: none; }
-.skyline-canvas:active { cursor: grabbing; }
-.skyline-tip { position: absolute; z-index: 2; padding: 3px 7px; pointer-events: none; white-space: nowrap; background: var(--term-glass); -webkit-backdrop-filter: var(--term-glass-blur); backdrop-filter: var(--term-glass-blur); border: 1px solid var(--term-line); border-radius: var(--term-radius); font: 11px var(--term-mono); color: var(--term-text); }
-.skyline-tip[hidden] { display: none; }
-.skyline-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; }
-
 .tray-item--week { text-decoration: none; border-left-color: var(--term-green); }
 .tray-item--week .tray-kicker { color: var(--term-green); }
 .tray-item--week b { font-weight: 500; font-size: 12px; line-height: 1.45; }
@@ -1339,28 +1318,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     backdrop-filter: var(--term-glass-blur);
 }
 
-/* With Advanced on, the background's light drifts very slowly. Stepped at about four frames a second, so it
-   costs a few repaints a second, and fx.js pauses it while a caption generates or the tab is hidden. */
-@property --fluid-x { syntax: '<percentage>'; inherits: false; initial-value: 25%; }
-@property --fluid-y { syntax: '<percentage>'; inherits: false; initial-value: 30%; }
-@keyframes fx-fluid {
-    0% { --fluid-x: 25%; --fluid-y: 30%; }
-    33% { --fluid-x: 58%; --fluid-y: 20%; }
-    66% { --fluid-x: 72%; --fluid-y: 62%; }
-    100% { --fluid-x: 32%; --fluid-y: 68%; }
-}
-.term-shell--fluid { animation: fx-fluid 120s steps(160) infinite alternate; }
-:root[data-fluid="paused"] .term-shell--fluid { animation-play-state: paused; }
-:root:not([data-theme="light"]) .term-shell--fluid {
-    background:
-        repeating-radial-gradient(circle at 25% 38%, rgba(130, 205, 255, 0.06) 0 1px, transparent 1px 84px),
-        radial-gradient(55% 45% at calc(100% - var(--fluid-x)) calc(100% - var(--fluid-y)), rgba(60, 120, 190, 0.16), transparent 70%),
-        radial-gradient(120% 90% at var(--fluid-x) var(--fluid-y), #0b2540 0%, #030a12 62%) fixed;
-}
-:root[data-theme="light"] .term-shell--fluid {
-    background: radial-gradient(70% 60% at var(--fluid-x) var(--fluid-y), rgba(10, 99, 168, 0.07), transparent 70%), var(--term-bg);
-}
-
 /* The room's light (--room-light, 0 to 1, set by AmbientBridge while a session runs) warms the page a
    little: a bright room a faint amber wash, a dark one none. */
 .term-shell {
@@ -1374,6 +1331,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .fx-tick--down { animation-name: fx-tick-down; }
 
 @media (prefers-reduced-motion: reduce) {
-    .term-shell--fluid, .fx-tick--down, .term-stat-value .fx-tick { animation: none; }
+    .fx-tick--down, .term-stat-value .fx-tick { animation: none; }
     .term-shell { transition: none; }
 }

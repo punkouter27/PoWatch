@@ -19,8 +19,7 @@ internal static class PoWatchPage
 
     /// <remarks>The caller must dispose the returned page to close its isolated browser context.</remarks>
     /// <param name="user">A distinct guest identity, for tests that need a user with no history.</param>
-    /// <param name="advanced">Start with Settings' Advanced switch on (it is off for a new browser).</param>
-    public static async Task<IPage> SignedInAsync(IBrowser browser, string route = "/", string? user = null, bool advanced = false)
+    public static async Task<IPage> SignedInAsync(IBrowser browser, string route = "/", string? user = null)
     {
         var page = await browser.NewPageAsync(new()
         {
@@ -41,8 +40,6 @@ internal static class PoWatchPage
 
         try
         {
-            if (advanced) await page.AddInitScriptAsync("localStorage.setItem('powatch:advanced', 'on')");
-
             // BFF auth: sign in first to set the session cookie before returning to the app.
             await page.GotoAsync(
                 $"{PlaywrightFixture.BaseUrl}/auth/login/fake?returnUrl={Uri.EscapeDataString(route)}"
