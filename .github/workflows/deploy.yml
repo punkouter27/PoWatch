@@ -33,7 +33,7 @@ jobs:
       webapp_name: ${{ steps.deployment.outputs.webapp_name }}
       resource_group: ${{ steps.deployment.outputs.resource_group }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Read authoritative deployment settings
         id: deployment
         shell: pwsh
@@ -46,10 +46,10 @@ jobs:
         run: ./SCRIPTS/check-hygiene.ps1
       - name: Compile infrastructure
         run: az bicep build --file infra/main.bicep --outfile "${{ runner.temp }}/powatch-template.json"
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
@@ -76,14 +76,14 @@ jobs:
           }
       - name: Upload test results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: testresults
           retention-days: 7
 
       - run: dotnet publish ${{ env.API_PROJECT_PATH }} -c Release --no-restore -o publish
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: webapp
           path: publish
@@ -105,11 +105,11 @@ jobs:
       name: production
       url: https://${{ needs.build.outputs.webapp_name }}.azurewebsites.net
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: webapp
           path: publish
-      - uses: azure/login@v2
+      - uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
