@@ -10,15 +10,18 @@ public sealed class ReplayMinuteDto
     public double Luminance { get; init; }
 }
 
-/// <summary>Something that happened at an instant: a caption, a notable moment, an entrance or an exit.</summary>
+/// <summary>Something that happened at an instant: a caption, words or a sound heard, a notable moment, an entrance or an exit.</summary>
 public sealed class ReplayEventDto
 {
     public DateTimeOffset AtUtc { get; init; }
 
-    /// <summary>caption, moment, enter or exit.</summary>
+    /// <summary>caption, speech, sound, moment, enter or exit.</summary>
     public string Kind { get; init; } = string.Empty;
     public string? Text { get; init; }
     public string? Class { get; init; }
+
+    /// <summary>The regular who spoke, came in or left, by name, once they were recognised; null for "someone".</summary>
+    public string? Who { get; init; }
 }
 
 /// <summary>A day, minute by minute, for scrubbing through: only minutes something was observed in.</summary>

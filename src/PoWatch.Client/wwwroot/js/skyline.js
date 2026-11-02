@@ -1,4 +1,4 @@
-// History's year as a 3D skyline: one tower per day on the same 53-week × 7-day grid as the 2D
+// The Journal's year as a 3D skyline: one tower per day on the same 53-week × 7-day grid as the 2D
 // calendar, height = occupancy, rainy days tinted blue. Drag to turn, scroll (or + −) to zoom, hover
 // for the day, click a tower to open it. "Fly over" glides along the year and plays each week as a
 // note, higher when it was busier. Plain WebGL2 with instanced boxes: one draw call for the year.
@@ -283,7 +283,7 @@ void main() {
         const onLeave = () => { if (state.hover !== -1) { state.hover = -1; state.render(); } if (tip) tip.hidden = true; };
         const onWheel = (e) => { e.preventDefault(); zoom(Math.exp(e.deltaY * 0.0012)); };
         const zoom = (factor) => { state.dist = Math.min(110, Math.max(14, state.dist * factor)); state.render(); };
-        // Keys stay here: History's own ← → step the day everywhere else on the page.
+        // Keys stay here: the Journal's own ← → step the day everywhere else on the page.
         const onKey = (e) => {
             const turns = { ArrowLeft: 0.12, ArrowRight: -0.12 }, tilts = { ArrowUp: 0.08, ArrowDown: -0.08 };
             if (e.key in turns) state.yaw += turns[e.key];

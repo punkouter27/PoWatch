@@ -51,13 +51,29 @@ public sealed class LiveSensingState
     /// <summary>The latest sound the classifier named, and when.</summary>
     public string? LastSound { get; private set; }
 
+    /// <summary>Everything this session saw, said, heard, and who came and went, newest last: Live's narration.</summary>
+    public IReadOnlyList<TimelineEntry> Narration => _narration;
+    private readonly List<TimelineEntry> _narration = [];
+    public const int NarrationLength = 200;
+
+    private void Narrate(TimelineEntry entry)
+    {
+        _narration.Add(entry);
+        if (_narration.Count > NarrationLength) _narration.RemoveAt(0);
+    }
+
     public void RecordHeard(DateTimeOffset atUtc, string text, string? speaker = null)
     {
         _heard.Add(new HeardLineDto { AtUtc = atUtc, Text = text, Speaker = speaker });
         if (_heard.Count > 50) _heard.RemoveAt(0);
+        Narrate(new TimelineEntry(atUtc, "speech", text, speaker));
     }
 
-    public void RecordSound(string label) => LastSound = label;
+    public void RecordSound(DateTimeOffset atUtc, string label)
+    {
+        LastSound = label;
+        Narrate(new TimelineEntry(atUtc, "sound", label));
+    }
 
     public string? LastCaption { get; private set; }
     public DateTimeOffset? LastCaptionUtc { get; private set; }
@@ -92,8 +108,14 @@ public sealed class LiveSensingState
         foreach (var entered in frame.Entered)
         {
             _classesSeen[entered.Label] = _classesSeen.GetValueOrDefault(entered.Label) + 1;
-            if (CentroidTracker.IsPresence(entered.Label)) Visits++;
+            if (!CentroidTracker.IsPresence(entered.Label)) continue;
+            Visits++;
+            Narrate(new TimelineEntry(nowUtc, "enter", entered.Label));
         }
+
+        // Called before the tracker forgets them, so a recognised regular leaves by name.
+        foreach (var exited in frame.Exited.Where(t => CentroidTracker.IsPresence(t.Label)))
+            Narrate(new TimelineEntry(nowUtc, "exit", exited.Label, RegularFor(exited.TrackId)?.DisplayName));
     }
 
     private readonly Dictionary<string, RegularDto> _regularByTrack = new(StringComparer.Ordinal);
@@ -134,6 +156,7 @@ public sealed class LiveSensingState
     {
         LastCaption = caption.Text;
         LastCaptionUtc = atUtc;
+        Narrate(new TimelineEntry(atUtc, "caption", caption.Text));
     }
 
     private static void Push(List<double> history, double value)

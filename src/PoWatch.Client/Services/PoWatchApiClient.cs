@@ -28,7 +28,7 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<SessionDto?> GetSessionAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.GetAsync($"api/sessions/{sessionId}", ct), Json.SessionDto, cancellationToken);
 
-    /// <summary>Empty on failure: Stats and History treat the list as optional.</summary>
+    /// <summary>Empty on failure: Live and the Journal treat the list as optional.</summary>
     public async Task<IReadOnlyList<SessionDto>> ListSessionsAsync(int take = 20, CancellationToken cancellationToken = default) =>
         await ReadAsync(ct => httpClient.GetAsync($"api/sessions?take={take}", ct), Json.ListSessionDto, cancellationToken) ?? [];
 
@@ -150,7 +150,7 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<PipelineStatsDto?> GetPipelineAsync(StatsQuery query, CancellationToken cancellationToken = default) =>
         GetStatsAsync("pipeline", query, Json.PipelineStatsDto, cancellationToken);
 
-    /// <summary>A day minute by minute, for History's replay.</summary>
+    /// <summary>A day minute by minute, for the Journal's replay.</summary>
     public Task<ReplayDayDto?> GetReplayAsync(DateOnly day, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.GetAsync($"api/stats/replay?date={Day(day)}&tz={Uri.EscapeDataString(TimeZoneInfo.Local.Id)}", ct), Json.ReplayDayDto, cancellationToken);
 

@@ -1,0 +1,86 @@
+@page "/journal"
+@page "/journal/{Day}"
+@page "/journal/s/{Id:guid}"
+@using System.Globalization
+@inject PoWatchApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>PoWatch | Journal</PageTitle>
+
+@* Everything that happened, in one place. On the left the index: the year, the week's and month's stories,
+   and every day with its sessions inside it, newest first. On the right the reader, the same for a day
+   and a session: the story at the top, then the replay with the timeline of everything seen, said and
+   heard under it (each line moves the playhead; the playhead lights its line). The choice is in the
+   address (/journal/2026-10-03, /journal/s/{id}, ?view=week), so reloads, links and Back/Forward keep it.
+   On a desktop each column scrolls on its own; on a phone the reader comes first. *@
+<div class="journal">
+    <div class="journal-reader">
+        @if (Id is { } id)
+        {
+            <SessionReader Id="@id" />
+        }
+        else if (View is { } view)
+        {
+            <PeriodStory Kind="@view" Day="@PeriodDay" />
+        }
+        else
+        {
+            <DayReader Day="@_day" At="@At" Weather="@_weather" />
+        }
+    </div>
+    <JournalIndex Patterns="@_patterns" Weather="@_weather" Day="@(Id is null && View is null ? _day : null)" SessionId="@Id" View="@View" />
+</div>
+
+@code {
+    private const string DayFormat = "yyyy-MM-dd";
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
+
+    /// <summary>The day in the address, yyyy-MM-dd; today when absent. An unreadable or future day goes to today.</summary>
+    [Parameter] public string? Day { get; set; }
+
+    /// <summary>A session in the reader instead of a day.</summary>
+    [Parameter] public Guid? Id { get; set; }
+
+    /// <summary>?view=week|month: that period's story in the reader.</summary>
+    [SupplyParameterFromQuery(Name = "view")] public string? ViewParameter { get; set; }
+
+    /// <summary>A day in the week or month shown (?date=yyyy-MM-dd); text, so a bad link cannot break the page.</summary>
+    [SupplyParameterFromQuery(Name = "date")] public string? DateParameter { get; set; }
+
+    /// <summary>?at={unix ms}: a caption search result, opened on its minute in the day's replay.</summary>
+    [SupplyParameterFromQuery(Name = "at")] public long? At { get; set; }
+
+    private DateOnly _day = Today;
+    private PatternStatsDto? _patterns;
+    private WeatherYearDto? _weather;
+
+    private string? View => ViewParameter is "week" or "month" ? ViewParameter : null;
+
+    private DateOnly? PeriodDay =>
+        DateOnly.TryParseExact(DateParameter, DayFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? day : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Loaded once for the page: the calendar's days, and the weather the calendar and the day both show.
+        var weather = Api.GetWeatherYearAsync();
+        _patterns = await Api.GetPatternsAsync(StatsQuery.For("today"));
+        _weather = await weather;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Day is null)
+        {
+            _day = Today;
+        }
+        else if (DateOnly.TryParseExact(Day, DayFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) && day <= Today)
+        {
+            _day = day;
+        }
+        else
+        {
+            Navigation.NavigateTo(StoryLinks.Day(Today), replace: true);
+        }
+    }
+}

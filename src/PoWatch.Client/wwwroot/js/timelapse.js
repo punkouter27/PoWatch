@@ -30,7 +30,7 @@
     });
   }
 
-  /** The local calendar day as yyyy-MM-dd, the same key the History page uses. */
+  /** The local calendar day as yyyy-MM-dd, the same key the Journal uses. */
   function localDay(date) {
     const pad = (n) => String(n).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;

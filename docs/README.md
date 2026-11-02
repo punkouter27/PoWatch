@@ -20,7 +20,7 @@ camera ──► browser (all sensing on-device)                        server
                                                   IngestService: raw rows + rollups (minute/hour/day/all)
                                                   ──► SignalR push (statsChanged)
                                                                           │
-           Live · Stories · Days       ◄── GET /api/stats/{family}, /api/recaps, …
+           Live · Journal              ◄── GET /api/stats/{family}, /api/recaps, …
 ```
 
 - **Audio never leaves the device, and is never kept.** The microphone is heard in the browser
@@ -51,49 +51,60 @@ camera ──► browser (all sensing on-device)                        server
 
 | Family | What | Where |
 |---|---|---|
-| A · Presence & space | occupancy, visits, dwell percentiles, peak at once, empty/still streaks, busiest minute, heatmaps, entry/exit edges | Live |
+| A · Presence & space | occupancy, visits, dwell percentiles, peak at once, empty/still streaks, busiest minute, heatmaps, entry/exit edges | Live (Numbers) |
 | B · Objects & regulars | classes seen, rarest, regulars leaderboard (recognised by look, never by face; by voice in the browser that learned it) | Live, Settings ("Who PoWatch knows"), the stories |
-| C · Patterns & anomalies | hour × weekday, rhythm score, "today vs usual" z-scores, trend, busy-hour forecast | Live |
-| D · Environment & captions | light curve, lights on/off, daylight estimate, palette, word cloud, weirdest caption, recaps | Live, Stories, Days |
+| C · Patterns & anomalies | hour × weekday, rhythm score, "today vs usual" z-scores, trend, busy-hour forecast | Live (Numbers) |
+| D · Environment & captions | light curve, lights on/off, daylight estimate, palette, word cloud, weirdest caption, recaps | Live (Numbers), the Journal |
 | E · Pipeline | frames per layer, FPS, latency, detector confidence, uptime, storage | /system |
 
 ## Pages
 
 `/` Live, always one session: the one being recorded, until it is stopped, then it stays as the last
-session (a session page's "Live view", `?session=`, opens another; one that is not yours, or not a session id,
+session (a session's "Live view", `?session=`, opens another; one that is not yours, or not a session id,
 says so and shows your latest). Leaving or reloading the page ends a recording; coming back within two
 minutes shows its recap card, unless it was dismissed. The recap card floats over the page (top right,
-scrolling inside itself), so Live's grid always fits one screen; starting a new session clears it. Detector boxes and the "now" counts show only
-while recording, and visits an hour only once ten minutes have been observed. One bar names it (with Advanced on, an "Ask" box
-and "JSON ↓" for every number behind the grid); longer views are Stories and Days: on a desktop a 3×3 with the camera in the larger middle cell (one Start
-button; a synthetic demo is available whenever stopped). What is happening now touches it: key metrics
-for the session beside your usual day (σ, rhythm, trend, next busy hour) above, who is in frame with every
-class seen in the session below, the live motion grid left and motion energy right. The corners hold
-Space, today's curve vs usual, hour × weekday and Environment (light, colours, captions). Every panel
-is there from the first paint, with a placeholder until its numbers arrive. Narrower screens stack the
-camera, key metrics and "In frame", and on a phone the panels after them are one swipeable strip; on a short desktop screen the camera keeps its share
-and the cells around it scroll · `/stories` Stories, what happened: Sessions lists every session,
-newest first, with the story of the whole session ("Older sessions" pages back through the latest
-hundred); Week and Month (`?view=week`, `?view=month`, with `&date=` for the period ◀ ▶ moved to) tell
-one story of the whole Monday-to-Sunday week or calendar month, with the days it was told from under
-it, newest first; one tab strip moves between the three, the stories in a centred column in the text
-face · `/stories/s/{id}` one session's own page, where every session link lands: its numbers, the story
-with every chapter (newest first), the transcript, and links to its Live view, its day and its PDF ·
-`/days/{yyyy-MM-dd}` Days, the numbers by day (`/days` opens on today): on the left the year (with the
-weather's effect, once a place is set), the day's numbers, weather and its week against the week
-before, and the day's sessions (each opening its page under Stories); on the right two tabs (recap with motion and captions, plus JSON/PDF and a
-share link with Advanced on; replay, with the day's moments and time-lapse under it); on a desktop each column scrolls on its own ·
-`/settings` the Settings drawer as a page, for links (`?section=` opens a tab). The old `/history`
-and `/history/{date}` addresses redirect to Stories and Days. Session, view and day live in the URL, so
-reloads, links and Back/Forward keep their place. Every page needs a sign-in.
+scrolling inside itself); starting a new session clears it. One bar names the session (with Advanced on,
+an "Ask" box and "JSON ↓" for every number behind it). Under it the camera (one Start button; a synthetic
+demo whenever stopped) with one line of "now" numbers (people and animals in frame, visits, peak,
+listening), and beside it two tabs. **Narration** (the default) is what the session is being turned into:
+every caption (SAW), line of speech (SAID), recognised sound (HEARD), coming and going (IN/OUT) and notable
+moment, newest first, filterable by kind (`Features/Live/LiveNarration.razor`; while recording it is the
+browser's own list in `LiveSensingState.Narration`, after that what the server kept). **Numbers** holds the
+stats: key metrics beside your usual day (σ, rhythm, trend, next busy hour), who is in frame with every
+class seen, the motion grid, motion energy, Space, Patterns and Environment. Detector boxes and the "now"
+counts show only while recording, and visits an hour only once ten minutes have been observed. A desktop
+holds both in the viewport (the camera keeps 16:9, the tab beside it scrolls); narrower screens stack them ·
+`/journal` the Journal, everything that happened: on the left the index (the year, with the weather's
+effect once a place is set and, with Advanced on, a 3D view; links to the week's and month's stories;
+every day that has sessions, newest first, with its sessions inside it; "Older sessions" pages back
+through the latest hundred), on the right the reader, laid out the same for a day and a session: the
+story first, then the replay with the timeline of every line under it · `/journal/{yyyy-MM-dd}` a day
+(`/journal` opens on today): the recap (JSON/PDF and a share link with Advanced on), the day's numbers in
+one row, its weather, the week against the week before and the caption words folded under them, the
+replay and timeline, then the day's moments and time-lapse · `/journal/s/{id}` one session, where every
+session link lands: its story with every chapter (newest first), its numbers, links to its Live view,
+its day and its PDF, and the replay of just its minutes with its timeline · `/journal?view=week|month`
+(with `&date=` for the period ◀ ▶ moved to) one story of the whole Monday-to-Sunday week or calendar
+month, with the days it was told from · `/settings` the Settings drawer as a page, for links (`?section=`
+opens a tab). The old `/stories`, `/stories/s/{id}`, `/days`, `/days/{date}`, `/history` and
+`/history/{date}` addresses redirect into the Journal. Session, view and day live in the URL, so
+reloads, links and Back/Forward keep their place. On a desktop each Journal column scrolls on its own;
+on a phone the reader comes first. Every page needs a sign-in.
 
-**Header.** One row: brand, three section keys (Live · Stories · Days; a bottom tab bar on a phone),
+**Lines of what happened** (`Services/TimelineEntry.cs`, `Components/MomentLine.razor`). Live's
+narration, a session's or a day's timeline, a day's moments and the recap card's moments are all the
+same line: the time, a tag (SAW · SAID · HEARD · IN · OUT · ★), the sentence ("Sam came in", "Sam: “hello”")
+and the snapshot when one was kept. Replay events carry the regular's name (`Who`) for speech, entries
+and exits. In a replay each line is a button that moves the playhead to it, and the playhead lights
+the line it is on and scrolls only the list to keep it in view (`replay.js`).
+
+**Header.** One row: brand, two section keys (Live · Journal; a bottom tab bar on a phone),
 then a status chip (state and uptime), Start/Stop, a bell and a gear. The gear opens Settings in a side
-drawer over any page, in six tabs: Recording (the camera and story AI models, listening), People (who
-PoWatch knows: rename, filter, sort, merge, forget voices), Alerts (watch rules, the weekly email),
-Sharing (shared recap links), Look (theme, sound, "Show power features", reset) and Account (retention
-window, weather place, System status, CSV export, sign out, delete everything; keeping less and
-deleting ask first). The bell is the one notification tray, in
+drawer over any page, in three tabs: Recording (the camera and story AI models, listening, sound cues),
+People (who PoWatch knows: rename, filter, sort, merge, forget voices) and Account, one column of panels:
+Look (theme, "Show power features", reset), Alerts (watch rules, the weekly email), Shared recaps, and the
+account itself (retention window, weather place, System status, CSV export, sign out, delete everything;
+keeping less and deleting ask first). The old `?section=alerts|sharing|look` links open Account. The bell is the one notification tray, in
 the same kind of drawer: sensing problems, watch-rule alerts, "name this newcomer" prompts and, once a
 week, last week in review; it opens by itself for a problem or an alert, and the rest only raise its
 count. Escape or ✕ closes a drawer, and so does going to another page. Watch rules ("person between
@@ -101,8 +112,8 @@ count. Escape or ✕ closes a drawer, and so does going to another page. Watch r
 tab over the hub (plus a desktop notification where allowed).
 
 **Simple by default, power features in Settings.** A new browser gets the simple app. Settings' "Show
-power features" switch (Look) (`Services/UiPrefs.cs`, remembered per browser) adds the extras: the Ask box, "Explain today"
-and JSON on Live; JSON/PDF downloads, share links and the 3D year on Days; the command palette row, watch rules, weather place, weekly email and shared links in Settings; and the
+power features" switch (Account → Look) (`Services/UiPrefs.cs`, remembered per browser) adds the extras: the Ask box, "Explain today"
+and JSON on Live; JSON/PDF downloads, share links and the 3D year in the Journal; the command palette row, watch rules, weather place, weekly email and shared links in Settings; and the
 visual effects (CRT tube switch, comet trails, WebGL2 motion grid). Anything already switched on stays
 visible without Advanced (a kept rule, a weather place, a live link). "Reset to defaults" puts this
 browser's choices back (dark, low sound, captions on, MiniCPM-V, Advanced off); rules and the
@@ -135,8 +146,8 @@ tables marked `term-table--cards` turn into one card per row on a phone.
 **Look.** One palette on every page (deep-blue glass in the dark theme, plain panels in the light one),
 five type sizes (`--fs-xs` to `--fs-xl`), and Radzen's `--rz-*` variables pointed at the same tokens.
 
-**Keyboard.** `g` then `l s d` jumps to Live, Stories or Days, Space starts or stops, ← → step the Days
-view's day, Ctrl+K opens a command palette (also: the demo scene, System, full screen) (`wwwroot/js/menus.js`).
+**Keyboard.** `g` then `l` or `j` jumps to Live or the Journal, Space starts or stops, ← → step the
+Journal's day, Ctrl+K opens a command palette (also: the demo scene, System, full screen) (`wwwroot/js/menus.js`).
 
 **Effects.** The header is frosted glass; with Advanced on the background drifts very slowly (CSS,
 paused while a caption generates or the tab is hidden), and sparks burst where something enters the
@@ -172,26 +183,26 @@ the sensing pipeline without a camera or model.
 camera panel (a transparent WebGL2 overlay, so camera and demo alike), timed with the start and stop
 cues; Stop keeps the picture docked until the tube is dark. Nothing plays under reduced motion.
 
-**The year in 3D** (Days, `wwwroot/js/skyline.js`, Advanced). The year panel switches between the 2D
+**The year in 3D** (the Journal, `wwwroot/js/skyline.js`, Advanced). The year panel switches between the 2D
 calendar and a skyline of instanced WebGL2 towers (height = occupancy, blue = a wet day): drag or
 arrow keys to turn, scroll or + − to zoom, hover for the day, click to open it. "Fly over" glides
 along the year and plays each week as a note (minor pentatonic, higher when busier). It draws only on
 change, never in an idle loop, since the detector and the caption model share the GPU.
 
-**Replay** (Days, `wwwroot/js/replay.js`). A day minute by minute from `GET /api/stats/replay`:
+**Replay** (the Journal, `Features/Journal/TimelineReplay.razor`, `wwwroot/js/replay.js`). A day, or one session of it, minute by minute from `GET /api/stats/replay`:
 a track of the whole day (occupancy bars, motion line, moment ticks, caption dots) under a native
 range slider (drag, ← →, Home/End); the playhead drives the motion grid shader, the readout, the
 caption of the moment and, where this browser kept a time-lapse, the nearest camera frame. Play walks
 the observed minutes only.
 
-**Save video** (Days → Replay) encodes the time-lapse this browser kept for the day to WebM
+**Save video** (the Journal, under a day's replay) encodes the time-lapse this browser kept for the day to WebM
 (MediaRecorder) and downloads it; it is disabled, with the reason, when nothing was kept.
 
 **Interop.** Replay's 16×9 grids reach JS as raw bytes through `[JSImport]` (`Services/ReplayGrids.cs`,
 `js/replay-grids.js`), and detector boxes reach the C# tracker as typed arrays through `[JSExport]`
 (`SensingSession.OnDetectorBoxes`), colour signatures included.
 
-**Client layout.** `PoWatch.Client` is grouped by feature: `Features/Live`, `History` (Stories and Days),
+**Client layout.** `PoWatch.Client` is grouped by feature: `Features/Live`, `Journal` (the index and the reader for days, sessions and periods),
 `Diagnostics` (the `/system` page), `Settings` and `Account`; `Layout` is the shell, `Components` holds
 the parts shared between features, `Services` the state and API client.
 
@@ -206,7 +217,7 @@ the camera and add up to a long-exposure PNG on the session recap; they respect
 | `POST /api/sessions`, `POST /api/sessions/{id}/stop`, `GET /api/sessions[?from=&to=]` | session lifecycle; `from`/`to` list every session overlapping a range |
 | `POST /api/sessions/{id}/batches` | tick + event ingest (idempotent by `batchKey`) |
 | `GET /api/stats/{presence\|space\|objects\|patterns\|environment\|pipeline}?range=` | stat families |
-| `GET /api/stats/all?range=` | every family in one JSON document, plus the raw ticks and events for session, today or one day (Live's "All data ↓", Days' "Day data ↓") |
+| `GET /api/stats/all?range=` | every family in one JSON document, plus the raw ticks and events for session, today or one day (Live's "JSON ↓", the Journal's day "JSON ↓") |
 | `GET /api/recaps/session/{id}.pdf`, `GET /api/recaps/day/{date}[.pdf]?tz=[&ai=false]` | recaps and PDFs; `ai=false` answers from the template at once |
 | `GET /api/sessions/{id}/transcript` | every line the on-device speech model heard in the session |
 | `GET /api/stories/{week\|month}?date=&tz=` | the story of the week or month holding a day, told from its days |
@@ -249,12 +260,12 @@ Settings. A background job (every 6 h) then deletes that user's raw ticks, scene
 and ingest claims older than the window. Rollups are never pruned, so charts, the calendar and
 all-time numbers keep the whole history; replays, captions and moments of older days go.
 
-**Weather.** Optional context from Open-Meteo (free, no key): the user picks a place by name; Days
+**Weather.** Optional context from Open-Meteo (free, no key): the user picks a place by name; the Journal
 shows each day's weather and sun, and once there are three or more wet and dry observed days each,
 whether wet days run busier. Older days come from the reanalysis archive (cached a day), the last
 week from the forecast API (cached an hour); a failed read leaves the days out.
 
-**Weekly digest.** The week in review is computed on demand from the day rollups (Days' "The
+**Weekly digest.** The week in review is computed on demand from the day rollups (the Journal's "The
 week" panel; the bell offers last week once per browser). It is also mailed from Monday 08:00 in the
 user's zone when they turn the weekly email on, which needs `Digest:Email:ConnectionString` and
 `Digest:Email:Sender` (Azure Communication Services Email) and, for the link back, `Digest:AppUrl`.
@@ -262,7 +273,7 @@ Without them the switch is disabled and says why.
 
 **Sharing.** "Share link" on a day's recap freezes it (without moments, whose snapshot links are
 private) behind a 128-bit random token for 1, 7 or 30 days. Anyone with the link reads the frozen
-copy; the owner can take it down from Days or Settings, and "delete everything" removes it.
+copy; the owner can take it down from the Journal or Settings, and "delete everything" removes it.
 
 ## Recaps
 
@@ -286,7 +297,7 @@ Production stays on Template until the web app's identity has *Cognitive Service
 `po-aiservices-shared2`). Replies are cached by prompt, so reopening a day or its PDF costs nothing.
 The model answers in a JSON schema (summary + highlights), so there is nothing to parse. Captions,
 moment text and names reach the prompt as fenced data with control characters and the fence removed,
-and the ingest validator caps their length. Days paints the template recap first and swaps in
+and the ingest validator caps their length. The Journal paints the template recap first and swaps in
 the model's version when it arrives; where the server has no model, a browser with a built-in one
 (Chrome's Prompt API) rewords it locally under the same number check. "Ask PoWatch" uses the same
 client with four tools — `get_stats(range)`, `get_day(date)`, `get_patterns()` and
@@ -294,13 +305,13 @@ client with four tools — `get_stats(range)`, `get_day(date)`, `get_patterns()`
 prompt carries today's date, and a question gets at most four tool rounds. Live's "Explain today"
 (shown when a σ chip is flagged) asks it what stands out. The same client drafts watch rules from a
 sentence (Settings; checked against the 80 detector labels and real hours, then confirmed by the user)
-and gives the weekly digest a headline (Days' "The week" and the email subject), kept only when
+and gives the weekly digest a headline (the Journal's "The week" and the email subject), kept only when
 it uses no number the summary lacks (`AssistService`).
 QuestPDF renders the PDF; a host without its native engine answers an explained 503.
 
-**Heard.** Live's camera cell shows the latest words and sound under the caption line; every story
-card (Stories, and the recap card after Stop) has its own "Heard" transcript, word for word
-(`GET /api/sessions/{id}/transcript`), apart from the story it feeds.
+**Heard.** Live's narration shows every line of speech (SAID) and recognised sound (HEARD) as it comes,
+and a session's or a day's timeline in the Journal has them word for word, beside the captions, apart
+from the story they feed (`GET /api/sessions/{id}/transcript` still lists a session's speech alone).
 
 **Session stories** (`StoryService`). Every ten minutes of a session is a chapter: a recap of just that
 stretch (whole-minute rollups, its moments), the model's version where one answers. While a session
@@ -311,7 +322,7 @@ the chapters are joined into one story, in order: by the model under the same nu
 writes only what has fallen due, so a missed one is caught up by the next; a backlog (a sleeping tab,
 a session closed as stale) is written from the template, with the model kept for the newest chapter.
 Models are asked for a story of the scene, not statistics, under the same number check. The story
-shows on Stories (the feed and each session's page) and on the recap card after Stop
+shows in the Journal's reader for the session and on the recap card after Stop
 (one chapter is not listed again under the story it already is); each asks for
 it, so a session closed without Stop gets its story the first time someone opens it. Stories are kept
 like rollups: retention does not prune them, "delete everything" does.
@@ -328,8 +339,8 @@ Each kept caption is embedded (all-MiniLM-L6-v2, int8, on WASM so the GPU stays 
 unlike the last 10 — in meaning when both have embeddings, else in words — becomes a Notable moment
 (`HighlightRules.NoveltyMaxCosine`). The vectors stay in this browser (`js/caption-index.js`, IndexedDB,
 capped at 20,000; replayed days are added too), and typing three letters into Ctrl+K offers
-"Search captions" by meaning; a result opens the Days replay on that minute
-(`/days/{day}?tab=replay&at={ms}`).
+"Search captions" by meaning; a result opens the Journal's replay on that minute
+(`/journal/{day}?at={ms}`).
 
 **Detector.** RF-DETR Nano in fp16 on WebGPU and int8 on WASM, each with fp32 behind it; the grey
 calibration frame rejects a precision that produces out-of-frame boxes, and one that makes ONNX

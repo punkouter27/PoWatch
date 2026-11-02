@@ -69,7 +69,9 @@ public sealed class StatsQueryService(IRollupStore rollups, ISensingLog sensingL
     {
         var minutesRead = rollups.GetRangeAsync(userId, RollupGrain.Minute, window.FromUtc, window.ToUtc, cancellationToken);
         var eventsRead = EventsAsync(userId, window, cancellationToken);
-        await Task.WhenAll(minutesRead, eventsRead);
+        var regularsRead = regulars.ListAsync(userId, cancellationToken);
+        await Task.WhenAll(minutesRead, eventsRead, regularsRead);
+        var names = (await regularsRead).ToDictionary(r => r.Id, r => r.DisplayName);
 
         var minutes = (await minutesRead).Where(m => m.Ticks > 0).OrderBy(m => m.BucketStartUtc).ToList();
         var grids = new byte[minutes.Count * SpatialGrid.Cells];
@@ -88,20 +90,24 @@ public sealed class StatsQueryService(IRollupStore rollups, ISensingLog sensingL
                 Luminance = m.Luminance.Mean
             }).ToList(),
             Grids = Convert.ToBase64String(grids),
-            Events = (await eventsRead).Select(ReplayEvent).OfType<ReplayEventDto>().ToList()
+            Events = (await eventsRead).OrderBy(e => e.AtUtc).Select(e => ReplayEvent(e, names)).OfType<ReplayEventDto>().ToList()
         };
     }
 
-    private static ReplayEventDto? ReplayEvent(SceneEvent e) => e.Kind switch
+    private static ReplayEventDto? ReplayEvent(SceneEvent e, Dictionary<string, string> names)
     {
-        SceneEventKind.Caption when e.Text is not null => new() { AtUtc = e.AtUtc, Kind = "caption", Text = e.Text },
-        SceneEventKind.Speech when e.Text is not null => new() { AtUtc = e.AtUtc, Kind = "speech", Text = e.Text },
-        SceneEventKind.Sound when e.Text is not null => new() { AtUtc = e.AtUtc, Kind = "sound", Text = e.Text },
-        SceneEventKind.Notable => new() { AtUtc = e.AtUtc, Kind = "moment", Text = e.Text },
-        SceneEventKind.TrackEnter when e.Class is { } enterClass && EntityClasses.IsPresence(enterClass) => new() { AtUtc = e.AtUtc, Kind = "enter", Class = e.Class },
-        SceneEventKind.TrackExit when e.Class is { } exitClass && EntityClasses.IsPresence(exitClass) => new() { AtUtc = e.AtUtc, Kind = "exit", Class = e.Class },
-        _ => null
-    };
+        var who = e.RegularId is { } id ? names.GetValueOrDefault(id) : null;
+        return e.Kind switch
+        {
+            SceneEventKind.Caption when e.Text is not null => new() { AtUtc = e.AtUtc, Kind = "caption", Text = e.Text },
+            SceneEventKind.Speech when e.Text is not null => new() { AtUtc = e.AtUtc, Kind = "speech", Text = e.Text, Who = who },
+            SceneEventKind.Sound when e.Text is not null => new() { AtUtc = e.AtUtc, Kind = "sound", Text = e.Text },
+            SceneEventKind.Notable => new() { AtUtc = e.AtUtc, Kind = "moment", Text = e.Text },
+            SceneEventKind.TrackEnter when e.Class is { } enterClass && EntityClasses.IsPresence(enterClass) => new() { AtUtc = e.AtUtc, Kind = "enter", Class = e.Class, Who = who },
+            SceneEventKind.TrackExit when e.Class is { } exitClass && EntityClasses.IsPresence(exitClass) => new() { AtUtc = e.AtUtc, Kind = "exit", Class = e.Class, Who = who },
+            _ => null
+        };
+    }
 
     /// <summary>The local days a window touches, up to today.</summary>
     private IEnumerable<DateOnly> DaysOf(StatsWindow window)

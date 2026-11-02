@@ -10,10 +10,10 @@
 
 <PageTitle>PoWatch</PageTitle>
 
-@* Everything on one screen, always about one session: the one recording now, else the latest (or the
-   one a History link names, ?session=). One bar (which session; with Advanced on, the question box and
-   the download), then a 3×3 around the camera (CSS dissolves each family's own grid into this one). On a
-   phone the panels after "In frame" become a strip you swipe through. Longer views live in History. *@
+@* One screen about one session: the one recording now, else the latest (or the one a Journal link names,
+   ?session=). One bar (which session; with Advanced on, the question box and the download), then the camera
+   beside what it is turning into words: the narration of everything seen, said, heard, and who came and
+   went. The numbers are one tab away, beside the narration. Longer views live in the Journal. *@
 <div class="dash">
     <div class="stats-toolbar" data-test="stats-toolbar">
         <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
@@ -87,82 +87,71 @@
                         }
                     </div>
                 </div>
-                <div class="live-caption" data-test="live-caption">
-                    <span class="live-caption-tag">VLM @(L.LastCaptionUtc?.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture) ?? "--:--:--")</span>
-                    @if (L.LastCaption is { } caption)
+                @* The one line of numbers that stays beside the words: who is here now, and how many came. *@
+                <div class="live-now" data-test="live-now">
+                    @if (Sensing.IsRunning)
                     {
-                        @* Keyed, so each new caption types itself out afresh. *@
-                        <span @key="L.LastCaptionUtc" class="fx-type" style="--chars: @caption.Length">@caption</span>
+                        <span><b class="fx-tick" @key="(L.PeopleNow, L.AnimalsNow)">@L.PeopleNow</b> @(L.PeopleNow == 1 ? "person" : "people") · <b>@L.AnimalsNow</b> @(L.AnimalsNow == 1 ? "animal" : "animals") in frame</span>
+                        <span><b data-test="metric-visits">@L.Visits</b> visits · peak @L.PeakConcurrency</span>
+                        <span class="term-stat-hint">@(L.Demo || L.AudioStatus == "listening" ? "LISTENING" : (L.AudioStatus ?? "NOT LISTENING").ToUpperInvariant())</span>
                     }
                     else
                     {
-                        <span>@(Sensing.IsRunning ? "Waiting for the first caption…" : "—")</span>
-                    }
-                    @if (L.LastError is not null)
-                    {
-                        <span class="live-error" role="status">@L.LastError</span>
-                    }
-                </div>
-                @* What the microphone heard, word for word (the whole transcript is on the session's story). *@
-                <div class="live-caption live-heard" data-test="live-heard">
-                    <span class="live-caption-tag">HEARD @(L.Heard.LastOrDefault()?.AtUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture) ?? "--:--:--")</span>
-                    @if (L.Heard.LastOrDefault() is { } line)
-                    {
-                        <span @key="line.AtUtc">@(line.Speaker is { } who ? $"{who}: " : null)“@line.Text”</span>
-                    }
-                    else
-                    {
-                        <span>@(!Sensing.IsRunning ? "—" : L.Demo || L.AudioStatus == "listening" ? "Listening…" : L.AudioStatus ?? "Not listening (Settings)")</span>
-                    }
-                    @if (L.LastSound is { } sound)
-                    {
-                        <span class="live-heard-sound" title="The latest sound recognised">♪ @sound</span>
+                        <span class="term-stat-hint">NOT RECORDING</span>
                     }
                 </div>
             </ChildContent>
         </TerminalPanel>
 
-        <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend"
-                    OnExplain="@(Prefs.Advanced ? EventCallback.Factory.Create(this, ExplainAsync) : default)" Asking="@_asking" />
-        <InFrame Objects="@_objects" />
-
-        @* On a phone the rest is a strip you swipe through, with keys to jump; elsewhere it melts into the grid. *@
-        <nav class="dash-pager" aria-label="Stat panels">
-            @for (var i = 0; i < Pages.Length; i++)
+        @* Beside the camera: the narration, or the numbers behind it. *@
+        <section class="live-side" aria-label="What the camera is seeing">
+            <nav class="term-tabbar live-tabs" aria-label="Live views">
+                @foreach (var (key, label) in Views)
+                {
+                    <button type="button" class="term-tab @(_view == key ? "term-tab--on" : null)" aria-pressed="@(_view == key ? "true" : "false")"
+                            @onclick="() => _view = key" data-test="@($"live-view-{key}")">@label</button>
+                }
+            </nav>
+            @if (_view == "narration")
             {
-                var index = i;
-                <button type="button" class="term-button" @onclick="() => ShowPanelAsync(index)">@Pages[i]</button>
+                <LiveNarration SessionId="@_sessionId" />
             }
-        </nav>
-        <div class="dash-more" @ref="_more">
-            <TerminalPanel Title="Motion grid" Class="cell-heat" Test="live-motion-grid">
-                <Aside>16×9 · EDGES TODAY</Aside>
-                <ChildContent>
-                    <div class="live-heat">
-                        @if (_shaderHeat && Prefs.Advanced)
-                        {
-                            @* Drawn by heat-gl.js (a WebGL2 shader) after every render; the plain grid is the simple view and the fallback. *@
-                            <canvas @ref="_heat" class="heat-gl" role="img" aria-label="Where motion is happening right now" data-test="heat-gl"></canvas>
-                        }
-                        else
-                        {
-                            <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
-                        }
-                    </div>
-                    <div class="live-edges">
-                        @foreach (var edge in Edges)
-                        {
-                            <span>@edge <b>@(_space?.Entries.GetValueOrDefault(edge) ?? 0)↓ @(_space?.Exits.GetValueOrDefault(edge) ?? 0)↑</b></span>
-                        }
-                    </div>
-                </ChildContent>
-            </TerminalPanel>
+            else
+            {
+                <div class="live-numbers" data-test="live-numbers">
+                    <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend"
+                                OnExplain="@(Prefs.Advanced ? EventCallback.Factory.Create(this, ExplainAsync) : default)" Asking="@_asking" />
+                    <InFrame Objects="@_objects" />
+                    <TerminalPanel Title="Motion grid" Class="cell-heat" Test="live-motion-grid">
+                        <Aside>16×9 · EDGES TODAY</Aside>
+                        <ChildContent>
+                            <div class="live-heat">
+                                @if (_shaderHeat && Prefs.Advanced)
+                                {
+                                    @* Drawn by heat-gl.js (a WebGL2 shader) after every render; the plain grid is the simple view and the fallback. *@
+                                    <canvas @ref="_heat" class="heat-gl" role="img" aria-label="Where motion is happening right now" data-test="heat-gl"></canvas>
+                                }
+                                else
+                                {
+                                    <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
+                                }
+                            </div>
+                            <div class="live-edges">
+                                @foreach (var edge in Edges)
+                                {
+                                    <span>@edge <b>@(_space?.Entries.GetValueOrDefault(edge) ?? 0)↓ @(_space?.Exits.GetValueOrDefault(edge) ?? 0)↑</b></span>
+                                }
+                            </div>
+                        </ChildContent>
+                    </TerminalPanel>
 
-            @* Pipeline numbers are operations, not the room: they live on System. *@
-            <PresenceTab Query="@_query" />
-            <SpaceTab Query="@_query" />
-            <PatternsTab Query="@_query" />
-            <EnvironmentTab Query="@_query" />
-        </div>
+                    @* Pipeline numbers are operations, not the room: they live on System. *@
+                    <PresenceTab Query="@_query" />
+                    <SpaceTab Query="@_query" />
+                    <PatternsTab Query="@_query" />
+                    <EnvironmentTab Query="@_query" />
+                </div>
+            }
+        </section>
     </div>
 </div>

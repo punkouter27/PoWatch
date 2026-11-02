@@ -1,0 +1,27 @@
+@page "/history"
+@page "/history/{Day}"
+@page "/stories"
+@page "/stories/s/{Id:guid}"
+@page "/days"
+@page "/days/{Day}"
+@inject NavigationManager Navigation
+
+@* Stories and Days became the Journal (/journal, /journal/{date}, /journal/s/{id}, ?view=week|month), as
+   History had become Stories and Days before; old links and bookmarks land on the new address, replacing
+   the old one in Back/Forward. A caption search's ?tab=replay&at= keeps its moment. *@
+
+@code {
+    [Parameter] public string? Day { get; set; }
+    [Parameter] public Guid? Id { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var query = uri.Query.Replace("tab=replay&", string.Empty, StringComparison.Ordinal);
+        var target = Id is { } id ? StoryLinks.Session(id)
+            : Day is { } day ? $"journal/{day}"
+            : uri.AbsolutePath.TrimEnd('/').EndsWith("/days", StringComparison.Ordinal) ? StoryLinks.Day(DateOnly.FromDateTime(DateTime.Now))
+            : "journal";
+        Navigation.NavigateTo($"{target}{query}", replace: true);
+    }
+}

@@ -19,10 +19,8 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("STANDBY");
         await Assertions.Expect(page.GetByTestId("settings-menu")).ToBeVisibleAsync();
 
-        await page.GetByTestId("nav-stories").ClickAsync();
-        await page.ExpectSectionAsync("STORIES");
-        await page.GetByTestId("nav-days").ClickAsync();
-        await page.ExpectSectionAsync("DAYS");
+        await page.GetByTestId("nav-journal").ClickAsync();
+        await page.ExpectSectionAsync("JOURNAL");
         await page.GetByTestId("nav-live").ClickAsync();
         await page.ExpectSectionAsync("LIVE");
         await page.AssertNoBlazorErrorAsync();
@@ -34,11 +32,14 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         foreach (var (route, heading) in new (string route, string heading)[]
         {
             ("/", "LIVE"),
-            ("/stories", "STORIES"),
-            ("/days/2026-01-01", "DAYS"),
-            // History's old addresses land on their new homes.
-            ("/history", "STORIES"),
-            ("/history/2026-01-01", "DAYS"),
+            ("/journal", "JOURNAL"),
+            ("/journal/2026-01-01", "JOURNAL"),
+            ("/journal?view=week", "JOURNAL"),
+            // The old Stories, Days and History addresses land in the Journal.
+            ("/stories", "JOURNAL"),
+            ("/days/2026-01-01", "JOURNAL"),
+            ("/history", "JOURNAL"),
+            ("/history/2026-01-01", "JOURNAL"),
         })
         {
             if (PlaywrightFixture.BaseUrl is null) return;
@@ -59,18 +60,16 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToHaveCountAsync(0);
         await Assertions.Expect(page.GetByTestId("stats-json")).ToHaveCountAsync(0);
 
-        await page.OpenSettingsAsync("alerts");
+        // Look, alerts, shared links and the account all sit under Settings' Account tab.
+        await page.OpenSettingsAsync("account");
         await Assertions.Expect(page.GetByTestId("watch-rules")).ToHaveCountAsync(0);
-        await page.GetByTestId("settings-tab-look").ClickAsync();
         await page.GetByTestId("advanced-toggle").ClickAsync();
         await Assertions.Expect(page.GetByTestId("advanced-toggle")).ToHaveAttributeAsync("aria-checked", "true");
-        await page.GetByTestId("settings-tab-alerts").ClickAsync();
         await Assertions.Expect(page.GetByTestId("watch-rules")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeAttachedAsync();
         await Assertions.Expect(page.GetByTestId("stats-json")).ToBeAttachedAsync();
 
         // Reset puts every browser choice back, power features included.
-        await page.GetByTestId("settings-tab-look").ClickAsync();
         await page.GetByTestId("settings-reset").ClickAsync();
         await Assertions.Expect(page.GetByTestId("advanced-toggle")).ToHaveAttributeAsync("aria-checked", "false");
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToHaveCountAsync(0);
@@ -98,7 +97,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         var before = await page.GetAttributeAsync("html", "data-theme");
-        await page.OpenSettingsAsync("look");
+        await page.OpenSettingsAsync("account");
         await page.GetByTestId("theme-toggle").ClickAsync();
         await page.WaitForTimeoutAsync(400);
         var after = await page.GetAttributeAsync("html", "data-theme");
@@ -147,7 +146,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
             "start|stop|delete|merge|share|reset|sign out|keep|demo|clear|send|ask|save|remove|take down|download|explain|pdf",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-        foreach (var route in new[] { "/", "/stories", "/days", "/system" })
+        foreach (var route in new[] { "/", "/journal", "/system" })
         {
             await page.GotoAsync($"{PlaywrightFixture.BaseUrl}{route}");
             await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync(new() { Timeout = 60_000 });

@@ -609,17 +609,47 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     letter-spacing: 0.1em;
 }
 
-.live-caption {
+/* Under the camera: who is here now and how many came, the one line of numbers that stays beside the words. */
+.live-now {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px 16px;
     padding: 6px 10px;
     border-top: 1px solid var(--term-line);
     font: 12px var(--term-mono);
+    color: var(--term-muted);
     flex-wrap: wrap;
 }
 
-.live-caption-tag { color: var(--term-accent); font-weight: 700; }
+.live-now b { color: var(--term-text); font-weight: 600; }
+.live-now .term-stat-hint { margin-left: auto; }
+
+/* ── A line of what happened (MomentLine): Live's narration, a session's or a day's timeline ── */
+
+.moment-filters { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--term-line); }
+.moment-filters .term-button { min-height: 26px; padding: 0 8px; font-size: var(--fs-xs); }
+.moment-list { list-style: none; margin: 0; padding: 0; display: grid; align-content: start; }
+.moment, .moment-jump {
+    display: grid;
+    grid-template-columns: auto 5.5ch minmax(0, 1fr);
+    gap: 2px 8px;
+    align-items: baseline;
+    padding: 6px 10px;
+    font: var(--fs-sm)/1.45 var(--term-font);
+    color: var(--term-text);
+}
+.moment { border-bottom: 1px dashed color-mix(in srgb, var(--term-line) 70%, transparent); }
+.moment:has(> .moment-jump) { display: block; padding: 0; }
+.moment-jump { width: 100%; border: 0; background: none; text-align: left; cursor: pointer; }
+.moment-jump:hover, .moment-jump:focus-visible { background: color-mix(in srgb, var(--term-accent) 8%, transparent); }
+.moment .num { font: var(--fs-xs) var(--term-mono); color: var(--term-dim); font-variant-numeric: tabular-nums; }
+.moment-tag { font: 600 10px var(--term-mono); letter-spacing: 0.08em; color: var(--term-muted); }
+.moment[data-kind="caption"] .moment-tag { color: var(--term-cyan); }
+.moment[data-kind="speech"] .moment-tag, .moment[data-kind="moment"] .moment-tag { color: var(--term-accent); }
+.moment[data-kind="enter"] .moment-text, .moment[data-kind="exit"] .moment-text, .moment[data-kind="sound"] .moment-text { color: var(--term-muted); }
+.moment[data-kind="speech"] .moment-text { font-style: italic; }
+.moment img { display: block; grid-column: 1 / -1; width: min(100%, 320px); margin: 4px 0 2px; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--term-line); border-radius: 2px; }
+.moment.is-now { background: color-mix(in srgb, var(--term-accent) 14%, transparent); box-shadow: inset 2px 0 0 var(--term-accent); }
 
 .live-edges {
     display: grid;
@@ -692,18 +722,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 }
 .away-card .term-panel-head .term-icon-button { min-width: 28px; min-height: 28px; }
 
-.away-moments {
-    list-style: none;
-    margin: 12px 0 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
-}
-
-.away-moments li { display: grid; gap: 4px; font: 12px var(--term-mono); color: var(--term-muted); }
-.away-moments img, .away-noimage { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--term-line); border-radius: 2px; background: var(--term-bg); }
-.away-noimage { display: grid; place-items: center; color: var(--term-dim); }
 
 /* ── Naming prompts ───────────────────────────────────────────────────── */
 
@@ -741,19 +759,10 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .crt { position: absolute; inset: 0; z-index: 5; width: 100%; height: 100%; pointer-events: none; visibility: hidden; }
 
 /* Teletype: each new caption types itself out, --chars steps at 30 ms. */
-.fx-type { animation: fx-type calc(var(--chars, 40) * 30ms) steps(var(--chars, 40), end) both; }
-@keyframes fx-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
 
 .away-exposure { margin: 12px 0 0; display: grid; gap: 6px; }
 .away-exposure img { width: min(100%, 640px); aspect-ratio: 16 / 9; border: 1px solid var(--term-line); border-radius: 2px; }
 .away-exposure figcaption { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font: 11px var(--term-mono); letter-spacing: 0.06em; color: var(--term-muted); }
-
-/* What the microphone heard: the latest line on Live, the whole transcript under a story. */
-.live-heard { border-top: 0; }
-.live-heard-sound { margin-left: auto; color: var(--term-dim); white-space: nowrap; }
-.session-transcript summary { cursor: pointer; color: var(--term-dim); font: var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; }
-.session-transcript ol { margin: 8px 0 0; padding-left: 0; list-style: none; display: grid; gap: 4px; font: var(--fs-sm) var(--term-mono); color: var(--term-text); line-height: 1.45; }
-.session-transcript .num { color: var(--term-accent); margin-right: 6px; }
 
 /* A session's story: the chapters joined into prose, the chapters themselves folded under it. */
 .session-story { margin: 12px 0 0; display: grid; gap: 8px; max-width: 80ch; }
@@ -764,7 +773,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .session-story-chapters .num { color: var(--term-accent); margin-right: 6px; }
 
 @media (prefers-reduced-motion: reduce) {
-    .fx-type { animation: none; }
 }
 
 /* ── History, Regulars, System ──────────────────────────────── */
@@ -962,7 +970,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .live-metric .term-z { margin-left: 6px; }
 .live-explain { margin: 0 10px 10px; min-height: 28px; font-size: var(--fs-xs); }
 
-/* ── Live: the bar and the 4×4 grid ───────────────────────────────────── */
+/* ── Live: the bar, then the camera beside its narration ──────────────── */
 
 .dash { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); }
 
@@ -976,82 +984,40 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .stats-answer { margin: 0 2px; color: var(--term-text); font-family: var(--term-font); font-size: var(--fs-md); }
 .stats-answer b { font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; color: var(--term-accent); margin-right: 6px; }
 
-/* The live panels and the stat panels share one grid: each family's own .term-grid dissolves into it. */
+/* Phone and tablet: the camera, then the tabs, one column; <main> scrolls. A desktop holds both in the
+   viewport: the camera keeps 16:9 in the wider column, and the narration (or the numbers) scrolls on its own. */
 .dash-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); }
-.dash-grid > .term-grid, .dash-more > .term-grid, .dash-more { display: contents; }
-.dash-grid .term-panel { grid-column: auto; }
-.dash-grid .rz-chart { height: 200px; }
-.dash-grid .term-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.dash-pager { display: none; }
+.live-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.live-tabs .term-tab { padding: 8px 14px 7px; }
+.live-numbers { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); align-content: start; }
+.live-numbers > .term-grid { display: contents; }
+.live-numbers .rz-chart { height: 200px; }
+.live-numbers .term-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .live-trend { width: 28%; }
-.dash-grid .term-table td:first-child { white-space: nowrap; }
+.live-numbers .term-table td:first-child { white-space: nowrap; }
 .stats-heats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .stats-heats figure { margin: 0; }
 .stats-heats figcaption { margin-top: 4px; font: var(--fs-xs) var(--term-mono); color: var(--term-dim); }
-.dash-grid .stats-cloud, .dash-grid .stats-weird { margin-top: 6px; }
+.live-numbers .stats-cloud, .live-numbers .stats-weird { margin-top: 6px; }
+.live-narration .moment-list { max-height: 70vh; overflow-y: auto; }
 
-@media (min-width: 720px) {
-    .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dash-grid .live-camera, .dash-grid .term-panel.dash-wide { grid-column: span 2; }
-}
-
-/* A desktop shows everything at once as a 3×3 under the bar, the camera in the middle with the larger
-   middle row and column. What is happening now touches it (key metrics above, the motion grid left,
-   motion energy right, "In frame" below); the longer views take the corners. Charts flex to fit; the
-   feed and the motion grid keep 16:9 (the boxes are placed in frame percentages). */
-@media (min-width: 1280px) and (min-height: 700px) {
+@media (min-width: 1024px) and (min-height: 600px) {
     .dash { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
     .dash:has(> .stats-answer) { grid-template-rows: auto auto minmax(0, 1fr); }
-    .dash-grid {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
-        grid-template-rows: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
-        grid-template-areas:
-            "space   metrics curve"
-            "heat    camera  energy"
-            "week    inframe env";
-        min-height: 0;
-    }
-    .dash-grid .live-camera { grid-area: camera; }
-    .dash-grid .cell-metrics { grid-area: metrics; }
-    .dash-grid .cell-inframe { grid-area: inframe; }
-    .dash-grid .cell-heat { grid-area: heat; }
-    .dash-grid .cell-energy { grid-area: energy; }
-    .dash-grid .cell-space { grid-area: space; }
-    .dash-grid .cell-curve { grid-area: curve; }
-    .dash-grid .cell-week { grid-area: week; }
-    .dash-grid .term-panel.cell-env { grid-area: env; }
-    .dash-grid .stats-pending { min-height: 0; height: 100%; }
-    /* Short screens keep the camera's share; the cells around it scroll instead (key metrics, and the room under its light curve). */
-    .dash-grid .cell-env > .term-panel-body, .dash-grid .cell-metrics > .term-panel-body { overflow-y: auto; }
-    .dash-grid .cell-env .rz-chart { flex: 1 0 110px; }
-    .dash-grid .term-skeleton { height: auto !important; }
-    .dash-grid .term-stats .term-stat-hint { display: none; }
-    .dash-grid .term-panel-body:has(> .rz-chart), .dash-grid .term-panel-body:has(> .live-heat), .live-camera > .term-panel-body { display: flex; flex-direction: column; overflow: hidden; }
-    .dash-grid .rz-chart { flex: 1 1 0; min-height: 0; height: auto; }
-    .live-stage, .live-heat { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; }
-    .live-stage { background: #05070a; }
-    .live-stage > .live-feed, .live-heat > * { width: min(100cqw, 100cqh * 16 / 9); }
+    .dash-grid { grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr); grid-template-rows: minmax(0, 1fr); min-height: 0; }
+    .live-camera > .term-panel-body { display: flex; flex-direction: column; overflow: hidden; }
+    .live-stage { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; background: #05070a; }
+    .live-stage > .live-feed { width: min(100cqw, 100cqh * 16 / 9); }
+    .live-side { min-height: 0; }
+    .live-narration { flex: 1; min-height: 0; }
+    .live-narration > .term-panel-body { display: flex; flex-direction: column; overflow: hidden; }
+    .live-narration .moment-list { flex: 1; min-height: 0; max-height: none; }
+    .live-numbers { flex: 1; min-height: 0; overflow-y: auto; }
 }
 
-/* A phone keeps the camera, the numbers and who is in frame in the column, and turns the rest into one
-   swipeable strip (scroll-snapped, a panel per screen width) with keys to jump along it. */
 @media (max-width: 719.98px) {
     .stats-window { display: none; }
     .stats-ask-row { flex-basis: 100%; max-width: none; }
-    .dash-pager { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-    .dash-pager .term-button { flex: none; min-height: 32px; padding: 0 10px; }
-    .dash-more {
-        display: grid;
-        grid-auto-flow: column;
-        grid-auto-columns: 100%;
-        gap: var(--term-gap);
-        align-items: start;
-        overflow-x: auto;
-        overscroll-behavior-x: contain;
-        scroll-snap-type: x mandatory;
-        scrollbar-width: none;
-    }
-    .dash-more .term-panel, .dash-more > .term-empty { scroll-snap-align: start; }
 }
 
 /* ── The glass (dark theme): every panel on every page ─────────────────── */
@@ -1119,53 +1085,53 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 /* ── History: master and detail ───────────────────────────────────────── */
 
 /* Both History views sit under the Stories | Days switch. */
-.history-page { display: grid; gap: var(--term-gap); align-content: start; }
-/* The story views read as one centred column, like an article; the day view keeps the full width. */
-.history-page--feed > * { width: min(100%, 980px); justify-self: center; }
-/* Tabs (Stories, Settings): text with an underline on the open one, a rule under the whole strip. */
+/* Tabs (Live, Settings): text with an underline on the open one, a rule under the whole strip. */
 .term-tabbar { display: flex; gap: 4px; border-bottom: 1px solid var(--term-line); overflow-x: auto; scrollbar-width: none; }
 .term-tab { padding: 10px 16px 9px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer; color: var(--term-muted); text-decoration: none; font: 600 var(--fs-sm) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
 .term-tab:hover { color: var(--term-text); }
 .term-tab--on { color: var(--term-accent); border-bottom-color: var(--term-accent); }
-.settings-tabs { flex-wrap: wrap; justify-content: space-between; }
-.settings-tabs .term-tab { padding: 8px 6px 7px; font-size: var(--fs-xs); letter-spacing: 0.04em; }
-.session-numbers { margin-bottom: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.story-back { justify-self: start; }
-/* Rows sized to their cards: a panel clips its own overflow, so without this a long feed squeezed each card to two lines. */
-.story-feed { display: grid; grid-auto-rows: max-content; gap: 12px; min-width: 0; }
-.story-card .term-panel-body { padding: 14px 16px; }
+.settings-tabs .term-tab { flex: 1; padding: 8px 6px 7px; font-size: var(--fs-xs); letter-spacing: 0.04em; }
+
+/* ── The Journal: the index beside the reader ───────────────────── */
+
+/* A phone reads first (the reader), then the index; a desktop puts the index on the left and lets each
+   column scroll on its own. The reader is the same for a day, a session and a period: panels of prose
+   first, then the replay with its timeline. */
+.journal { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); align-content: start; }
+.journal-reader, .journal-index { display: grid; grid-auto-rows: max-content; gap: var(--term-gap); min-width: 0; align-content: start; }
+.journal-days .term-panel-meta .term-link + .term-link { margin-left: 10px; }
+.journal-list { list-style: none; margin: 0; padding: 0; }
+.journal-list > li { padding: 4px 0 6px; border-bottom: 1px solid var(--term-line); }
+.journal-list ul { list-style: none; margin: 0; padding: 0 0 0 10px; }
+.journal-day, .journal-session { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; text-decoration: none; color: var(--term-muted); font: 12px var(--term-mono); }
+.journal-day { justify-content: space-between; color: var(--term-text); font-weight: 600; }
+.journal-session .term-stat-hint { margin-left: auto; }
+.journal-session .num { color: var(--term-text); font-variant-numeric: tabular-nums; }
+.journal-day:hover, .journal-session:hover { color: var(--term-accent); }
+.journal-on, .journal-on .num { color: var(--term-accent); }
+.journal-day.journal-on, .journal-session.journal-on { background: color-mix(in srgb, var(--term-accent) 10%, transparent); box-shadow: inset 2px 0 0 var(--term-accent); }
+.story-more { justify-self: start; margin: 10px; }
+.story-card .term-panel-body, .reader .term-panel-body { padding: 14px 16px; }
 .story-card .session-story { margin-top: 0; max-width: none; gap: 10px; }
 .story-meta { margin-right: 12px; }
-.story-more { justify-self: start; }
-.history-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); align-items: start; }
-.history-col { display: grid; gap: var(--term-gap); min-width: 0; }
+.reader-numbers { margin-top: 14px; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
+.reader-more { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--term-line); }
+.reader-more > summary { cursor: pointer; font: 600 11px var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-muted); }
+.replay-lines { max-height: 55vh; overflow-y: auto; border: 1px solid var(--term-line); border-radius: var(--term-radius); }
+.moment-list--snaps .moment { padding-left: 0; padding-right: 0; }
 .history-nav { display: inline-flex; align-items: center; gap: 4px; }
 .history-nav .term-button { min-height: 28px; min-width: 28px; padding: 0 8px; }
 .history-day { font: 600 12px var(--term-mono); color: var(--term-text); min-width: 15ch; text-align: center; }
-.history-numbers { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
-.history-numbers .term-stats { flex: 1 1 220px; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
-.history-tabs { min-width: 0; }
-.history-tabs .rz-tabview-panels { background: var(--term-panel); border: 1px solid var(--term-line); border-radius: var(--term-radius); padding: 10px; }
 .history-recap-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
 .history-recap-foot > .term-stat-hint { margin-right: auto; }
-.history-chart { height: 200px; }
-.history-week .history-sub { margin-top: 12px; }
 .history-pick .rz-datepicker-trigger, .history-pick button { min-height: 28px; min-width: 28px; }
-.history-sessions .term-table td { white-space: nowrap; }
 .history-sub { margin: 16px 0 6px; padding-top: 10px; border-top: 1px solid var(--term-line); font: 600 11px var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-muted); }
+.history-sub--first { margin-top: 0; padding-top: 0; border-top: 0; }
 
-/* A desktop holds both columns in the viewport: the left one scrolls on its own (sessions take what is
-   left of it), and the tab strip stays put while the open tab scrolls. */
 @media (min-width: 960px) {
-    .history-page { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
-    .story-feed { min-height: 0; overflow: auto; align-content: start; }
-    .history-grid { height: 100%; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); grid-template-rows: minmax(0, 1fr); align-items: stretch; }
-    .history-col { display: flex; flex-direction: column; min-height: 0; overflow: auto; }
-    .history-col > .term-panel { flex: none; }
-    .history-col > .history-sessions { flex: 1 1 0; min-height: 132px; }
-    .history-chart { height: clamp(130px, 20vh, 220px); }
-    .history-tabs { display: flex; flex-direction: column; min-height: 0; }
-    .history-tabs .rz-tabview-panels { flex: 1; min-height: 0; overflow: auto; }
+    .journal { height: 100%; grid-template-columns: minmax(260px, 1fr) minmax(0, 2.6fr); grid-template-rows: minmax(0, 1fr); }
+    .journal-index { order: -1; }
+    .journal-reader, .journal-index { min-height: 0; overflow-y: auto; }
 }
 
 /* ── Regulars grid, Settings ───────────────────────────────── */
@@ -1234,8 +1200,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .replay-track { position: absolute; inset: 0 0 18px; width: 100%; height: calc(100% - 18px); }
 .replay-scrub { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; margin: 0; accent-color: var(--term-accent); }
 .replay-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
-.replay-moments { display: flex; flex-wrap: wrap; gap: 6px; }
-.replay-moments .term-button { min-height: 28px; padding: 0 8px; font-variant-numeric: tabular-nums; }
 @media (min-width: 900px) {
     .replay-stage { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(180px, 0.8fr); }
 }
@@ -1260,7 +1224,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .term-button, .term-header .term-button, .term-icon-button, .term-key, .term-menu-item,
     .history-nav .term-button, .stats-toolbar .term-button, .regulars-merge .term-button,
     .rule-row .term-icon-button, .rule-form .term-button, .away-card .term-panel-head .term-icon-button,
-    .settings-search .term-button, .replay-moments .term-button, .history-share .term-button { min-height: 44px; }
+    .settings-search .term-button, .moment-filters .term-button, .history-share .term-button { min-height: 44px; }
     .term-icon-button, .rule-row .term-icon-button, .away-card .term-panel-head .term-icon-button { min-width: 44px; }
     .term-key { font-size: 12px; }
     .regulars-bar input[type="search"], .regulars-merge select, .regular-name input, .stats-ask input,

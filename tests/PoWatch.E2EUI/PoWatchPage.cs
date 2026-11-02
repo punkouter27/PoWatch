@@ -94,7 +94,7 @@ internal static class PoWatchPage
     /// <summary>Settings opens from the header's gear, on its Recording tab.</summary>
     public static Task OpenSettingsAsync(this IPage page) => page.GetByTestId("settings-menu").ClickAsync();
 
-    /// <summary>Opens Settings at one of its tabs: recording, people, alerts, sharing, look or account.</summary>
+    /// <summary>Opens Settings at one of its tabs: recording, people or account (look, alerts, sharing and your data).</summary>
     public static async Task OpenSettingsAsync(this IPage page, string section)
     {
         await page.OpenSettingsAsync();

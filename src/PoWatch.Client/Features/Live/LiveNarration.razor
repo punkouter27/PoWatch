@@ -1,0 +1,108 @@
+@* Live's main view: what the session saw, said and heard, and who came and went, as one feed of lines,
+   newest first. While recording it is the browser's own narration (LiveSensingState); for a session that
+   has stopped it is what the server kept of it (the replay's events). The filters keep one kind. *@
+@using System.Globalization
+@inject SensingSession Sensing
+@inject PoWatchApiClient Api
+@implements IDisposable
+
+<TerminalPanel Title="Narration" Class="live-narration" Test="live-narration" Flush="true">
+    <Aside>@Status</Aside>
+    <ChildContent>
+        <div class="moment-filters" role="group" aria-label="Show only">
+            @foreach (var (key, label, _) in TimelineEntry.Filters)
+            {
+                <button type="button" class="term-button @(_filter == key ? "term-button--on" : null)" aria-pressed="@(_filter == key ? "true" : "false")"
+                        @onclick="() => _filter = key" data-test="@($"narration-filter-{key}")">@label</button>
+            }
+        </div>
+        @if (Sensing.Live.LastError is { } error && Recording)
+        {
+            <p class="live-error" role="status">@error</p>
+        }
+        @{ var lines = Lines().Where(e => TimelineEntry.Passes(e, _filter)).ToList(); }
+        @if (lines.Count == 0)
+        {
+            <p class="term-empty" data-test="narration-empty">@Empty</p>
+        }
+        else
+        {
+            <ol class="moment-list" aria-live="polite" data-test="narration-lines">
+                @foreach (var entry in lines)
+                {
+                    <MomentLine @key="entry" Entry="@entry" />
+                }
+            </ol>
+        }
+    </ChildContent>
+</TerminalPanel>
+
+@code {
+    /// <summary>The session Live is about (Guid.Empty before the first one).</summary>
+    [Parameter] public Guid SessionId { get; set; }
+
+    private string _filter = "all";
+    private Guid _loaded;
+    private List<TimelineEntry> _kept = [];
+    private bool _wasRecording;
+    private DateTimeOffset _lastRender;
+
+    private LiveSensingState L => Sensing.Live;
+
+    private bool Recording => Sensing.IsRunning && L.Session?.Id == SessionId;
+
+    private string Status => Recording
+        ? L.LastCaptionUtc is null ? "WAITING FOR THE FIRST CAPTION" : $"LAST SEEN {L.LastCaptionUtc.Value.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture)}"
+        : SessionId == Guid.Empty ? "NOTHING YET" : "AS KEPT · NEWEST FIRST";
+
+    private string Empty => Recording
+        ? "Watching and listening. The first lines appear as soon as something is seen, said or heard."
+        : SessionId == Guid.Empty
+            ? "Press Start: everything the camera sees and the microphone hears is written here."
+            : _filter == "all" ? "Nothing was written down in this session." : "Nothing of that kind in this session.";
+
+    /// <summary>Newest first: the browser's lines while recording, else what the server kept.</summary>
+    private IEnumerable<TimelineEntry> Lines() => Recording ? L.Narration.Reverse() : _kept;
+
+    protected override void OnInitialized() => Sensing.Changed += OnSensingChanged;
+
+    /// <summary>Sensing fires several times a second; four renders a second keep up with the words.</summary>
+    private void OnSensingChanged()
+    {
+        var recording = Recording;
+        if (_wasRecording && !recording)
+        {
+            // Stopped: this browser heard all of it, so its lines stand until the page reloads.
+            _kept = [.. L.Narration.Reverse()];
+        }
+        else if (recording == _wasRecording && DateTimeOffset.UtcNow - _lastRender < TimeSpan.FromMilliseconds(250))
+        {
+            return;
+        }
+        (_wasRecording, _lastRender) = (recording, DateTimeOffset.UtcNow);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Sensing.Changed -= OnSensingChanged;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _wasRecording = Recording;
+        if (SessionId == _loaded || SessionId == Guid.Empty || Recording) return;
+        (_loaded, _kept) = (SessionId, []);
+        var id = SessionId;
+        if (await Api.GetSessionAsync(id) is not { } session) return;
+        // A session's lines are its days' events inside its own start and end.
+        var end = session.EndedUtc ?? DateTimeOffset.UtcNow;
+        var days = new List<DateOnly>();
+        for (var day = DateOnly.FromDateTime(session.StartedUtc.LocalDateTime); day <= DateOnly.FromDateTime(end.LocalDateTime); day = day.AddDays(1))
+            days.Add(day);
+        var replays = await Task.WhenAll(days.Select(d => Api.GetReplayAsync(d)));
+        if (id != SessionId) return;
+        _kept = replays.SelectMany(r => r?.Events ?? [])
+            .Where(e => e.AtUtc >= session.StartedUtc && e.AtUtc <= end)
+            .Select(TimelineEntry.From).OfType<TimelineEntry>()
+            .OrderByDescending(e => e.AtUtc)
+            .ToList();
+    }
+}

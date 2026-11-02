@@ -1,10 +1,10 @@
-@* Under History's replay: the day's highlight snapshots, best first, then the time-lapse this browser
+@* Under a day's replay: the day's highlight snapshots, best first, then the time-lapse this browser
    kept of it (one frame a minute while a camera session runs, for 7 days, never uploaded). *@
 @using System.Globalization
 @inject PoWatchApiClient Api
 @inject IJSRuntime JS
 
-<h3 class="history-sub">Moments · @_moments.Count</h3>
+<h3 class="history-sub history-sub--first">Moments · @_moments.Count</h3>
 <div data-test="history-moments">
     @if (_moments.Count == 0)
     {
@@ -12,17 +12,10 @@
     }
     else
     {
-        <ol class="away-moments">
+        <ol class="moment-list moment-list--snaps">
             @foreach (var moment in _moments.Take(9))
             {
-                <li>
-                    @if (moment.ImageUrl is { } url)
-                    {
-                        <img src="@url" alt="Snapshot: @moment.Text" loading="lazy" />
-                    }
-                    <span class="num">@moment.AtUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture)</span>
-                    <span>@moment.Text</span>
-                </li>
+                <MomentLine Entry="@TimelineEntry.From(moment)" />
             }
         </ol>
     }

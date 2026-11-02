@@ -11,8 +11,10 @@ public sealed partial class Live
 {
     private static readonly string[] Edges = ["Left", "Top", "Right", "Bottom"];
 
-    /// <summary>The phone strip's keys, in the order the panels appear.</summary>
-    private static readonly string[] Pages = ["Grid", "Energy", "Space", "Curve", "Week", "Room"];
+    /// <summary>The two views beside the camera: the words, or the numbers behind them.</summary>
+    private static readonly (string Key, string Label)[] Views = [("narration", "Narration"), ("numbers", "Numbers")];
+
+    private string _view = "narration";
 
     private Guid _sessionId;
     private StatsQuery _query = StatsQuery.For("session");
@@ -23,7 +25,6 @@ public sealed partial class Live
     private ElementReference _slot;
     private ElementReference _crt;
     private ElementReference _heat;
-    private ElementReference _more;
     private bool _shaderHeat = true;
     private IReadOnlyList<double> _occupancyTrend = [];
     private IReadOnlyList<double> _visitsTrend = [];
@@ -42,7 +43,7 @@ public sealed partial class Live
 
     [SupplyParameterFromQuery(Name = "start")] public string? StartMode { get; set; }
 
-    /// <summary>A session to open straight away (History links each of its sessions here).</summary>
+    /// <summary>A session to open straight away (the Journal links each of its sessions here).</summary>
     /// <remarks>Text, not a Guid: a mistyped link must not take the page down.</remarks>
     [SupplyParameterFromQuery(Name = "session")] public string? SessionParameter { get; set; }
 
@@ -67,7 +68,7 @@ public sealed partial class Live
         _ = RefreshLoopAsync(_refresh.Token);
     }
 
-    /// <summary>A History link (?session=) opens that session; otherwise the page follows the recording one.</summary>
+    /// <summary>A Journal link (?session=) opens that session; otherwise the page follows the recording one.</summary>
     protected override async Task OnParametersSetAsync()
     {
         if (SessionParameter == _checkedParameter) return;
@@ -115,7 +116,7 @@ public sealed partial class Live
             await DockFeedAsync();
         }
 
-        if (_shaderHeat && Prefs.Advanced && !await JS.TryInvokeAsync<bool>("powatchHeat.draw", _heat, L.Heat, 16, 9))
+        if (_view == "numbers" && _shaderHeat && Prefs.Advanced && !await JS.TryInvokeAsync<bool>("powatchHeat.draw", _heat, L.Heat, 16, 9))
         {
             _shaderHeat = false;
             StateHasChanged();
@@ -245,8 +246,6 @@ public sealed partial class Live
     }
 
     private Task DockFeedAsync() => Sensing.DockFeedAsync(_slot);
-
-    private Task ShowPanelAsync(int index) => JS.TryInvokeVoidAsync("powatchMenus.reveal", _more, index);
 
     private static string Pct(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 

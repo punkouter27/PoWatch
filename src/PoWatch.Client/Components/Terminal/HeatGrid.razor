@@ -1,6 +1,6 @@
 @* A grid heatmap (16×9 frame grid, 7×24 weekday-by-hour, …). Shade runs from the smallest non-zero
    value to the largest, so a busy but even frame still shows where it is busiest; zero stays blank.
-   With OnCellClick the cells are clickable (History picks a day this way); Selected outlines one. *@
+   With OnCellClick the cells are clickable (the Journal picks a day this way); Selected outlines one. *@
 <div class="term-heat @(OnCellClick.HasDelegate ? "term-heat--pick" : null)" role="img" aria-label="@Label"
      style="grid-template-columns: repeat(@Columns, minmax(0, 1fr));">
     @for (var i = 0; i < Columns * Rows; i++)

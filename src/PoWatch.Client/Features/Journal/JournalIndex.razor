@@ -1,0 +1,215 @@
+@* The Journal's index: the year (click a day; with Advanced on, a 3D skyline), the week's and month's
+   stories, then every day that has sessions, newest first, with its sessions inside it. What the reader
+   shows is lit. A session that saw nothing for under ten seconds (a Start and a quick Stop) is noise here. *@
+@using System.Globalization
+@inject PoWatchApiClient Api
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject UiPrefs Prefs
+@implements IDisposable
+
+<div class="journal-index">
+    <TerminalPanel Title="The year" Test="history-calendar">
+        <Aside>
+            @(Patterns?.Calendar.Count ?? 0) DAYS
+            @if (Prefs.Advanced)
+            {
+                <span class="history-view" role="group" aria-label="Year view">
+                    <button class="term-button @(_year3d ? null : "term-button--on")" aria-pressed="@(_year3d ? "false" : "true")" @onclick="() => SetYearViewAsync(false)" data-test="year-2d">2D</button>
+                    <button class="term-button @(_year3d ? "term-button--on" : null)" aria-pressed="@(_year3d ? "true" : "false")" @onclick="() => SetYearViewAsync(true)" data-test="year-3d">3D</button>
+                </span>
+            }
+        </Aside>
+        <ChildContent>
+            @if (_year3d && Prefs.Advanced)
+            {
+                <YearSkyline Values="@_skyValues" Wet="@_skyWet" Labels="@_skyLabels" Selected="@CellFor(Day)" OnPick="@(i => Open(DayFor(i)))" />
+            }
+            else
+            {
+                <HeatGrid Values="@_calendarCells" Columns="53" Rows="7" Label="Daily occupancy over the last year"
+                          Selected="@CellFor(Day)" OnCellClick="@(i => Open(DayFor(i)))"
+                          CellTitle="@((i, v) => CellLabel(i, v))" />
+            }
+            @if (Weather?.Insight is { } insight)
+            {
+                <p class="history-insight" data-test="weather-insight">@insight.Sentence</p>
+            }
+        </ChildContent>
+    </TerminalPanel>
+
+    <TerminalPanel Title="Days" Class="journal-days" Test="journal-days" Flush="true">
+        <Aside>
+            <a class="term-link @(View == "week" ? "journal-on" : null)" href="@StoryLinks.Period("week")" data-test="story-view-week">Week story</a>
+            <a class="term-link @(View == "month" ? "journal-on" : null)" href="@StoryLinks.Period("month")" data-test="story-view-month">Month story</a>
+        </Aside>
+        <ChildContent>
+            @if (_sessions is null)
+            {
+                <Skeleton Heights="@([0])" Span="term-span-4 history-skel-sessions" />
+            }
+            else if (_days.Count == 0)
+            {
+                <p class="term-empty" data-test="story-feed-empty">No sessions yet, so nothing to read. <TryDemo /></p>
+            }
+            else
+            {
+                <ol class="journal-list" data-test="story-feed">
+                    @foreach (var (day, sessions) in _days)
+                    {
+                        <li>
+                            <a class="journal-day @(Day == day ? "journal-on" : null)" href="@StoryLinks.Day(day)" aria-current="@(Day == day ? "page" : null)" data-test="journal-day">
+                                <span>@day.ToString("ddd d MMM", CultureInfo.CurrentCulture)</span>
+                                <span class="term-stat-hint">@DisplayText.Duration(sessions.Sum(s => s.DurationSeconds))</span>
+                            </a>
+                            <ul>
+                                @foreach (var s in sessions)
+                                {
+                                    <li>
+                                        <a class="journal-session @(SessionId == s.Id ? "journal-on" : null)" href="@StoryLinks.Session(s.Id)" aria-current="@(SessionId == s.Id ? "page" : null)"
+                                           title="This session's story, replay and timeline" data-test="story-open">
+                                            <span class="num">@Time(s.StartedUtc)–@(s.EndedUtc is { } end ? Time(end) : "now")</span>
+                                            <span>@SessionDto.Tag(s.Id)</span>
+                                            <span class="term-stat-hint">@(s.IsRunning ? "RECORDING" : DisplayText.Duration(s.DurationSeconds))</span>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                </ol>
+                @if (_sessions.Count >= _take && _take < MaxTake)
+                {
+                    <button type="button" class="term-button story-more" @onclick="OlderAsync" data-test="story-more">Older sessions</button>
+                }
+            }
+        </ChildContent>
+    </TerminalPanel>
+</div>
+
+@code {
+    private const double MinSeconds = 10;
+    private const int Page = 20;
+
+    /// <summary>The server lists at most this many of the latest sessions.</summary>
+    private const int MaxTake = 100;
+
+    private const string YearViewKey = "powatch:year-view";
+
+    [Parameter] public PatternStatsDto? Patterns { get; set; }
+    [Parameter] public WeatherYearDto? Weather { get; set; }
+
+    /// <summary>The day in the reader, if a day is.</summary>
+    [Parameter] public DateOnly? Day { get; set; }
+
+    /// <summary>The session in the reader, if a session is.</summary>
+    [Parameter] public Guid? SessionId { get; set; }
+
+    /// <summary>week or month, when a period's story is in the reader.</summary>
+    [Parameter] public string? View { get; set; }
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
+
+    /// <summary>The Sunday the 53-week calendar starts on; cell index = weekday × 53 + week.</summary>
+    private static DateOnly CalendarStart => Today.AddDays(-(52 * 7) - (int)Today.DayOfWeek);
+
+    private int _take = Page;
+    private IReadOnlyList<SessionDto>? _sessions;
+    private List<(DateOnly Day, List<SessionDto> Sessions)> _days = [];
+    private bool _year3d;
+    private PatternStatsDto? _calendarFor;
+    private WeatherYearDto? _skylineFor;
+    private Dictionary<DateOnly, WeatherDayDto> _weatherByDay = [];
+    private List<double> _calendarCells = [];
+    private IReadOnlyList<double> _skyValues = [];
+    private IReadOnlyList<bool> _skyWet = [];
+    private IReadOnlyList<string> _skyLabels = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        Prefs.Changed += OnPrefsChanged;
+        _year3d = await JS.TryInvokeAsync<string>("localStorage.getItem", YearViewKey) == "3d";
+        await LoadSessionsAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Rebuilt only when a new answer arrives, not on every render of the page.
+        if (!ReferenceEquals(Patterns, _calendarFor) || !ReferenceEquals(Weather, _skylineFor))
+        {
+            (_calendarFor, _skylineFor) = (Patterns, Weather);
+            _weatherByDay = Weather?.Days.ToDictionary(d => d.Date) ?? [];
+            BuildCalendar();
+            BuildSkyline();
+        }
+    }
+
+    private async Task LoadSessionsAsync()
+    {
+        _sessions = await Api.ListSessionsAsync(_take);
+        _days = _sessions.Where(s => s.IsRunning || s.DurationSeconds >= MinSeconds)
+            .GroupBy(s => DateOnly.FromDateTime(s.StartedUtc.ToLocalTime().DateTime))
+            .OrderByDescending(g => g.Key)
+            .Select(g => (g.Key, g.OrderByDescending(s => s.StartedUtc).ToList()))
+            .ToList();
+    }
+
+    private async Task OlderAsync()
+    {
+        _take = Math.Min(MaxTake, _take + Page);
+        await LoadSessionsAsync();
+    }
+
+    private void Open(DateOnly? day)
+    {
+        if (day is { } d) Navigation.NavigateTo(StoryLinks.Day(d));
+    }
+
+    private static string Time(DateTimeOffset at) => at.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+
+    private static DateOnly? DayFor(int index)
+    {
+        var day = CalendarStart.AddDays(((index % 53) * 7) + (index / 53));
+        return day > Today ? null : day;
+    }
+
+    private static int CellFor(DateOnly? day)
+    {
+        if (day is not { } d) return -1;
+        var offset = d.DayNumber - CalendarStart.DayNumber;
+        return offset < 0 || offset >= 53 * 7 ? -1 : ((int)d.DayOfWeek * 53) + (offset / 7);
+    }
+
+    private string CellLabel(int index, double value) => DayFor(index) is { } d
+        ? $"{d:ddd dd MMM} · {(value > 0 ? value.ToString("P0", CultureInfo.CurrentCulture) : "no data")}{(_weatherByDay.GetValueOrDefault(d) is { } w ? $" · {w.Summary}" : string.Empty)}"
+        : string.Empty;
+
+    private void BuildCalendar()
+    {
+        var cells = new double[53 * 7];
+        foreach (var day in Patterns?.Calendar ?? [])
+        {
+            if (CellFor(day.Date) is var index and >= 0) cells[index] = Math.Max(day.Occupancy, 0.0001);
+        }
+        _calendarCells = [.. cells];
+    }
+
+    /// <summary>The calendar as the skyline wants it: −1 marks days still to come, so they get no tower.</summary>
+    private void BuildSkyline()
+    {
+        var cells = Enumerable.Range(0, _calendarCells.Count).ToList();
+        _skyValues = cells.Select(i => DayFor(i) is null ? -1 : _calendarCells[i]).ToList();
+        _skyWet = cells.Select(i => DayFor(i) is { } d && _weatherByDay.GetValueOrDefault(d) is { Wet: true }).ToList();
+        _skyLabels = cells.Select(i => CellLabel(i, _calendarCells[i])).ToList();
+    }
+
+    private async Task SetYearViewAsync(bool threeD)
+    {
+        _year3d = threeD;
+        await JS.TryInvokeVoidAsync("localStorage.setItem", YearViewKey, threeD ? "3d" : "2d");
+    }
+
+    private void OnPrefsChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Prefs.Changed -= OnPrefsChanged;
+}

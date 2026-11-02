@@ -14,7 +14,7 @@
         <header class="term-panel-head">
             <h2 id="away-title">@(recap.AwayFor is { } away ? $"While you were away · {DisplayText.Duration(away.TotalSeconds)}" : "Session recap")</h2>
             <span class="term-panel-meta">SESSION @tag · @DisplayText.Duration(recap.Session.DurationSeconds)</span>
-            <a class="term-button" href="@($"stories/s/{recap.Session.Id}")" title="This session's page: story, transcript and numbers" data-test="away-open">Open</a>
+            <a class="term-button" href="@StoryLinks.Session(recap.Session.Id)" title="This session in the Journal: story, replay and timeline" data-test="away-open">Open</a>
             <a class="term-button" href="@PoWatchApiClient.SessionRecapPdfUrl(recap.Session.Id)" download="PoWatch-session-@(tag[1..]).pdf" data-test="away-pdf">PDF ↓</a>
             <button class="term-icon-button" @onclick="Close" aria-label="Dismiss" data-test="away-close">✕</button>
         </header>
@@ -36,7 +36,6 @@
 
                 @* Asking for the story writes whatever is due: after Stop, the last chapter and the story itself. *@
                 <SessionStory SessionId="@recap.Session.Id" />
-                <SessionTranscript SessionId="@recap.Session.Id" />
 
                 @if (recap.Exposure is { } exposure)
                 {
@@ -51,21 +50,10 @@
 
                 @if (_moments.Count > 0)
                 {
-                    <ol class="away-moments">
+                    <ol class="moment-list moment-list--snaps">
                         @foreach (var moment in _moments.Take(3))
                         {
-                            <li>
-                                @if (moment.ImageUrl is { } url)
-                                {
-                                    <img src="@url" alt="Snapshot: @moment.Text" loading="lazy" />
-                                }
-                                else
-                                {
-                                    <div class="away-noimage" aria-hidden="true">no picture</div>
-                                }
-                                <span class="num">@moment.AtUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture)</span>
-                                <span>@moment.Text</span>
-                            </li>
+                            <MomentLine Entry="@TimelineEntry.From(moment)" />
                         }
                     </ol>
                 }

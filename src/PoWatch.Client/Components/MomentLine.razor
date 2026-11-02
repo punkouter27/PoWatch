@@ -1,0 +1,30 @@
+@using System.Globalization
+
+@* One line of what happened (TimelineEntry): the time, a tag (SAW · SAID · HEARD · IN · OUT · ★) and the
+   sentence, with the snapshot when one was kept. Inside a replay (Jump) the line is a button that moves the
+   playhead to it (replay.js reads data-replay-jump), and replay.js marks the line the playhead is on. *@
+<li class="moment" data-test="moment-line" data-kind="@Entry.Kind">
+    @if (Jump)
+    {
+        <button type="button" class="moment-jump" data-replay-jump="@Entry.AtUtc.ToUnixTimeMilliseconds()" title="Replay from @Time">
+            <time class="num">@Time</time><span class="moment-tag">@Entry.Tag</span><span class="moment-text">@Entry.Sentence</span>
+        </button>
+    }
+    else
+    {
+        <time class="num">@Time</time><span class="moment-tag">@Entry.Tag</span><span class="moment-text">@Entry.Sentence</span>
+    }
+    @if (Entry.ImageUrl is { } url)
+    {
+        <img src="@url" alt="Snapshot: @Entry.Text" loading="lazy" />
+    }
+</li>
+
+@code {
+    [Parameter, EditorRequired] public TimelineEntry Entry { get; set; } = default!;
+
+    /// <summary>A button that moves the surrounding replay's playhead to this line.</summary>
+    [Parameter] public bool Jump { get; set; }
+
+    private string Time => Entry.AtUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture);
+}

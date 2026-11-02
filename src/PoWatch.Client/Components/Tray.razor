@@ -62,7 +62,7 @@
 
             @if (_week is { } week)
             {
-                <a class="tray-item tray-item--week" href="@($"stories?view=week&date={_weekEnd:yyyy-MM-dd}")" @onclick="DismissWeekAsync" data-test="tray-week">
+                <a class="tray-item tray-item--week" href="@StoryLinks.Period("week", _weekEnd)" @onclick="DismissWeekAsync" data-test="tray-week">
                     <span class="tray-kicker">● THE WEEK IN REVIEW · OPEN HISTORY →</span>
                     <b>@week.Summary</b>
                 </a>

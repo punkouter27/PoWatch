@@ -1,0 +1,204 @@
+@* The reader's replay and timeline in one: a day (or one session of it) minute by minute (replay.js draws
+   and plays), and under it every line of what happened (MomentLine). A line moves the playhead to its
+   moment; the playhead lights the line it is on and keeps it in view. For a session (From/To) the replay
+   covers only the session's own minutes and lines. *@
+@using System.Globalization
+@using System.Text.Json
+@implements IAsyncDisposable
+@inject PoWatchApiClient Api
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<div class="replay" @ref="_root" data-test="history-replay">
+    @if (_data is null)
+    {
+        @if (_loaded)
+        {
+            <p class="term-empty">Could not load the replay — the server did not answer.</p>
+        }
+        else
+        {
+            <Skeleton Heights="@([180, 60])" />
+        }
+    }
+    else if (_data.Minutes.Count == 0 && _lines.Count == 0)
+    {
+        <p class="term-empty" data-test="replay-empty">Nothing to replay: no minute was observed.</p>
+    }
+    else
+    {
+        @if (_data.Minutes.Count > 0)
+        {
+            <div class="replay-stage">
+                <figure class="replay-view">
+                    <canvas class="replay-heat" data-replay="heat" aria-label="Where things moved in the chosen minute"></canvas>
+                    <figcaption>MOTION</figcaption>
+                </figure>
+                <figure class="replay-view" data-replay="camera-box" hidden>
+                    <img data-replay="frame" alt="This device's time-lapse frame nearest the chosen minute" />
+                    <figcaption>CAMERA · THIS DEVICE</figcaption>
+                </figure>
+                <div class="replay-readout">
+                    <b class="replay-clock" data-replay="clock" data-test="replay-clock">--:--</b>
+                    <span class="term-stat-hint" data-replay="stats"></span>
+                    <p class="replay-caption" data-replay="caption"></p>
+                </div>
+            </div>
+
+            <div class="replay-track-wrap">
+                <canvas class="replay-track" data-replay="track" aria-hidden="true"></canvas>
+                <input type="range" class="replay-scrub" data-replay="scrub" aria-label="Time of day" data-test="replay-scrub" />
+            </div>
+
+            <div class="replay-actions">
+                <button class="term-button term-button--primary" data-replay="play" data-test="replay-play">▶ Play</button>
+                <span class="term-stat-hint">@_data.Minutes.Count OBSERVED MINUTES · DRAG, OR ← → A MINUTE · CLICK A LINE TO JUMP</span>
+                <button class="term-button" disabled="@(_saving || VideoBlocker is not null)" title="@(VideoBlocker ?? "Download this browser's time-lapse of the day as a WebM")"
+                        @onclick="SaveVideoAsync" data-test="replay-save-video">@(_saving ? "Saving…" : "Save video")</button>
+                @if (VideoBlocker is not null)
+                {
+                    <span class="term-stat-hint" data-test="replay-save-video-reason">@VideoBlocker</span>
+                }
+            </div>
+        }
+
+        <h3 class="history-sub">Timeline · @_lines.Count @(_lines.Count == 1 ? "line" : "lines")</h3>
+        <div class="moment-filters" role="group" aria-label="Show only">
+            @foreach (var (key, label, _) in TimelineEntry.Filters)
+            {
+                <button type="button" class="term-button @(_filter == key ? "term-button--on" : null)" aria-pressed="@(_filter == key ? "true" : "false")"
+                        @onclick="() => _filter = key" data-test="@($"timeline-filter-{key}")">@label</button>
+            }
+        </div>
+        var shown = _lines.Where(e => TimelineEntry.Passes(e, _filter)).ToList();
+        @if (shown.Count == 0)
+        {
+            <p class="term-empty">@(_lines.Count == 0 ? "Nothing was written down: no captions, words or sounds were kept." : "Nothing of that kind.")</p>
+        }
+        else
+        {
+            <ol class="moment-list replay-lines" data-replay-lines data-test="timeline-lines">
+                @foreach (var entry in shown)
+                {
+                    <MomentLine @key="entry" Entry="@entry" Jump="@(_data.Minutes.Count > 0)" />
+                }
+            </ol>
+        }
+    }
+</div>
+
+@code {
+    private static readonly PoWatchJsonContext Json = PoWatchJsonContext.Default;
+
+    /// <summary>A 16×9 motion grid per minute, one byte a cell.</summary>
+    private const int Cells = 144;
+
+    /// <summary>Time-lapse frames per second in the saved video.</summary>
+    private const int VideoFps = 12;
+
+    /// <summary>The day the replay is of (the time-lapse is kept by day).</summary>
+    [Parameter, EditorRequired] public DateOnly Day { get; set; }
+
+    /// <summary>With <see cref="To"/>, only this stretch (a session); null replays the whole day.</summary>
+    [Parameter] public DateTimeOffset? From { get; set; }
+    [Parameter] public DateTimeOffset? To { get; set; }
+
+    /// <summary>The minute to open on (Unix ms), e.g. from a caption search; null opens on the first observed minute.</summary>
+    [Parameter] public long? StartAt { get; set; }
+
+    private ElementReference _root;
+    private (DateOnly, DateTimeOffset?, DateTimeOffset?)? _shown;
+    private ReplayDayDto? _data;
+    private List<TimelineEntry> _lines = [];
+    private string _filter = "all";
+    private bool _loaded;
+    private bool _mounted;
+    private int _frames;
+    private bool _canRecord;
+    private bool _saving;
+
+    private string DayKey => Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    /// <summary>Why "Save video" is off, or null when it can run: the frames live only in the browser that took them.</summary>
+    private string? VideoBlocker =>
+        _frames == 0 ? "This browser kept no time-lapse frames for this day."
+        : !_canRecord ? "This browser cannot record video."
+        : null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_shown == (Day, From, To)) return;
+        _shown = (Day, From, To);
+        if (_mounted) await JS.TryInvokeVoidAsync("powatchReplay.unmount", _root);
+        (_data, _lines, _loaded, _mounted) = (null, [], false, false);
+
+        var shown = _shown;
+        var days = new List<DateOnly> { Day };
+        if (From is { } from && To is { } to)
+        {
+            days.Clear();
+            for (var d = DateOnly.FromDateTime(from.LocalDateTime); d <= DateOnly.FromDateTime(to.LocalDateTime); d = d.AddDays(1)) days.Add(d);
+        }
+        var replays = await Task.WhenAll(days.Select(d => Api.GetReplayAsync(d)));
+        var frames = await JS.TryInvokeAsync<int>("powatchTimelapse.count", DayKey);
+        var canRecord = await JS.TryInvokeAsync<bool>("powatchTimelapse.canRecord");
+        if (_shown != shown) return; // A newer day or session owns the reader now.
+
+        _data = replays.Any(r => r is null) ? null
+            : From is { } start && To is { } end ? Window(replays!, start, end)
+            : replays[0];
+        _lines = _data?.Events.Select(TimelineEntry.From).OfType<TimelineEntry>().OrderBy(e => e.AtUtc).ToList() ?? [];
+        (_frames, _canRecord, _loaded) = (frames, canRecord, true);
+    }
+
+    /// <summary>The minutes, grids and events of the days that fall inside [from, to], as one replay.</summary>
+    private static ReplayDayDto Window(IEnumerable<ReplayDayDto> days, DateTimeOffset from, DateTimeOffset to)
+    {
+        var start = new DateTimeOffset(from.Ticks - (from.Ticks % TimeSpan.TicksPerMinute), from.Offset);
+        var end = new DateTimeOffset(to.Ticks - (to.Ticks % TimeSpan.TicksPerMinute), to.Offset).AddMinutes(1);
+        var minutes = new List<ReplayMinuteDto>();
+        var grids = new List<byte>();
+        var events = new List<ReplayEventDto>();
+        var zone = string.Empty;
+        foreach (var day in days)
+        {
+            zone = day.Window.TimeZoneId;
+            var bytes = Convert.FromBase64String(day.Grids);
+            for (var i = 0; i < day.Minutes.Count; i++)
+            {
+                if (day.Minutes[i].AtUtc < start || day.Minutes[i].AtUtc >= end) continue;
+                minutes.Add(day.Minutes[i]);
+                grids.AddRange(bytes.Length >= (i + 1) * Cells ? bytes[(i * Cells)..((i + 1) * Cells)] : new byte[Cells]);
+            }
+            events.AddRange(day.Events.Where(e => e.AtUtc >= from && e.AtUtc <= to));
+        }
+        return new ReplayDayDto
+        {
+            Window = new StatsWindowDto { Range = "session", FromUtc = start, ToUtc = end, Grain = "Minute", TimeZoneId = zone },
+            Minutes = minutes,
+            Grids = Convert.ToBase64String([.. grids]),
+            Events = events,
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_mounted || _data is not { Minutes.Count: > 0 }) return;
+        _mounted = true;
+        // The grids go over as raw bytes when they can (ReplayGrids), so the JSON carries everything else.
+        var data = _data;
+        if (await ReplayGrids.TryStageAsync(Nav.BaseUri, DayKey, data.Grids))
+            data = new ReplayDayDto { Window = data.Window, Minutes = data.Minutes, Events = data.Events };
+        await JS.TryInvokeVoidAsync("powatchReplay.mount", _root, JsonSerializer.Serialize(data, Json.ReplayDayDto), DayKey, StartAt ?? From?.ToUnixTimeMilliseconds());
+    }
+
+    /// <summary>Encodes the day's time-lapse frames (kept only in this browser) to a WebM and downloads it.</summary>
+    private async Task SaveVideoAsync()
+    {
+        _saving = true;
+        await JS.TryInvokeAsync<bool>("powatchTimelapse.saveVideo", DayKey, VideoFps);
+        _saving = false;
+    }
+
+    public async ValueTask DisposeAsync() => await JS.TryInvokeVoidAsync("powatchReplay.unmount", _root);
+}

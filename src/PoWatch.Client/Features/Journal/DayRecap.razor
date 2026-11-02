@@ -1,5 +1,5 @@
-@* History's Recap tab: the day in a paragraph (the template first, a model's rewording when one arrives),
-   with Advanced on its downloads and a share link, then the motion across the day and the caption words. *@
+@* The top of a day in the Journal: the day in a paragraph (the template first, a model's rewording when
+   one arrives), with Advanced on its downloads and a share link. *@
 @using System.Globalization
 @inject PoWatchApiClient Api
 @inject NavigationManager Navigation
@@ -63,45 +63,14 @@ else
     </div>
 }
 
-@if (_motion.Count > 0)
-{
-    <h3 class="history-sub">Motion</h3>
-    <RadzenChart class="history-chart" aria-label="Motion across the day">
-        <RadzenAreaSeries Data="@_motion" CategoryProperty="@nameof(Point.At)" ValueProperty="@nameof(Point.Value)" Title="Motion" />
-        <RadzenCategoryAxis Formatter="@(v => v is DateTime t ? t.ToString("HH:mm", CultureInfo.CurrentCulture) : string.Empty)" />
-        <RadzenValueAxis Min="0" FormatString="{0:0.00}" />
-        <RadzenLegend Visible="false" />
-    </RadzenChart>
-}
-
-@if (Captions is { Words.Count: > 0 })
-{
-    <h3 class="history-sub">Captions · @Captions.CaptionCount</h3>
-    <div class="stats-cloud">
-        @foreach (var word in Captions.Words.Take(30))
-        {
-            <span style="font-size: @((11 + (16.0 * word.Count / Captions.Words[0].Count)).ToString("0", CultureInfo.InvariantCulture))px">@word.Word</span>
-        }
-    </div>
-    @if (Captions.WeirdestCaption is { } weird)
-    {
-        <p class="stats-weird"><b>WEIRDEST</b> “@weird”</p>
-    }
-}
-
 @code {
-    public sealed record Point(DateTime At, double Value);
-
     [Parameter, EditorRequired] public DateOnly Day { get; set; }
     [Parameter] public RecapDto? Recap { get; set; }
     [Parameter] public PresenceStatsDto? Presence { get; set; }
-    [Parameter] public EnvironmentStatsDto? Captions { get; set; }
     [Parameter] public bool Loaded { get; set; }
     [Parameter] public bool Rewriting { get; set; }
 
     private DateOnly? _shareDay;
-    private PresenceStatsDto? _charted;
-    private List<Point> _motion = [];
     private ShareDto? _share;
     private bool _sharing;
     private bool _copied;
@@ -115,9 +84,6 @@ else
     {
         // A link belongs to the day it was made for.
         if (Day != _shareDay) (_share, _shareError, _copied, _shareDay) = (null, null, false, Day);
-        if (ReferenceEquals(Presence, _charted)) return;
-        _charted = Presence;
-        _motion = Presence?.Series.Select(p => new Point(p.AtUtc.LocalDateTime, p.Motion)).ToList() ?? [];
     }
 
     private void OnPrefsChanged() => InvokeAsync(StateHasChanged);

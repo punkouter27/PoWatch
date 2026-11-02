@@ -62,7 +62,7 @@ public sealed partial class SensingSession
     private void AddSound(DateTimeOffset atUtc, string label, double score)
     {
         _batcher.AddSoundEvent(atUtc, label, score);
-        Live.RecordSound(label);
+        Live.RecordSound(atUtc, label);
         Notify();
     }
 

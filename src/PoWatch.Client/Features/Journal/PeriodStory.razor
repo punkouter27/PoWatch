@@ -4,7 +4,7 @@
 
 @* The story of a whole week or month (PeriodStoryService), with the days it was told from under it,
    newest first. ◀ ▶ step back and forth a week or a month at a time. *@
-<TerminalPanel Title="@Heading" Class="story-card" Test="period-story">
+<TerminalPanel Title="@Heading" Class="reader story-card" Test="period-story">
     <Aside>
         <span class="history-nav">
             <button class="term-button" @onclick="() => MoveAsync(-1)" aria-label="@($"Previous {Kind}")" data-test="period-prev">◀</button>
@@ -78,7 +78,7 @@
     private Task MoveAsync(int step)
     {
         var day = Month ? _day.AddMonths(step) : _day.AddDays(7 * step);
-        Navigation.NavigateTo($"stories?view={Kind}&date={day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
+        Navigation.NavigateTo(StoryLinks.Period(Kind, day));
         return Task.CompletedTask;
     }
 

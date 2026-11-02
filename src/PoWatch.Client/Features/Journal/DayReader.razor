@@ -1,0 +1,195 @@
+@* The reader for a day: the recap at the top (the template first, a model's rewording when one arrives),
+   the day's numbers in one row, then the replay with the day's timeline, then its moments and time-lapse.
+   The week against the week before and the caption words fold away under the numbers. ◀ ▶ and the arrow
+   keys step a day (menus.js); the calendar button jumps to any day. *@
+@using System.Globalization
+@using PoWatch.Shared.Services
+@inject PoWatchApiClient Api
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<TerminalPanel Title="The day" Class="reader" Test="history-day-stats">
+    <Aside>
+        <span class="history-nav" data-test="history-toolbar">
+            <button class="term-button" @onclick="() => Move(-1)" aria-label="Previous day" title="Previous day (←)" data-test="history-prev">◀</button>
+            <span class="history-day" data-test="history-day">@Day.ToString("ddd d MMM yyyy", CultureInfo.CurrentCulture)</span>
+            <RadzenDatePicker TValue="DateOnly" Value="@Day" ValueChanged="@((DateOnly d) => Go(d))" ShowInput="false"
+                              Max="@Today.ToDateTime(TimeOnly.MinValue)" class="history-pick" aria-label="Pick a day" title="Pick a day" />
+            <button class="term-button" @onclick="() => Move(1)" disabled="@(Day >= Today)" aria-label="Next day" title="Next day (→)" data-test="history-next">▶</button>
+            <button class="term-button" @onclick="() => Go(Today)" disabled="@(Day == Today)" aria-label="Go to today">Today</button>
+        </span>
+    </Aside>
+    <ChildContent>
+        @if (!_loaded)
+        {
+            <Skeleton Heights="@([0])" Span="term-span-4 history-skel-day" />
+        }
+        else if (_presence is null || _presence.SecondsObserved == 0)
+        {
+            <p class="term-empty" data-test="history-empty">Nothing was observed on this day. <TryDemo /></p>
+        }
+        else
+        {
+            <DayRecap Day="@Day" Recap="@_recap" Presence="@_presence" Loaded="@_loaded" Rewriting="@_rewriting" />
+
+            <div class="term-stats reader-numbers" data-test="history-numbers">
+                <StatCell Label="Occupancy" Value="@_presence.Occupancy.ToString("0.0%", CultureInfo.InvariantCulture)" Test="history-occupancy" />
+                <StatCell Label="Observed" Value="@DisplayText.Duration(_presence.SecondsObserved)" />
+                <StatCell Label="Visits" Value="@_presence.Visits.ToString(CultureInfo.InvariantCulture)" />
+                <StatCell Label="Peak at once" Value="@_presence.PeakConcurrency.ToString(CultureInfo.InvariantCulture)" />
+                <StatCell Label="Busiest" Value="@(_presence.BusiestStartUtc?.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture) ?? "—")" />
+                <StatCell Label="Longest empty" Value="@DisplayText.Duration(_presence.LongestEmptySeconds)" />
+            </div>
+        }
+        @if (WeatherOn(Day) is { } weather)
+        {
+            <p class="history-weather" data-test="history-weather" title="Weather at @Weather!.Place?.Name">@DisplayText.Weather(weather)</p>
+        }
+
+        @* The day's week against the week before: one row of numbers and the sentence. *@
+        <details class="reader-more history-week" data-test="history-week">
+            <summary>The week · @WeekStart(Day).ToString("d MMM", CultureInfo.CurrentCulture) – @WeekStart(Day).AddDays(6).ToString("d MMM", CultureInfo.CurrentCulture) vs the week before</summary>
+            @if (_week is null)
+            {
+                <Skeleton Heights="@([0])" Span="term-span-4 history-skel-week" />
+            }
+            else
+            {
+                <div class="term-stats history-week-stats">
+                    <StatCell Label="Occupancy" Value="@_week.ThisWeek.Occupancy.ToString("0%", CultureInfo.InvariantCulture)" Hint="@Change(_week.ThisWeek.Occupancy, _week.LastWeek.Occupancy)" Test="week-occupancy" />
+                    <StatCell Label="Observed" Value="@DisplayText.Duration(_week.ThisWeek.SecondsObserved)" Hint="@($"was {DisplayText.Duration(_week.LastWeek.SecondsObserved)}")" />
+                    <StatCell Label="Visits" Value="@_week.ThisWeek.Visits.ToString(CultureInfo.InvariantCulture)" Hint="@($"was {_week.LastWeek.Visits}")" />
+                    <StatCell Label="Busiest day" Value="@(_week.ThisWeek.BusiestDay?.ToString("ddd", CultureInfo.CurrentCulture) ?? "—")"
+                              Hint="@(_week.ThisWeek.BusiestDay is null ? null : _week.ThisWeek.BusiestOccupancy.ToString("0% occupied", CultureInfo.InvariantCulture))" />
+                </div>
+                @if (_week.Headline is { } headline)
+                {
+                    <p class="history-week-headline" data-test="week-headline" title="Written by the server's AI model from the numbers below">✦ @headline</p>
+                }
+                <p class="history-week-summary" data-test="week-summary">@_week.Summary</p>
+            }
+        </details>
+
+        @if (_environment is { Words.Count: > 0 } captions)
+        {
+            <details class="reader-more">
+                <summary>Caption words · @captions.CaptionCount captions</summary>
+                <div class="stats-cloud">
+                    @foreach (var word in captions.Words.Take(30))
+                    {
+                        <span style="font-size: @((11 + (16.0 * word.Count / captions.Words[0].Count)).ToString("0", CultureInfo.InvariantCulture))px">@word.Word</span>
+                    }
+                </div>
+                @if (captions.WeirdestCaption is { } weird)
+                {
+                    <p class="stats-weird"><b>WEIRDEST</b> “@weird”</p>
+                }
+            </details>
+        }
+    </ChildContent>
+</TerminalPanel>
+
+<TerminalPanel Title="Replay and timeline" Class="reader" Test="reader-timeline">
+    <ChildContent>
+        <TimelineReplay Day="@Day" StartAt="@At" />
+    </ChildContent>
+</TerminalPanel>
+
+<TerminalPanel Title="Moments and time-lapse" Class="reader" Test="reader-moments">
+    <ChildContent>
+        <DayMoments Day="@Day" Sessions="@_sessions" />
+    </ChildContent>
+</TerminalPanel>
+
+@code {
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
+
+    [Parameter, EditorRequired] public DateOnly Day { get; set; }
+
+    /// <summary>The minute to open the replay on (Unix ms), from a caption search.</summary>
+    [Parameter] public long? At { get; set; }
+
+    [Parameter] public WeatherYearDto? Weather { get; set; }
+
+    private DateOnly? _shown;
+    private bool _loaded;
+    private bool _rewriting;
+    private PresenceStatsDto? _presence;
+    private RecapDto? _recap;
+    private EnvironmentStatsDto? _environment;
+    private IReadOnlyList<SessionDto> _sessions = [];
+    private WeekDigestDto? _week;
+    private DateOnly? _weekShown;
+
+    private WeatherDayDto? WeatherOn(DateOnly day) => Weather?.Days.FirstOrDefault(d => d.Date == day);
+
+    private static DateOnly WeekStart(DateOnly day) => day.AddDays(-(((int)day.DayOfWeek + 6) % 7));
+
+    /// <summary>"+6 pts on the week before", or "no week before" when there is nothing to compare with.</summary>
+    private string Change(double now, double before)
+    {
+        if (_week is not { LastWeek.SecondsObserved: > 0 }) return "no week before";
+        var points = Math.Round((now - before) * 100);
+        return points == 0 ? "same as the week before" : $"{(points > 0 ? "+" : "−")}{Math.Abs(points)} pts on the week before";
+    }
+
+    private void Move(int days) => Go(Day.AddDays(days) > Today ? Today : Day.AddDays(days));
+
+    // Every day, today included, has its own address.
+    private void Go(DateOnly day) => Navigation.NavigateTo(StoryLinks.Day(day));
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Day == _shown) return;
+        _shown = Day;
+        await LoadDayAsync();
+    }
+
+    private async Task LoadDayAsync()
+    {
+        var day = Day;
+        _loaded = false;
+        if (_weekShown != WeekStart(day)) (_week, _weekShown) = (null, WeekStart(day));
+        var week = _week is null ? Api.GetWeekDigestAsync(day) : Task.FromResult<WeekDigestDto?>(_week);
+        var start = new DateTimeOffset(day.ToDateTime(TimeOnly.MinValue));
+        var query = StatsQuery.ForDay(day);
+        var presence = Api.GetPresenceAsync(query);
+        var environment = Api.GetEnvironmentAsync(query);
+        var sessions = Api.ListSessionsBetweenAsync(start, start.AddDays(1));
+        // The template recap answers at once; a model's rewording replaces it when (if) it arrives.
+        var recap = Api.GetDayRecapAsync(day, TimeZoneInfo.Local.Id, ai: false);
+        await Task.WhenAll(presence, environment, sessions, recap, week);
+        if (day != Day) return; // A newer ◀/▶ press owns the reader now.
+
+        (_presence, _environment, _recap, _sessions, _week) = (presence.Result, environment.Result, recap.Result, sessions.Result, week.Result);
+        _loaded = true;
+        StateHasChanged();
+
+        await RewordRecapAsync(day);
+    }
+
+    /// <summary>
+    /// Asks the server's model for its version of the day's recap; where the server has none, the
+    /// browser's built-in model gets the same prompt. Either answer must keep to the template's numbers.
+    /// </summary>
+    private async Task RewordRecapAsync(DateOnly day)
+    {
+        if (_recap is not { } template || _presence is not { SecondsObserved: > 0 }) return;
+        _rewriting = true;
+        StateHasChanged();
+
+        var reworded = await Api.GetDayRecapAsync(day, TimeZoneInfo.Local.Id, ai: true);
+        if (reworded is null || reworded.Source == template.Source)
+        {
+            var prompt = RecapPrompt.User(template);
+            var text = await JS.TryInvokeAsync<string>("powatchLocalAi.rewrite", RecapPrompt.System + " Reply with the summary paragraph only.", prompt);
+            reworded = !string.IsNullOrWhiteSpace(text) && RecapPrompt.KeepsToFacts(text, prompt)
+                ? RecapPrompt.Rewritten(template, text, "this browser's model")
+                : null;
+        }
+
+        _rewriting = false;
+        if (day == Day && reworded is not null) _recap = reworded;
+        StateHasChanged();
+    }
+}

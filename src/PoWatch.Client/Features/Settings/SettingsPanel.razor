@@ -1,9 +1,9 @@
-@* Every optional choice, grouped by what it is about: what is recorded, who is known, what alerts you,
-   what is shared, how it looks, and your account. Browser choices start on the values that suit most
-   rooms and are remembered here; "Show power features" (Look) shows the extras here and across the app,
-   and anything already switched on stays visible without it. One column: it opens in the gear's drawer,
-   and as the /settings page (?section= opens a tab). Each tab is its own component and loads what it
-   shows when it opens. *@
+@* Every optional choice in three tabs: what is recorded and heard (the models, listening, sound cues),
+   who is known, and everything else about your account (look, alerts, shared links, your data). Browser
+   choices start on the values that suit most rooms and are remembered here; "Show power features" (Look,
+   under Account) shows the extras here and across the app, and anything already switched on stays visible
+   without it. One column: it opens in the gear's drawer, and as the /settings page (?section= opens a
+   tab; the old alerts, sharing and look sections open Account). Each panel loads what it shows when it opens. *@
 <div class="settings-stack" data-test="settings-page">
     <nav class="term-tabbar settings-tabs" aria-label="Settings sections">
         @foreach (var (key, label) in Sections)
@@ -21,16 +21,10 @@
         case "people":
             <KnownRegulars />
             break;
-        case "alerts":
-            <AlertSettings />
-            break;
-        case "sharing":
-            <SharingSettings />
-            break;
-        case "look":
-            <LookSettings />
-            break;
         default:
+            <LookSettings />
+            <AlertSettings />
+            <SharingSettings />
             <AccountSettings />
             break;
     }
@@ -39,10 +33,13 @@
 @code {
     private static readonly (string Key, string Label)[] Sections =
     [
-        ("recording", "Recording"), ("people", "People"), ("alerts", "Alerts"), ("sharing", "Sharing"), ("look", "Look"), ("account", "Account"),
+        ("recording", "Recording"), ("people", "People"), ("account", "Account"),
     ];
 
-    /// <summary>The tab to open on: recording, people, alerts, sharing, look or account.</summary>
+    /// <summary>The sections that were tabs of their own and now sit under Account, for old links.</summary>
+    private static readonly string[] UnderAccount = ["alerts", "sharing", "look"];
+
+    /// <summary>The tab to open on: recording, people or account (alerts, sharing and look open account).</summary>
     [Parameter] public string? Section { get; set; }
 
     private string _section = "recording";
@@ -50,5 +47,6 @@
     protected override void OnParametersSet()
     {
         if (Section is { } section && Sections.Any(t => t.Key == section)) _section = section;
+        else if (UnderAccount.Contains(Section)) _section = "account";
     }
 }

@@ -1,10 +1,12 @@
-// History's day replay: scrub or play through a day minute by minute. The track shows the whole day
+// The Journal's replay: scrub or play through a day (or one session of it) minute by minute. The track shows the whole day
 // (occupancy as amber bars, motion as a line, moments as ticks, captions as dots); the playhead drives
 // the motion grid (heat-gl.js), the readout, the caption of the moment, and, where this device kept a
 // time-lapse, the camera frame nearest that minute. The slider is a native range input, so arrow keys,
 // Home/End and screen readers work without extra code, and menus.js leaves its keys alone. Passing a
 // moment while playing or scrubbing plays a soft tick (cues.js, at the user's sound level). The grids
-// arrive as raw bytes through stage() (DayReplay → replay-grids.js) before mount; base64 is the fallback.
+// arrive as raw bytes through stage() (TimelineReplay → replay-grids.js) before mount; base64 is the fallback.
+// The timeline under it ([data-replay-lines]) follows along: the line the playhead is on is lit and kept in
+// view, and a line (data-replay-jump) moves the playhead to its moment.
 (function () {
     'use strict';
 
@@ -66,7 +68,7 @@
         const maxMotion = Math.max(0.0001, ...minutes.map((m) => m.motion));
         const empty = new Array(GRID).fill(0);
 
-        const state = { at: startAt >= from && startAt < to ? startAt : minutes.length ? minutes[0].at : from, timer: 0, frames: [], frameUrl: null, colors: null, observer: null, detach: null };
+        const state = { at: startAt >= from && startAt < to ? startAt : minutes.length ? minutes[0].at : from, timer: 0, frames: [], frameUrl: null, colors: null, observer: null, detach: null, line: null };
         mounted.set(root, state);
 
         scrub.min = '0';
@@ -157,6 +159,25 @@
             if (caption) caption.textContent = said && state.at - said.at <= CAPTION_HOLD_MS ? `“${said.text}”` : '';
             showFrame();
             drawTrack();
+            followLines();
+        }
+
+        // Lights the last timeline line at or before the playhead's minute, and scrolls only the list to it.
+        function followLines() {
+            const list = root.querySelector('[data-replay-lines]');
+            // On a whole minute (scrub, play) the minute's lines count; on a line's own instant (a click), up to it.
+            const until = state.at % 60000 === 0 ? state.at + 60000 : state.at + 1;
+            let current = null;
+            for (const jump of list?.querySelectorAll('[data-replay-jump]') ?? []) {
+                if (Number(jump.dataset.replayJump) < until) current = jump.closest('li'); else break;
+            }
+            if (current === state.line && current?.isConnected) return;
+            state.line?.classList.remove('is-now');
+            state.line = current;
+            if (!current) return;
+            current.classList.add('is-now');
+            const box = list.getBoundingClientRect(), row = current.getBoundingClientRect();
+            if (row.top < box.top || row.bottom > box.bottom) list.scrollTop += row.top - box.top - box.height / 3;
         }
 
         // One soft tick when the playhead passes a moment (several passed in one drag still tick once).
@@ -204,7 +225,7 @@
         const onScrub = () => { stop(); seek(from + Number(scrub.value) * 60000, true, true); };
         const onJump = (e) => {
             const jump = e.target.closest?.('[data-replay-jump]');
-            if (jump) { stop(); seek(Number(jump.dataset.replayJump), false); scrub.focus(); }
+            if (jump) { stop(); seek(Number(jump.dataset.replayJump), false); scrub.focus({ preventScroll: true }); }
         };
         scrub.addEventListener('input', onScrub);
         playButton?.addEventListener('click', play);

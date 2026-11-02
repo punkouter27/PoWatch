@@ -1,10 +1,10 @@
-// The keyboard: `g` then a letter jumps to a section, Space starts or stops observing, ← → step the Days view's day,
+// The keyboard: `g` then a letter jumps to a section, Space starts or stops observing, ← → step the Journal's day,
 // and Ctrl+K opens a command palette listing all of it. Typing three letters or more also offers a search of
-// the captions by meaning (caption-index.js); its results open that moment in History's replay.
+// the captions by meaning (caption-index.js); its results open that moment in the Journal's replay.
 (function () {
     'use strict';
 
-    const SECTIONS = { l: 'live', s: 'stories', d: 'days' };
+    const SECTIONS = { l: 'live', j: 'journal' };
     const find = (test) => document.querySelector(`[data-test="${test}"]`);
     const click = (test) => { const el = find(test); el?.click(); return !!el; };
 
@@ -68,7 +68,7 @@
                     return {
                         label: `“${r.text}”${r.times > 1 ? ` ×${r.times}` : ''}`,
                         hint: when(at),
-                        run: () => Blazor.navigateTo(`days/${localDay(at)}?tab=replay&at=${r.at}`),
+                        run: () => Blazor.navigateTo(`journal/${localDay(at)}?at=${r.at}`),
                     };
                 });
         renderPalette(0);

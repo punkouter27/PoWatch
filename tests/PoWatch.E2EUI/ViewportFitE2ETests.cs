@@ -31,14 +31,14 @@ public sealed class ViewportFitE2ETests
     }
 
     [Fact]
-    public async Task Live_Stories_and_System_bodies_fit_within_every_viewport()
+    public async Task Live_Journal_and_System_bodies_fit_within_every_viewport()
     {
         if (PlaywrightFixture.BaseUrl is null) return;
         foreach (var (name, open) in new (string, Func<IPage, Task>)[]
         {
             // Live opens on sign-in; its panels need a beat longer to settle than the other pages.
             ("Live", page => page.WaitForTimeoutAsync(1000)),
-            ("Stories", async page => { await page.GoToAsync("/stories", "STORIES"); await page.WaitForTimeoutAsync(500); }),
+            ("Journal", async page => { await page.GoToAsync("/journal", "JOURNAL"); await page.WaitForTimeoutAsync(500); }),
             ("System", async page => { await page.GoToSystemAsync(); await page.WaitForTimeoutAsync(500); }),
         })
         {
@@ -63,12 +63,12 @@ public sealed class ViewportFitE2ETests
         await page.WaitForTimeoutAsync(500);
 
         // Every section stays reachable from the key bar, and the page itself never scrolls sideways.
-        await Assertions.Expect(page.GetByTestId("nav-days")).ToBeInViewportAsync();
+        await Assertions.Expect(page.GetByTestId("nav-journal")).ToBeInViewportAsync();
         var pageOverflow = await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth > window.innerWidth + 1");
         Assert.False(pageOverflow, "The page scrolls horizontally on a 360 px phone.");
 
-        await page.GetByTestId("nav-stories").ClickAsync();
-        await page.ExpectSectionAsync("STORIES");
+        await page.GetByTestId("nav-journal").ClickAsync();
+        await page.ExpectSectionAsync("JOURNAL");
         await page.AssertNoBlazorErrorAsync();
     }
 
