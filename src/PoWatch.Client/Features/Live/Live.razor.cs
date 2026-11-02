@@ -11,10 +11,8 @@ public sealed partial class Live
 {
     private static readonly string[] Edges = ["Left", "Top", "Right", "Bottom"];
 
-    /// <summary>The two views beside the camera: the words, or the numbers behind them.</summary>
-    private static readonly (string Key, string Label)[] Views = [("narration", "Narration"), ("numbers", "Numbers")];
-
-    private string _view = "narration";
+    /// <summary>The phone strip's keys, in the order the panels appear.</summary>
+    private static readonly string[] Pages = ["Grid", "Energy", "Space", "Curve", "Week", "Room"];
 
     private Guid _sessionId;
     private StatsQuery _query = StatsQuery.For("session");
@@ -25,6 +23,7 @@ public sealed partial class Live
     private ElementReference _slot;
     private ElementReference _crt;
     private ElementReference _heat;
+    private ElementReference _more;
     private bool _shaderHeat = true;
     private IReadOnlyList<double> _occupancyTrend = [];
     private IReadOnlyList<double> _visitsTrend = [];
@@ -116,7 +115,7 @@ public sealed partial class Live
             await DockFeedAsync();
         }
 
-        if (_view == "numbers" && _shaderHeat && Prefs.Advanced && !await JS.TryInvokeAsync<bool>("powatchHeat.draw", _heat, L.Heat, 16, 9))
+        if (_shaderHeat && Prefs.Advanced && !await JS.TryInvokeAsync<bool>("powatchHeat.draw", _heat, L.Heat, 16, 9))
         {
             _shaderHeat = false;
             StateHasChanged();
@@ -246,6 +245,8 @@ public sealed partial class Live
     }
 
     private Task DockFeedAsync() => Sensing.DockFeedAsync(_slot);
+
+    private Task ShowPanelAsync(int index) => JS.TryInvokeVoidAsync("powatchMenus.reveal", _more, index);
 
     private static string Pct(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 

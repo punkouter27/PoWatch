@@ -45,7 +45,7 @@
                     <td></td>
                     <td class="term-stat-hint" title="This session: most at once, and visits">@if (Sensing.IsRunning)
                         {
-                            <span>peak @L.PeakConcurrency · @L.Visits visits</span>
+                            <span>peak @L.PeakConcurrency · <span data-test="metric-visits">@L.Visits</span> visits</span>
                         }
                         else
                         {

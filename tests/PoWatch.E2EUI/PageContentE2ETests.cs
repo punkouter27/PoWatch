@@ -10,19 +10,14 @@ namespace PoWatch.E2EUI;
 public sealed class PageContentE2ETests(PlaywrightFixture fixture)
 {
     [Fact]
-    public async Task The_live_page_shows_the_camera_beside_its_narration_and_the_numbers_one_tab_away()
+    public async Task The_live_page_shows_every_panel_around_the_camera_and_its_narration()
     {
         if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
-        foreach (var panel in new[] { "live-camera", "live-now", "live-narration" })
+        foreach (var panel in new[] { "live-camera", "live-narration", "live-metrics", "live-tracks", "live-motion-grid" })
             await Assertions.Expect(page.GetByTestId(panel)).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("start-camera")).ToBeVisibleAsync();
-
-        await page.GetByTestId("live-view-numbers").ClickAsync();
-        foreach (var panel in new[] { "live-metrics", "live-tracks", "live-motion-grid" })
-            await Assertions.Expect(page.GetByTestId(panel)).ToBeVisibleAsync();
-        await Assertions.Expect(page.GetByTestId("live-narration")).ToHaveCountAsync(0);
         await page.AssertNoBlazorErrorAsync();
     }
 
@@ -67,11 +62,10 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.GoToAsync("/?start=demo", "LIVE");
         await Assertions.Expect(page.GetByTestId("header-stop")).ToBeVisibleAsync(new() { Timeout = 30_000 });
         await Assertions.Expect(page.GetByTestId("stats-window")).ToContainTextAsync("Recording session", new() { Timeout = 30_000 });
-        await page.GetByTestId("live-view-numbers").ClickAsync();
         await Assertions.Expect(page.GetByTestId("stats-occupancy")).Not.ToContainTextAsync("0.0%", new() { Timeout = 45_000 });
         await Assertions.Expect(page.Locator("[data-test=stats-presence] .rz-chart svg").First).ToBeVisibleAsync();
 
-        // Every family is under Live's Numbers (classes in "In frame"); pipeline counters are on System.
+        // Every family is on the Live grid (classes in "In frame"); pipeline counters are on System.
         foreach (var content in new[] { "stats-space", "live-census", "stats-patterns", "stats-environment" })
         {
             await Assertions.Expect(page.GetByTestId(content)).ToBeVisibleAsync(new() { Timeout = 30_000 });
@@ -107,7 +101,6 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(cat).Not.ToBeVisibleAsync();
 
         // Bob is recognised by name in frame, and listed in Settings' "Who PoWatch knows"; the cat stays unnamed.
-        await page.GetByTestId("live-view-numbers").ClickAsync();
         await Assertions.Expect(page.GetByTestId("live-tracks")).ToContainTextAsync("Bob", new() { Timeout = 25_000 });
         await page.GetByTestId("header-stop").ClickAsync();
         await page.OpenSettingsAsync("people");

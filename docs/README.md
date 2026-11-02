@@ -51,10 +51,10 @@ camera ──► browser (all sensing on-device)                        server
 
 | Family | What | Where |
 |---|---|---|
-| A · Presence & space | occupancy, visits, dwell percentiles, peak at once, empty/still streaks, busiest minute, heatmaps, entry/exit edges | Live (Numbers) |
+| A · Presence & space | occupancy, visits, dwell percentiles, peak at once, empty/still streaks, busiest minute, heatmaps, entry/exit edges | Live |
 | B · Objects & regulars | classes seen, rarest, regulars leaderboard (recognised by look, never by face; by voice in the browser that learned it) | Live, Settings ("Who PoWatch knows"), the stories |
-| C · Patterns & anomalies | hour × weekday, rhythm score, "today vs usual" z-scores, trend, busy-hour forecast | Live (Numbers) |
-| D · Environment & captions | light curve, lights on/off, daylight estimate, palette, word cloud, weirdest caption, recaps | Live (Numbers), the Journal |
+| C · Patterns & anomalies | hour × weekday, rhythm score, "today vs usual" z-scores, trend, busy-hour forecast | Live |
+| D · Environment & captions | light curve, lights on/off, daylight estimate, palette, word cloud, weirdest caption, recaps | Live, the Journal |
 | E · Pipeline | frames per layer, FPS, latency, detector confidence, uptime, storage | /system |
 
 ## Pages
@@ -64,16 +64,16 @@ session (a session's "Live view", `?session=`, opens another; one that is not yo
 says so and shows your latest). Leaving or reloading the page ends a recording; coming back within two
 minutes shows its recap card, unless it was dismissed. The recap card floats over the page (top right,
 scrolling inside itself); starting a new session clears it. One bar names the session (with Advanced on,
-an "Ask" box and "JSON ↓" for every number behind it). Under it the camera (one Start button; a synthetic
-demo whenever stopped) with one line of "now" numbers (people and animals in frame, visits, peak,
-listening), and beside it two tabs. **Narration** (the default) is what the session is being turned into:
-every caption (SAW), line of speech (SAID), recognised sound (HEARD), coming and going (IN/OUT) and notable
-moment, newest first, filterable by kind (`Features/Live/LiveNarration.razor`; while recording it is the
-browser's own list in `LiveSensingState.Narration`, after that what the server kept). **Numbers** holds the
-stats: key metrics beside your usual day (σ, rhythm, trend, next busy hour), who is in frame with every
-class seen, the motion grid, motion energy, Space, Patterns and Environment. Detector boxes and the "now"
-counts show only while recording, and visits an hour only once ten minutes have been observed. A desktop
-holds both in the viewport (the camera keeps 16:9, the tab beside it scrolls); narrower screens stack them ·
+an "Ask" box and "JSON ↓" for every number behind it). Under it a 3×3 with the camera in the middle (one
+Start button; a synthetic demo whenever stopped) and, under the picture, its narration: every caption
+(SAW), line of speech (SAID), recognised sound (HEARD), coming and going (IN/OUT) and notable moment,
+newest first, a few lines tall and scrolling (`Features/Live/LiveNarration.razor`; while recording it is
+the browser's own list in `LiveSensingState.Narration`, after that what the server kept). Around it: key
+metrics beside your usual day (σ, rhythm, trend, next busy hour) above, who is in frame with every class
+seen below, the motion grid left, motion energy right, and Space, the light curve, the week and the room in
+the corners. Detector boxes and the "now" counts show only while recording, and visits an hour only once
+ten minutes have been observed. A desktop holds the whole grid in the viewport (the camera keeps 16:9);
+narrower screens stack it, and a phone turns the panels after "In frame" into a strip you swipe through ·
 `/journal` the Journal, everything that happened: on the left the index (the year, with the weather's
 effect once a place is set and, with Advanced on, a 3D view; links to the week's and month's stories;
 every day that has sessions, newest first, with its sessions inside it; "Older sessions" pages back

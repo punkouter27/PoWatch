@@ -93,6 +93,9 @@
     /// <summary>A 16×9 motion grid per minute, one byte a cell.</summary>
     private const int Cells = 144;
 
+    /// <summary>Ingest keeps ticks this far either side of their session (Tick.MaxClockSkew), so a session's replay reaches as far.</summary>
+    private static readonly TimeSpan SessionSkew = TimeSpan.FromMinutes(5);
+
     /// <summary>Time-lapse frames per second in the saved video.</summary>
     private const int VideoFps = 12;
 
@@ -134,7 +137,7 @@
 
         var shown = _shown;
         var days = new List<DateOnly> { Day };
-        if (From is { } from && To is { } to)
+        if (From - SessionSkew is { } from && To + SessionSkew is { } to)
         {
             days.Clear();
             for (var d = DateOnly.FromDateTime(from.LocalDateTime); d <= DateOnly.FromDateTime(to.LocalDateTime); d = d.AddDays(1)) days.Add(d);
@@ -145,7 +148,7 @@
         if (_shown != shown) return; // A newer day or session owns the reader now.
 
         _data = replays.Any(r => r is null) ? null
-            : From is { } start && To is { } end ? Window(replays!, start, end)
+            : From - SessionSkew is { } start && To + SessionSkew is { } end ? Window(replays!, start, end)
             : replays[0];
         _lines = _data?.Events.Select(TimelineEntry.From).OfType<TimelineEntry>().OrderBy(e => e.AtUtc).ToList() ?? [];
         (_frames, _canRecord, _loaded) = (frames, canRecord, true);
