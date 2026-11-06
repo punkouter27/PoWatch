@@ -35,11 +35,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
             ("/journal", "JOURNAL"),
             ("/journal/2026-01-01", "JOURNAL"),
             ("/journal?view=week", "JOURNAL"),
-            // The old Stories, Days and History addresses land in the Journal.
-            ("/stories", "JOURNAL"),
-            ("/days/2026-01-01", "JOURNAL"),
-            ("/history", "JOURNAL"),
-            ("/history/2026-01-01", "JOURNAL"),
         })
         {
             if (PlaywrightFixture.BaseUrl is null) return;

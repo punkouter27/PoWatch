@@ -86,8 +86,7 @@ session link lands: its story with every chapter (newest first), its numbers, li
 its day and its PDF, and the replay of just its minutes with its timeline · `/journal?view=week|month`
 (with `&date=` for the period ◀ ▶ moved to) one story of the whole Monday-to-Sunday week or calendar
 month, with the days it was told from · `/settings` the Settings drawer as a page, for links (`?section=`
-opens a tab). The old `/stories`, `/stories/s/{id}`, `/days`, `/days/{date}`, `/history` and
-`/history/{date}` addresses redirect into the Journal. Session, view and day live in the URL, so
+opens a tab). Session, view and day live in the URL, so
 reloads, links and Back/Forward keep their place. On a desktop each Journal column scrolls on its own;
 on a phone the reader comes first. Every page needs a sign-in.
 
