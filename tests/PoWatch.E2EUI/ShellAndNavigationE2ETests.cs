@@ -27,6 +27,44 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     }
 
     [Fact]
+    public async Task Going_back_and_forth_between_pages_does_not_grow_the_js_heap()
+    {
+        if (PlaywrightFixture.BaseUrl is null) return;
+        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
+        var cdp = await page.Context.NewCDPSessionAsync(page);
+
+        async Task RoundTripsAsync(int count)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                await page.GetByTestId("nav-journal").ClickAsync();
+                await page.ExpectSectionAsync("JOURNAL");
+                await page.GetByTestId("nav-live").ClickAsync();
+                await page.ExpectSectionAsync("LIVE");
+            }
+            await page.WaitForTimeoutAsync(500);
+        }
+
+        async Task<double> UsedHeapAsync()
+        {
+            await cdp.SendAsync("HeapProfiler.collectGarbage");
+            var usage = await cdp.SendAsync("Runtime.getHeapUsage");
+            return usage!.Value.GetProperty("usedSize").GetDouble();
+        }
+
+        // Warm up first: the first visits load scripts and caches that stay on purpose.
+        await RoundTripsAsync(3);
+        var before = await UsedHeapAsync();
+        await RoundTripsAsync(10);
+        var after = await UsedHeapAsync();
+
+        // Pages that leave listeners, canvases or WebGL contexts behind grow by megabytes over ten
+        // round trips; a little noise from the runtime is fine.
+        Assert.True(after < before * 1.25 + 2_000_000, $"JS heap grew from {before:N0} to {after:N0} bytes over ten round trips.");
+        await page.AssertNoBlazorErrorAsync();
+    }
+
+    [Fact]
     public async Task Every_route_renders_with_its_section_title()
     {
         foreach (var (route, heading) in new (string route, string heading)[]

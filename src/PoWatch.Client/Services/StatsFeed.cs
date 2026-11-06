@@ -43,8 +43,12 @@ public sealed class StatsFeed(NavigationManager navigation) : IAsyncDisposable
         }
         catch (Exception ex) when (ex is HttpRequestException or TimeoutException or InvalidOperationException or System.Net.WebSockets.WebSocketException)
         {
-            // Offline or hub unavailable: pages fall back to their refresh timers.
+            // Offline or hub unavailable: pages fall back to their refresh timers. The failed connection
+            // is disposed so the next attempt doesn't leave it (and its handlers) behind.
+            var failed = _connection;
+            _connection = null;
             _connecting = null;
+            await failed.DisposeAsync();
         }
     }
 
