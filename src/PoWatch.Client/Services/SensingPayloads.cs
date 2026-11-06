@@ -32,7 +32,7 @@ public sealed class VlmResultPayload
 }
 
 /// <summary>The caption worker's actual model and backend, separate from the pending selection.</summary>
-public sealed record InferenceStatusPayload(string? ModelKey, string LoadState, string? Device, string? LoadError);
+public sealed record InferenceStatusPayload(string? ModelKey, string LoadState, string? Device, string? LoadError, string? ModelId = null, string? OllamaMissing = null);
 
 /// <summary>One batch waiting in the outbox (outbox.js), as its JSON text.</summary>
 public sealed class OutboxEntryPayload

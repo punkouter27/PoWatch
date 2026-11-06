@@ -109,7 +109,7 @@ the line it is on and scrolls only the list to keep it in view (`replay.js`).
 then a status chip (state and uptime), Start/Stop, a bell, a dark/light button and a gear. The gear opens
 Settings in a side drawer over any page, in four tabs: Recording (listening, sound cues, the weather place),
 People (who PoWatch knows: rename, filter, sort, merge, forget voices), Alerts (watch rules, the weekly
-email, shared recaps) and Advanced, where the niche and the dangerous live: the AI models, this browser
+email, shared recaps) and Advanced, where the niche and the dangerous live: this browser
 (the command palette, reset), and your data and account (retention window, System status, CSV export,
 sign out, delete everything; keeping less and deleting ask first). Old `?section=` names still land:
 `sharing` on Alerts, `account` and `look` on Advanced. The bell is the one notification tray, in
@@ -134,10 +134,13 @@ filtered) have a "Text ↓" link: the lines as a plain-text file, oldest first, 
 21:53:06  SAW   A person walks across the room."). The text rides in the link as a `data:` URL
 (`Components/TranscriptLink.razor`, `TimelineEntry.Transcript`), so saving needs no script or request.
 
-**AI models** (Settings → Advanced). Two dropdowns. Camera AI
+**AI models** (the MODELS strip on Live, under the Ask bar). Three dropdowns. SEES (camera captions)
 chooses MiniCPM-V, Qwen3-VL 8B, Qwen2.5-VL 7B, or captions off; its status reports whether Ollama
-answered or the in-browser fallback (WebGPU/WASM) ran, loading/failure, or a pending switch. Changes are saved per browser, also update
-Settings, and apply after the current caption finishes, even in a still scene. Ask / Recap AI lists
+answered or the in-browser Florence-2 stood in (WebGPU/CPU), and says "NOT IN OLLAMA" in amber when Ollama
+answered without the chosen model (the hover names the `ollama pull`), plus loading/failure or a pending
+switch. HEARS is the microphone: Whisper words, AST sounds and WavLM voices, or listening off (the same
+switch as Settings → Recording). WRITES is the story and Ask model below. Changes are saved per browser, also update
+Settings, and apply after the current caption finishes, even in a still scene. WRITES lists
 the server-configured Azure OpenAI, Gemini and Ollama models plus Template and, when any model is
 configured, Auto: the local Ollama model when it lists the configured model (probed with a one-second
 timeout, the answer kept 30 seconds), else Gemini, else Azure OpenAI, else Template; its label names

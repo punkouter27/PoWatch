@@ -3,11 +3,13 @@
 @inject PoWatchApiClient Api
 @inject IJSRuntime JS
 
-@* The two model choices, in Settings → Recording: chosen rarely, so they no longer take header space. *@
-
-<div class="ai-models" data-test="ai-models" aria-label="AI models">
+@* The models at work, in one strip on Live above the panels: what turns the camera into words, what
+   turns the microphone into words, and what writes the stories and answers Ask. Each is a dropdown, and
+   its status says what is really running (Ollama on this PC, or the browser's own model standing in). *@
+<div class="ai-models" data-test="ai-models" role="group" aria-label="AI models">
+    <span class="ai-models-title" aria-hidden="true">MODELS</span>
     <div class="ai-model">
-        <label for="ai-caption-model">Camera AI <i>describes the scene; Captions off saves the GPU</i></label>
+        <label for="ai-caption-model" title="Describes what the camera sees. Captions off saves the GPU.">SEES</label>
         <select id="ai-caption-model" @key="_captionRevision" value="@(Sensing.Captions ? Sensing.CaptionModel : "off")"
                 @onchange="SelectCaptionAsync" data-test="ai-caption-model" aria-describedby="ai-caption-status">
             <option value="off">Captions off</option>
@@ -16,10 +18,18 @@
                 <option value="@model.Key">@model.Label</option>
             }
         </select>
-        <a id="ai-caption-status" class="ai-model-status" href="system" title="@CaptionHint" data-test="ai-caption-status"><span role="status">@CaptionStatus</span></a>
+        <a id="ai-caption-status" class="ai-model-status @(CaptionWarn ? "ai-model-status--warn" : null)" href="system" title="@CaptionHint" data-test="ai-caption-status"><span role="status">@CaptionStatus</span></a>
     </div>
     <div class="ai-model">
-        <label for="ai-chat-model">Story and Ask AI <i>writes recaps and stories, answers questions</i></label>
+        <label for="ai-hearing" title="Words (Whisper), sounds (AST) and voices (WavLM), all heard on this machine; never the audio itself.">HEARS</label>
+        <select id="ai-hearing" value="@(Sensing.Listening ? "on" : "off")" @onchange="SelectHearingAsync" data-test="ai-hearing">
+            <option value="on">WHISPER · AST · WAVLM</option>
+            <option value="off">Listening off</option>
+        </select>
+        <span class="ai-model-status">@(Sensing.Listening ? "THIS BROWSER" : "OFF")</span>
+    </div>
+    <div class="ai-model">
+        <label for="ai-chat-model" title="Writes recaps and stories, answers questions. Auto picks local Ollama when it answers, else a cloud model; a failing model hands over to the next configured one.">WRITES</label>
         <select id="ai-chat-model" @key="_chatRevision" value="@_models?.SelectedId" @onchange="SelectChatAsync"
                 disabled="@(_models is null || _saving)" data-test="ai-chat-model" aria-describedby="ai-chat-status">
             @if (_models is null)
@@ -34,8 +44,8 @@
                 }
             }
         </select>
-        <span id="ai-chat-status" class="ai-model-status" role="status" title="Configured server model; availability is checked when you use it, and a failing model hands over to the next configured one. Auto picks local Ollama when it answers, else a cloud model. Changes apply to new requests in this browser.">
-            @(_saving ? "SAVING..." : _models?.SelectedId switch { "Template" => "TEMPLATE / BROWSER FALLBACK", "Ollama" => "SERVER · OLLAMA", "Auto" => "SERVER · AUTO", null => "SERVER", _ => "SERVER · CLOUD" })
+        <span id="ai-chat-status" class="ai-model-status" role="status">
+            @(_saving ? "SAVING..." : _models?.SelectedId switch { "Template" => "TEMPLATE", "Ollama" => "SERVER · OLLAMA", "Auto" => "SERVER · AUTO", null => "SERVER", _ => "SERVER · CLOUD" })
         </span>
     </div>
     @if (_error is not null)
@@ -60,25 +70,30 @@
     private Task _poll = Task.CompletedTask;
 
     private string CaptionStatus => !Sensing.Captions ? "OFF"
-        : !Sensing.IsRunning ? "ON DEVICE · IDLE"
+        : !Sensing.IsRunning ? "STARTS WITH THE CAMERA"
         : Sensing.Live.Demo ? "DEMO · AI IDLE"
         : _inference is null ? "WAITING FOR WORKER"
         : _inference.Device == "ollama" ? (_inference.ModelKey == Sensing.CaptionModel ? "LOCAL GPU · OLLAMA" : "SWITCH PENDING")
-        // Any other backend is the in-browser fallback: no Ollama server answered.
+        // Any other backend is the in-browser model standing in: no Ollama answered, or it lacks the model.
         : _inference.LoadState switch
         {
-            "ready" => _inference.Device switch
-            {
-                "webgpu" => "NO OLLAMA · BROWSER WEBGPU",
-                "wasm" => "NO OLLAMA · BROWSER CPU",
-                _ => "BACKEND UNKNOWN"
-            },
-            "loading" => "NO OLLAMA · LOADING...",
+            "ready" => $"{Fallback} · {BrowserModel} ON {(_inference.Device == "webgpu" ? "WEBGPU" : "CPU")}",
+            "loading" => $"{Fallback} · LOADING {BrowserModel}...",
             "error" => "MODEL FAILED",
             _ => "WAITING FOR CAPTION"
         };
 
+    /// <summary>Why the browser's model runs: Ollama is not there, or it has not pulled the chosen model.</summary>
+    private string Fallback => _inference?.OllamaMissing is { Length: > 0 } ? "NOT IN OLLAMA" : "NO OLLAMA";
+
+    private string BrowserModel => _inference?.ModelId?.Split('/')[^1].Replace("-base-ft", "", StringComparison.OrdinalIgnoreCase).ToUpperInvariant() ?? "BROWSER MODEL";
+
+    /// <summary>The chosen model is not what runs: worth a second look.</summary>
+    private bool CaptionWarn => Sensing.Captions && Sensing.IsRunning && !Sensing.Live.Demo
+        && _inference is { } i && (i.LoadState == "error" || (i.Device != "ollama" && i.LoadState == "ready"));
+
     private string CaptionHint => _inference?.LoadError is { Length: > 0 } error ? error
+        : _inference?.OllamaMissing is { Length: > 0 } missing ? $"Ollama answered but has no {missing}, so the browser's own model captions instead. Run: ollama pull {missing}"
         : "Camera captions stay on this device: Ollama runs the model on this PC, or the browser does when Ollama is off. A switch applies after the current caption finishes. Open System for details.";
 
     protected override async Task OnInitializedAsync()
@@ -117,6 +132,13 @@
             _captionRevision++;
             _error = "Could not save the camera AI choice in this browser.";
         }
+    }
+
+    private async Task SelectHearingAsync(ChangeEventArgs args)
+    {
+        var on = args.Value?.ToString() != "off";
+        Sensing.Listening = on;
+        await JS.TryInvokeVoidAsync("localStorage.setItem", MainLayout.ListeningKey, on ? "on" : "off");
     }
 
     private async Task SelectChatAsync(ChangeEventArgs args)

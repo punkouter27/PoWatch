@@ -234,29 +234,34 @@ main:focus { outline: none; }
 .term-status--live { border-color: var(--term-green); color: var(--term-green); }
 .term-status--demo { border-color: var(--term-cyan); color: var(--term-cyan); }
 
-/* The model choices, in Settings → Recording: one labelled select each, stacked. */
-.ai-models { display: grid; gap: 12px; padding: 12px 12px 4px; position: relative; }
-.ai-model { display: grid; gap: 4px; min-width: 0; }
-.ai-model label { color: var(--term-text); font: var(--fs-sm) var(--term-font); }
-.ai-model label i { font-style: normal; color: var(--term-dim); margin-left: 6px; }
+/* The models strip on Live: a label, then what sees, hears and writes, each a small dropdown and a status. */
+.ai-models { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 6px 10px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-panel-2); }
+.ai-models-title { color: var(--term-accent); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.12em; }
+.ai-model { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ai-model label { color: var(--term-dim); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; cursor: help; }
 .ai-model select {
-    width: 100%;
     min-width: 0;
-    min-height: 36px;
+    max-width: 260px;
+    min-height: 30px;
     border: 1px solid var(--term-line);
     border-radius: var(--term-radius);
-    padding: 4px 8px;
+    padding: 2px 6px;
     color: var(--term-text);
     background: var(--term-surface);
     font: 600 var(--fs-sm) var(--term-mono);
     text-overflow: ellipsis;
     cursor: pointer;
 }
-.ai-model select:hover { border-color: var(--term-accent); }
-@media (max-width: 720px) { .ai-model select { min-height: 44px; } }
+.ai-model select:hover, .ai-model select:focus-visible { border-color: var(--term-accent); outline: none; }
 .ai-model select:disabled { cursor: wait; opacity: 0.6; }
-.ai-model-status { color: var(--term-muted); font: var(--fs-xs) var(--term-mono); text-decoration: none; }
-.ai-models-error { padding: 8px; color: var(--term-red); border: 1px solid var(--term-red); border-radius: var(--term-radius); }
+.ai-model-status { color: var(--term-muted); font: var(--fs-xs) var(--term-mono); text-decoration: none; white-space: nowrap; }
+.ai-model-status--warn { color: var(--term-amber, var(--term-red)); }
+.ai-models-error { padding: 4px 8px; color: var(--term-red); border: 1px solid var(--term-red); border-radius: var(--term-radius); }
+@media (max-width: 720px) {
+    .ai-model { flex-wrap: wrap; width: 100%; }
+    .ai-model label { min-width: 52px; }
+    .ai-model select { flex: 1; max-width: none; min-height: 44px; }
+}
 /* The status chip starts the right-hand group: Start/Stop, bell, gear. */
 .term-header .term-status { margin-left: auto; }
 

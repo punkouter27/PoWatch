@@ -16,6 +16,7 @@ const OLLAMA_CHAT_URL = 'http://localhost:11434/api/chat';
 // The first call loads the model into VRAM, which took up to ~30 s on a laptop GPU.
 const OLLAMA_TIMEOUT_MS = 120_000;
 let _ollamaModel = null; // the Ollama model that answered last; null while the in-browser model is in use
+let _ollamaMissing = null; // the chosen Ollama model when Ollama answered without it (404): the browser model stands in
 
 // Model state
 let _modelKey = null;
@@ -143,8 +144,8 @@ async function toJpegBase64(bitmap) {
   return btoa(binary);
 }
 
-// The reply from the local Ollama server, or null when nothing listens there (the caller then uses the
-// in-browser model). A server that answers with an error throws: the picked model is the one to fix.
+// The reply from the local Ollama server; null when nothing listens there and { missing } when it has no
+// such model (the caller then uses the in-browser model either way). Any other error throws.
 async function ollamaGenerate(model, bitmap, prompt, maxNewTokens) {
   const image = await toJpegBase64(bitmap);
   let response;
@@ -167,7 +168,8 @@ async function ollamaGenerate(model, bitmap, prompt, maxNewTokens) {
   }
   if (!response.ok) {
     const detail = (await response.json().catch(() => null))?.error ?? `HTTP ${response.status}`;
-    throw new Error(response.status === 404 ? `${model} is not installed in Ollama (ollama pull ${model})` : `Ollama: ${detail}`);
+    if (response.status === 404) return { missing: model };
+    throw new Error(`Ollama: ${detail}`);
   }
   return ((await response.json()).message?.content ?? '').trim();
 }
@@ -188,11 +190,16 @@ async function runInference(bitmap, prompt, maxNewTokens = 32, modelKey = null) 
       bitmap.close?.();
       return unavailable(`Model unavailable: ${describeError(err)}`);
     }
-    if (output !== null) {
+    if (typeof output === 'string') {
       bitmap.close?.();
       _ollamaModel = modelKey;
+      _ollamaMissing = null;
       return finish(output, prompt, started, null);
     }
+    // Ollama answered but has no such model: caption in the browser instead, and say why (GET_DIAGNOSTICS).
+    _ollamaMissing = output?.missing ?? null;
+  } else {
+    _ollamaMissing = null;
   }
   _ollamaModel = null;
 
@@ -302,6 +309,7 @@ self.onmessage = async (e) => {
               fp16FallbackUsed: _fp16FallbackUsed,
               loadDurationMs: _loadDurationMs,
             }),
+          ollamaMissing: _ollamaMissing,
           inferenceCount: _inferenceCount,
           lastInferenceMs: _lastInferenceMs,
           lastInferenceTimestamp: _lastInferenceTimestamp,

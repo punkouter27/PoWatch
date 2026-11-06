@@ -79,10 +79,9 @@ public sealed class ViewportFitE2ETests
         await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser);
         await page.SetViewportSizeAsync(1440, 900);
 
-        // Chromium's fake camera (see PlaywrightFixture); captions off so no vision model downloads.
-        await page.OpenSettingsAsync("advanced");
-        await page.GetByTestId("ai-caption-model").SelectOptionAsync("off");
+        // Chromium's fake camera (see PlaywrightFixture); captions off (Live's models strip) so no vision model downloads.
         await page.GetByTestId("nav-live").ClickAsync();
+        await page.GetByTestId("ai-caption-model").SelectOptionAsync("off");
         await page.GetByTestId("start-camera").ClickAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("OBSERVING", new() { Timeout = 15_000 });
 
