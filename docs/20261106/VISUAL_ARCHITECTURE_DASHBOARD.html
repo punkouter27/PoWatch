@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en" data-tier="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="PoWatch NET_DOCS 2026-11-06 @ 284e0b8">
+<title>PoWatch — Visual Architecture Dashboard</title>
+
+<style>
+:root{color-scheme:light;
+--bg:#fcfcfb;--surface:#ffffff;--surface-2:#f3f2ef;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6b6a66;--line:#e4e2dc;
+--accent:#2a78d6;--accent-ink:#1d5fae;--accent-tint:rgba(42,120,214,.08);
+--good:#0a7a2f;--warn:#9a5b00;--bad:#c62f2e;--code-bg:#f3f2ef;
+--series-1:#2a78d6;
+--r:10px;--fs-xs:.78rem;--fs-sm:.9rem;--fs-md:1rem;--fs-lg:1.25rem;--fs-xl:clamp(1.6rem,1.2rem + 1.6vw,2.3rem);
+--sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--mono:ui-monospace,"Cascadia Code","SFMono-Regular",Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;
+--bg:#121211;--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--muted:#9a998f;--line:#34332f;
+--accent:#3987e5;--accent-ink:#8bb8f0;--accent-tint:rgba(57,135,229,.12);--good:#4cc36f;--warn:#e0a64a;--bad:#ef7473;--code-bg:#242422;--series-1:#3987e5}}
+:root[data-theme="dark"]{color-scheme:dark;
+--bg:#121211;--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--muted:#9a998f;--line:#34332f;
+--accent:#3987e5;--accent-ink:#8bb8f0;--accent-tint:rgba(57,135,229,.12);--good:#4cc36f;--warn:#e0a64a;--bad:#ef7473;--code-bg:#242422;--series-1:#3987e5}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs-md)/1.6 var(--sans);overflow-x:hidden}
+a{color:var(--accent-ink)}
+code,pre,kbd{font-family:var(--mono);font-size:.86em}
+code{background:var(--code-bg);padding:.08em .35em;border-radius:4px;overflow-wrap:anywhere}
+.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;z-index:9;background:var(--surface);padding:6px 10px}
+/* header */
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{max-width:1240px;margin:0 auto;padding:.55rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center}
+.brand{font-weight:700;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:.45rem;white-space:nowrap}
+.brand span{color:var(--muted);font-weight:500}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.pages{display:flex;flex-wrap:wrap;gap:.15rem;flex:1 1 420px;min-width:0}
+.pages a{font-size:var(--fs-sm);text-decoration:none;color:var(--ink-2);padding:.25rem .55rem;border-radius:6px}
+.pages a:hover{background:var(--surface-2)}
+.pages a[aria-current]{color:var(--ink);background:var(--surface-2);font-weight:600}
+.ctl{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.tier{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.tier button,.theme-btn{font:inherit;font-size:var(--fs-xs);border:0;background:transparent;color:var(--ink-2);padding:.35rem .6rem;cursor:pointer;min-height:32px}
+.tier button+button{border-left:1px solid var(--line)}
+.tier button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+.theme-btn{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+html.embedded .top,html.embedded .foot .t1-hint{display:none}
+/* tiers */
+[data-tier="1"] .t2,[data-tier="1"] .t3,[data-tier="2"] .t3{display:none!important}
+[data-tier="1"] a.cite,[data-tier="2"] a.cite{display:none}
+.tier-badge{display:inline-block;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.05rem .5rem;margin-left:.4rem;vertical-align:middle}
+/* layout */
+main{max-width:1240px;margin:0 auto;padding:1.5rem 1rem 2rem}
+.hero{padding:1.2rem 0 .6rem}
+.eyebrow{font-size:var(--fs-xs);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 .35rem}
+h1{font-size:var(--fs-xl);line-height:1.15;margin:0 0 .6rem;letter-spacing:-.01em}
+h2{font-size:var(--fs-lg);margin:2.2rem 0 .6rem;padding-top:.6rem;border-top:1px solid var(--line)}
+h3{font-size:var(--fs-md);margin:1.2rem 0 .35rem}
+p{margin:.4rem 0 .8rem;max-width:78ch}
+.lede{font-size:1.08rem;color:var(--ink-2);max-width:72ch}
+.eli5{background:var(--accent-tint);border-left:3px solid var(--accent);padding:.6rem .9rem;border-radius:0 8px 8px 0;max-width:none;margin:.4rem 0 1rem}
+.eli5::before{content:"In plain English · ";font-weight:700;color:var(--accent-ink)}
+.grid{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.grid.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.9rem 1rem;min-width:0}
+.card h3{margin-top:0}
+.card p:last-child{margin-bottom:0}
+.analogy{display:flex;gap:.7rem;align-items:flex-start}
+.analogy .ico{font-size:1.5rem;line-height:1}
+.analogy b{display:block}
+.muted{color:var(--muted)}
+.small{font-size:var(--fs-sm)}
+.pill{display:inline-block;font-size:var(--fs-xs);font-weight:600;padding:.05rem .5rem;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.pill.good{color:var(--good);border-color:currentColor;background:transparent}
+.pill.warn{color:var(--warn);border-color:currentColor;background:transparent}
+.pill.bad{color:var(--bad);border-color:currentColor;background:transparent}
+.pill.plan{color:var(--accent-ink);border-style:dashed;background:transparent}
+/* narrative step cards */
+ol.steps{list-style:none;counter-reset:s;padding:0;margin:.6rem 0 1rem;display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+ol.steps>li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.75rem .9rem .75rem 2.9rem;position:relative;min-width:0}
+ol.steps>li::before{content:counter(s);position:absolute;left:.8rem;top:.75rem;width:1.5rem;height:1.5rem;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:var(--fs-xs);display:grid;place-items:center}
+ol.steps>li b{display:block}
+/* figures */
+figure{margin:1rem 0;min-width:0}
+figcaption{font-size:var(--fs-sm);color:var(--muted);margin-top:.35rem}
+.mmd{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.8rem;overflow-x:auto;min-height:60px}
+.mmd .out svg{max-width:100%;height:auto;display:block;margin:0 auto}
+.mmd .fallback{white-space:pre-wrap;font-family:var(--mono);font-size:var(--fs-xs);color:var(--muted)}
+/* tables & code */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);margin:.6rem 0 1rem}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th,td{text-align:left;vertical-align:top;padding:.5rem .7rem;border-bottom:1px solid var(--line)}
+th{background:var(--surface-2);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:.7rem .9rem;overflow-x:auto;line-height:1.45;margin:.5rem 0 1rem}
+pre code{background:none;padding:0;overflow-wrap:normal}
+a.cite{font-family:var(--mono);font-size:var(--fs-xs);background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:.02rem .35rem;text-decoration:none;color:var(--accent-ink);overflow-wrap:anywhere;white-space:normal}
+a.cite::before{content:"⌖ ";opacity:.7}
+.evidence{font-size:var(--fs-sm);color:var(--ink-2)}
+.evidence::before{content:"Evidence: ";font-weight:600}
+details{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:.5rem .9rem;margin:.6rem 0}
+summary{cursor:pointer;font-weight:600}
+/* stat tiles */
+.tiles{display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));margin:1rem 0}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.8rem .9rem}
+.tile .label{font-size:var(--fs-sm);color:var(--ink-2)}
+.tile .value{font-size:2rem;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.tile .sub{font-size:var(--fs-xs);color:var(--muted)}
+.meter{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:.45rem}
+.meter>i{display:block;height:100%;background:var(--series-1);border-radius:4px}
+.callout{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:0 var(--r) var(--r) 0;background:var(--surface);padding:.7rem .9rem;margin:.8rem 0}
+.callout.ok{border-left-color:var(--good)}
+.callout.plan{border-left-color:var(--accent);border-left-style:dashed}
+.foot{max-width:1240px;margin:0 auto;padding:1rem 1rem 2rem;border-top:1px solid var(--line);font-size:var(--fs-sm);color:var(--muted)}
+.foot p{max-width:none}
+@media (max-width:560px){.tier button{padding:.35rem .45rem}.bar{gap:.4rem}h2{margin-top:1.6rem}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+@media print{.top{position:static}.t2,.t3{display:block!important}}
+</style>
+<script>try{var t=localStorage.getItem('powatch-docs:tier');if(t)document.documentElement.dataset.tier=t;var th=localStorage.getItem('powatch-docs:theme');if(th&&th!=='auto')document.documentElement.dataset.theme=th;}catch(e){}try{if(window.self!==window.top)document.documentElement.classList.add('embedded');}catch(e){document.documentElement.classList.add('embedded');}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="index.html"><span class="dot" aria-hidden="true"></span>PoWatch <span>docs</span></a>
+    <nav class="pages" aria-label="Documentation pages"><a href="index.html">Overview</a><a href="USER_WORKFLOW.html">User journeys</a><a href="VISUAL_ARCHITECTURE_DASHBOARD.html" aria-current="page">Architecture</a><a href="AI_SERVICES_REPORT.html">AI & services</a><a href="AUTH_SECURITY_REPORT.html">Security</a><a href="DIAGRAM_DESIGN_OVERVIEW.html">Alt overview</a><a href="artifact.html">Tabbed view</a></nav>
+    <div class="ctl">
+      <div class="tier" role="group" aria-label="Detail level">
+        <button type="button" data-set-tier="1" title="Simple: plain English, journeys and analogies">1 · Simple</button>
+        <button type="button" data-set-tier="2" title="Standard: adds diagrams and component maps">2 · Standard</button>
+        <button type="button" data-set-tier="3" title="Developer: adds file:line citations, schemas, DI and config">3 · Developer</button>
+      </div>
+      <button type="button" class="theme-btn" data-theme-toggle title="Theme: auto / light / dark">◐ <span data-theme-label>Auto</span></button>
+    </div>
+  </div>
+</header>
+<main id="main">
+<section class="hero">
+  <p class="eyebrow">System architecture &amp; flow</p>
+  <h1>How the pieces fit together</h1>
+  <p class="eli5">Think of a newsroom. Reporters in the field (your browser) phone in short notes. The front desk (the API) checks the caller's badge, the filing clerk (the ingest service) files each note once and updates the running totals, and the editors (stats and recap services) write the paper from those totals.</p>
+  <p class="lede">Sensing runs in the browser, and the server only ingests 10-second ticks and serves rollups. Four layers point inward: Domain ← Application ← Infrastructure / Api, with Shared holding DTOs and browser-safe logic.</p>
+  <p class="evidence t3">CLAUDE.md "Where the pipeline lives" · <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L69-L75" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:69-75</a></p>
+</section>
+
+<div class="tiles">
+  <div class="tile"><div class="label">Feature slices mapped</div><div class="value">16</div><div class="sub">+ <code>/hubs/stats</code> + dev seed</div></div>
+  <div class="tile"><div class="label">Scoped application services</div><div class="value">14</div><div class="sub">one per use case</div></div>
+  <div class="tile"><div class="label">Singleton stores</div><div class="value">10</div><div class="sub">Azure Table / Blob</div></div>
+  <div class="tile"><div class="label">Rollup grains</div><div class="value">4</div><div class="sub">minute · hour · day · all-time</div></div>
+</div>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/FeatureRoutes.cs#L25-L42" target="_blank" rel="noopener">src/PoWatch.Api/Features/FeatureRoutes.cs:25-42</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/DependencyInjection.cs#L13-L26" target="_blank" rel="noopener">src/PoWatch.Application/DependencyInjection.cs:13-26</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/DependencyInjection.cs#L18-L27" target="_blank" rel="noopener">src/PoWatch.Infrastructure/DependencyInjection.cs:18-27</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/IngestService.cs#L22" target="_blank" rel="noopener">src/PoWatch.Application/Services/IngestService.cs:22</a></p>
+
+<h2>C4 level 2 · Containers</h2>
+<p class="eli5">Four boxes do the real work: the browser app, the web server, the filing cabinet, and (optionally) an AI writer.</p>
+<figure class="t2">
+  <div class="mmd"><script type="text/plain">
+flowchart TB
+  user(["Owner"])
+  viewer(["Share-link reader"])
+  subgraph dev["Owner's device"]
+    spa["Blazor WebAssembly app<br/>pages, C# tracker, batcher"]
+    workers["JS workers<br/>pixels, RF-DETR, captions, audio"]
+    idb[("IndexedDB<br/>outbox, caption vectors")]
+    ollama["Local Ollama (optional)<br/>caption models"]
+  end
+  subgraph az["Azure App Service"]
+    api["ASP.NET Core API<br/>endpoints, SignalR hub, jobs"]
+  end
+  tables[("Azure Table Storage<br/>9 tables")]
+  blobs[("Azure Blob Storage<br/>snapshots, key ring")]
+  entra["Microsoft Entra ID"]
+  llm["Chat model (optional)<br/>Ollama, Gemini, Azure OpenAI"]
+  user --> spa
+  spa <--> workers
+  workers --> idb
+  workers -. "localhost:11434" .-> ollama
+  spa -- "HTTPS + cookie" --> api
+  api -- "statsChanged" --> spa
+  viewer -- "/s/token" --> api
+  api --> tables
+  api --> blobs
+  spa -- "snapshot upload, short-lived link" --> blobs
+  api -- "sign-in" --> entra
+  api -. "reword recaps, Ask" .-> llm
+  </script><div class="out" role="img" aria-label="Container diagram: the owner's device runs the Blazor app, JS workers, IndexedDB and optional Ollama; Azure App Service runs the API, which uses Table and Blob storage, Entra ID and an optional chat model."></div></div>
+  <figcaption>Containers. Dashed lines are optional.</figcaption>
+</figure>
+<ol class="steps">
+  <li><b>Browser app</b>Pages plus the C# parts that are safe to run in a browser (<code>CentroidTracker</code>, <code>TickBatcher</code>, <code>VlmScheduler</code>).</li>
+  <li><b>Workers</b>Heavy models run off the main thread, using WebGPU when available and WASM otherwise.</li>
+  <li><b>API</b>One host serves the app files, the JSON API, the live hub and two timers (retention and digest).</li>
+  <li><b>Storage</b>Tables hold the notes and totals, and blobs hold snapshot photos and the cookie-encryption key ring.</li>
+</ol>
+
+<h2>C4 level 3 · Inside the API</h2>
+<p class="eli5">The server is a stack of layers. The front desk takes requests, service clerks do the work, and storage clerks talk to Azure. Each layer only calls the one below it.</p>
+<figure class="t2">
+  <div class="mmd"><script type="text/plain">
+flowchart TB
+  subgraph Api["Api · front desk"]
+    direction LR
+    ep["Feature endpoints<br/>Sessions, Ingest, Stats, Recaps,<br/>Stories, Ask, Shares, Data…"]
+    hub["StatsHub<br/>live pushes"]
+    jobs["RetentionJob, DigestJob<br/>timers"]
+  end
+  subgraph App["Application · clerks"]
+    direction LR
+    ingest["IngestService"]
+    query["StatsQueryService"]
+    recap["RecapService<br/>StoryService"]
+    ask["AskService<br/>AssistService"]
+    other["Sessions, Regulars, Shares,<br/>Retention, Weather, Digest"]
+  end
+  subgraph Dom["Domain · pure maths"]
+    direction LR
+    math["PresenceStats, PatternStats,<br/>AnomalyMath, SpaceStats…"]
+    ents["Tick, SceneEvent, Rollup,<br/>Session, Regular"]
+  end
+  subgraph Infra["Infrastructure · storage and outside clerks"]
+    direction LR
+    stores["Azure Table/Blob stores"]
+    ai["RecapAi model registry"]
+    wx["OpenMeteoWeatherSource"]
+    mail["DigestEmail (ACS)"]
+  end
+  Api -- "calls" --> App
+  App -- "computes with" --> Dom
+  App -- "through contracts" --> Infra
+  </script><div class="out" role="img" aria-label="Component diagram: API endpoints call Application services, which use Domain maths and Infrastructure stores, AI registry, weather and email."></div></div>
+  <figcaption>Components. <code>ArchitectureBoundaryTests</code> fail the build if a reference points the wrong way.</figcaption>
+</figure>
+
+<h2>The request assembly line (middleware)</h2>
+<p class="eli5">Every request passes the same stations in the same order, like a security checkpoint. Order matters: the speed limit comes after the badge check, so it can count per person, not per building.</p>
+<ol class="steps">
+  <li><b>Commit tag</b>Every response is stamped <code>X-Commit</code>, so a deploy can tell which build answered.</li>
+  <li><b>Error net</b>Any crash becomes a tidy "ProblemDetails" 500. The stack trace is shown only when debug details are on.</li>
+  <li><b>HTTPS</b>Outside Development, plain HTTP is redirected.</li>
+  <li><b>Correlation id</b>Each request gets an id that every log line carries.</li>
+  <li><b>Authentication</b>Read the badge (cookie, or the guest scheme in Dev/Test).</li>
+  <li><b>User log scope</b>Logs carry the caller's partition id.</li>
+  <li><b>Authorization</b>Default deny: anything not marked public needs a signed-in cookie.</li>
+  <li><b>Rate limiter</b>300 requests a minute per user on <code>/api</code>, <code>/auth</code>, <code>/hubs</code> and <code>/s</code>.</li>
+  <li><b>Isolation headers</b>COOP/COEP make the page cross-origin isolated, so WASM models can use threads.</li>
+  <li><b>Endpoints</b>Static files, then feature routes, then the SPA fallback. Unknown <code>/api/*</code> routes return 404.</li>
+</ol>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L94-L145" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:94-145</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/RequestPipeline.cs#L14-L74" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/RequestPipeline.cs:14-74</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/RateLimiting.cs#L14-L34" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/RateLimiting.cs:14-34</a></p>
+
+<h2>Sequence · one batch of ticks</h2>
+<p class="eli5">The browser sends a numbered envelope. The server checks it, files the contents, and updates the totals only if that envelope number has never been seen before, so resending never double-counts.</p>
+<figure class="t2">
+  <div class="mmd"><script type="text/plain">
+sequenceDiagram
+  autonumber
+  participant B as Browser outbox
+  participant E as Ingest endpoint
+  participant S as IngestService
+  participant L as Ingest ledger
+  participant T as Tables
+  participant H as StatsHub
+  B->>E: POST batch (batchKey, ticks, events)
+  E->>E: Check the badge and the batch shape
+  E->>S: Ingest for this user and session
+  S->>T: Look up the session (user's drawer only)
+  S->>S: Reject ticks outside the session window
+  S->>T: Write raw rows (safe to repeat)
+  S->>L: Claim batchKey
+  alt first time this key is seen
+    L-->>S: claimed
+    S->>T: Merge minute, hour, day and all-time totals
+    S->>T: Update regulars' visit totals
+    E->>H: Push statsChanged to this user's tabs
+  else replayed batch
+    L-->>S: already claimed
+    Note over S: Stored again, counted zero times
+  end
+  E-->>B: 200 Accepted (Replayed true or false)
+  B->>B: Remove from outbox
+  </script><div class="out" role="img" aria-label="Sequence of ingesting one batch: validate, write raw rows, claim batch key, merge rollups only on first claim, push statsChanged, acknowledge, remove from outbox."></div></div>
+</figure>
+<ol class="steps">
+  <li><b>Shape check</b>At most 360 ticks and 2,000 events per batch. Event text is capped at 300 characters and names at 80.</li>
+  <li><b>Time check</b>A tick more than 5 minutes outside its session is rejected, so old days cannot be rewritten.</li>
+  <li><b>Raw first</b>Raw rows are keyed so a replay overwrites them rather than adding duplicates.</li>
+  <li><b>Claim</b>Only the first claim of a <code>batchKey</code> merges totals, with up to 32 merges in parallel.</li>
+  <li><b>Notify</b>The stats cache for that user is cleared, and only that user's tabs get the push.</li>
+</ol>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Ingest/IngestEndpoints.cs#L16-L65" target="_blank" rel="noopener">src/PoWatch.Api/Features/Ingest/IngestEndpoints.cs:16-65</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/IngestService.cs#L45-L98" target="_blank" rel="noopener">src/PoWatch.Application/Services/IngestService.cs:45-98</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Models/IngestDtos.cs#L9-L10" target="_blank" rel="noopener">src/PoWatch.Shared/Models/IngestDtos.cs:9-10</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Models/IngestDtos.cs#L46-L47" target="_blank" rel="noopener">src/PoWatch.Shared/Models/IngestDtos.cs:46-47</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Stats/StatsHub.cs#L27-L28" target="_blank" rel="noopener">src/PoWatch.Api/Features/Stats/StatsHub.cs:27-28</a></p>
+
+<h2>Sequence · reading a day's recap</h2>
+<figure class="t2">
+  <div class="mmd"><script type="text/plain">
+sequenceDiagram
+  participant J as Journal page
+  participant R as Recap endpoint
+  participant RS as RecapService
+  participant Q as StatsQueryService
+  participant M as Chat model chain
+  J->>R: GET /api/recaps/day/2026-11-05?ai=false
+  R->>RS: Template recap
+  RS->>Q: Day rollups and events
+  RS-->>J: Template recap (numbers and story)
+  J->>R: GET /api/recaps/day/2026-11-05
+  RS->>M: Reword these facts (20 s per model)
+  alt reply keeps every number
+    M-->>RS: Reworded summary
+    RS-->>J: Model version
+  else timeout, error or invented number
+    RS-->>J: Template version stays
+  end
+  </script><div class="out" role="img" aria-label="Recap sequence: the template recap is shown first; then the model is asked to reword it and its reply is kept only if it introduces no new numbers."></div></div>
+</figure>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Recaps/RecapEndpoints.cs#L25-L35" target="_blank" rel="noopener">src/PoWatch.Api/Features/Recaps/RecapEndpoints.cs:25-35</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/RecapService.cs#L26" target="_blank" rel="noopener">src/PoWatch.Application/Services/RecapService.cs:26</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/RecapService.cs#L129-L142" target="_blank" rel="noopener">src/PoWatch.Application/Services/RecapService.cs:129-142</a></p>
+
+<h2>Data model</h2>
+<p class="eli5">Each user has their own drawer. Inside it are sessions, the 10-second notes from each session, events (someone came in, a caption, a sound), and pre-added totals. Share links live in a separate drawer, filed by link code, so a public reader can find one in a single lookup.</p>
+<figure class="t2">
+  <div class="mmd"><script type="text/plain">
+erDiagram
+  USER ||--o{ SESSION : records
+  USER ||--o| PROFILE : has
+  USER ||--o{ REGULAR : knows
+  USER ||--o{ ROLLUP : "totals per bucket"
+  USER ||--o{ LEDGER_CLAIM : "batches counted"
+  USER ||--o{ SHARE : owns
+  SESSION ||--o{ TICK : "10-second notes"
+  SESSION ||--o{ SCENE_EVENT : "things that happened"
+  SESSION ||--o{ STORY_CHAPTER : "10-minute chapters"
+  SESSION ||--o| SESSION_STORY : "joined story"
+  REGULAR ||--o{ SCENE_EVENT : "named in"
+  SCENE_EVENT |o--o| SNAPSHOT : "photo, when kept"
+  SESSION {
+    guid Id
+    string TimeZoneId
+    datetime StartedUtc
+    datetime EndedUtc
+    datetime LastActivityUtc
+  }
+  TICK {
+    datetime StartUtc
+    float MotionMean
+    float LuminanceMean
+    float SoundMean
+    json Classes
+    floats MotionGrid
+  }
+  SCENE_EVENT {
+    datetime AtUtc
+    enum Kind
+    string Class
+    string Text
+    string RegularId
+    string ImagePath
+  }
+  ROLLUP {
+    enum Grain
+    datetime BucketStartUtc
+    long Ticks
+    long OccupiedTicks
+    int PeakConcurrency
+    long Visits
+  }
+  REGULAR {
+    string Id
+    string Class
+    string Name
+    floats Signature
+    long Visits
+    float DwellSeconds
+  }
+  SHARE {
+    string Token
+    datetime ExpiresUtc
+    date Day
+    json Content
+  }
+  PROFILE {
+    string TimeZoneId
+    int RetentionDays
+    bool DigestEmail
+  }
+  </script><div class="out" role="img" aria-label="Entity relationship diagram of users, sessions, ticks, scene events, rollups, regulars, ledger claims, shares, profiles, stories and snapshots."></div></div>
+  <figcaption>Logical model. Azure Table Storage has no foreign keys; the relations are enforced by keys and code.</figcaption>
+</figure>
+
+<div class="t3">
+<h3>Physical tables <span class="tier-badge">Level 3</span></h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Table / container</th><th>PartitionKey</th><th>Holds</th><th>Pruned by retention?</th></tr></thead>
+<tbody>
+<tr><td><code>PoWatchSessions</code></td><td>user</td><td>Session rows</td><td>No</td></tr>
+<tr><td><code>PoWatchTicks</code></td><td><code>{user}|{yyyyMMdd}</code></td><td>Raw 10 s ticks</td><td><span class="pill warn">Yes</span></td></tr>
+<tr><td><code>PoWatchSceneEvents</code></td><td><code>{user}|{yyyyMMdd}</code></td><td>Enter/exit, captions, speech, sounds, notable moments</td><td><span class="pill warn">Yes</span></td></tr>
+<tr><td><code>PoWatchIngestLedger</code></td><td>user</td><td>Claimed <code>batchKey</code>s</td><td><span class="pill warn">Yes</span></td></tr>
+<tr><td><code>PoWatchRollups</code></td><td>user (+ grain)</td><td>count/sum/sum²/min/max, 16×9 grids, class and dwell histograms</td><td><span class="pill good">Never</span></td></tr>
+<tr><td><code>PoWatchRegulars</code></td><td>user</td><td>Look signatures, names, visit totals</td><td>No</td></tr>
+<tr><td><code>PoWatchProfiles</code></td><td>user</td><td>Zone, retention, place, weekly-email switch</td><td>No</td></tr>
+<tr><td><code>PoWatchStories</code></td><td>user</td><td>Rows <code>{session}|c0003</code> per chapter, <code>{session}|story</code></td><td><span class="pill good">Never</span></td></tr>
+<tr><td><code>PoWatchShares</code></td><td><b>token</b></td><td>Frozen recap JSON, owner, expiry</td><td>Deleted by owner on "delete everything"</td></tr>
+<tr><td>blob <code>snapshots</code></td><td><code>{user}/{yyyyMMdd}/…</code></td><td>Highlight images</td><td><span class="pill warn">Yes</span></td></tr>
+<tr><td>blob <code>dataprotection-keys</code></td><td>—</td><td><code>keys.xml</code>, the cookie key ring</td><td>—</td></tr>
+</tbody></table></div>
+<p class="evidence"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Options/AzureStorageOptions.cs#L13-L54" target="_blank" rel="noopener">src/PoWatch.Application/Options/AzureStorageOptions.cs:13-54</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Persistence/StatsEntityMapper.cs#L28-L35" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Persistence/StatsEntityMapper.cs:28-35</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Persistence/SnapshotStores.cs#L29" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Persistence/SnapshotStores.cs:29</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Persistence/UserDataStore.cs#L18-L24" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Persistence/UserDataStore.cs:18-24</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/DataProtectionSetup.cs#L26-L47" target="_blank" rel="noopener">src/PoWatch.Api/Security/DataProtectionSetup.cs:26-47</a></p>
+
+<h3>Domain fields <span class="tier-badge">Level 3</span></h3>
+<pre><code>// Tick — src/PoWatch.Domain/Models/Tick.cs:38-68
+SessionId, StartUtc, DurationSeconds, PixelSamples, DetectorSamples,
+MotionMean, MotionMax, LuminanceMean, SoundMean, SoundMax,
+Palette, MotionGrid (16×9), PresenceGrid, Classes{label → (Max, Mean)}, ActiveTrackIds
+
+// SceneEvent — src/PoWatch.Domain/Models/SceneEvent.cs:37-55
+SessionId, AtUtc, Kind, TrackId, Class, Edge, Text, Score, DwellSeconds, RegularId, ImagePath
+enum SceneEventKind { TrackEnter, TrackExit, LightsOn, LightsOff, Caption, Notable, Speech, Sound }
+
+// Rollup — src/PoWatch.Domain/Models/Rollup.cs:55-90
+BucketStartUtc, Ticks, Seconds, PixelSamples, DetectorSamples, OccupiedTicks, PeakConcurrency,
+Motion, MotionPeak, Luminance (RunningStat), Grid, PresenceGrid, Classes, Visits, Captions, DwellHistogram</code></pre>
+
+<h3>Dependency-injection registry <span class="tier-badge">Level 3</span></h3>
+<p class="eli5">The supply closet's inventory: what is on each shelf, and whether each request gets a fresh one (scoped) or everyone shares one (singleton).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Registration</th><th>Lifetime</th><th>Where</th></tr></thead>
+<tbody>
+<tr><td><code>TimeProvider.System</code></td><td>Singleton</td><td><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/DependencyInjection.cs#L12" target="_blank" rel="noopener">src/PoWatch.Application/DependencyInjection.cs:12</a></td></tr>
+<tr><td>Session, Ingest, StatsQuery, Regulars, Recap, Story, PeriodStory, Ask, Assist, Retention, Weather, Digest, Share services, DigestMailer</td><td>Scoped</td><td><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/DependencyInjection.cs#L13-L26" target="_blank" rel="noopener">src/PoWatch.Application/DependencyInjection.cs:13-26</a></td></tr>
+<tr><td><code>StartupReadiness</code>, <code>AzureStorageClients</code></td><td>Singleton</td><td><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/DependencyInjection.cs#L14-L16" target="_blank" rel="noopener">src/PoWatch.Infrastructure/DependencyInjection.cs:14-16</a></td></tr>
+<tr><td><code>ISessionRepository</code> … <code>IStoryStore</code> → <code>Azure*</code> (10 stores)</td><td>Singleton</td><td><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/DependencyInjection.cs#L18-L27" target="_blank" rel="noopener">src/PoWatch.Infrastructure/DependencyInjection.cs:18-27</a></td></tr>
+<tr><td><code>IWeatherSource</code> → <code>OpenMeteoWeatherSource</code> (15 s timeout, 15 min pooled connections)</td><td>Singleton</td><td><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/DependencyInjection.cs#L30-L34" target="_blank" rel="noopener">src/PoWatch.Infrastructure/DependencyInjection.cs:30-34</a></td></tr>
+<tr><td><code>AzureStorageInitializer</code> (creates tables and containers)</td><td>Hosted</td><td><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/DependencyInjection.cs#L39" target="_blank" rel="noopener">src/PoWatch.Infrastructure/DependencyInjection.cs:39</a></td></tr>
+<tr><td><code>IAiModelRegistry</code> → <code>RecapAi.ModelRegistry</code></td><td>Singleton</td><td><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L26-L31" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:26-31</a></td></tr>
+<tr><td><code>HybridCache</code> (stats, 5 min) and distributed memory cache (AI replies)</td><td>Singleton</td><td><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L60" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:60</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L72" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:72</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Stats/StatsEndpoints.cs#L11-L12" target="_blank" rel="noopener">src/PoWatch.Api/Features/Stats/StatsEndpoints.cs:11-12</a></td></tr>
+<tr><td><code>RetentionJob</code> (every 6 h), <code>DigestJob</code> (hourly), both off in Test</td><td>Hosted</td><td><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L77-L81" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:77-81</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/BackgroundJobs.cs#L47-L62" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/BackgroundJobs.cs:47-62</a></td></tr>
+<tr><td><code>IngestBatchValidator</code>, SignalR, <code>CurrentUserIdProvider</code></td><td>Singleton</td><td><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L82-L84" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:82-84</a></td></tr>
+</tbody></table></div>
+
+<h3>Fail-fast options <span class="tier-badge">Level 3</span></h3>
+<pre><code>// src/PoWatch.Api/Program.cs:43-50
+builder.Services.AddOptions&lt;AzureStorageOptions&gt;()
+    .Bind(builder.Configuration.GetSection("AzureStorage"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();</code></pre>
+</div>
+
+</main>
+<footer class="foot">
+  <p>Generated <time datetime="2026-11-06">2026-11-06</time> for commit <a href="https://github.com/punkouter27/PoWatch/commit/284e0b81432ed0dc92d6fdb6a5652e6bde97c916" target="_blank" rel="noopener"><code>284e0b8</code></a> on <code>master</code>.
+  Evidence order: source code → config → code comments → <code>docs/README.md</code>. No secrets or keys are reproduced; config values shown are committed, non-secret defaults.</p>
+  <p class="t1-hint">Detail level is remembered in this browser. Level 3 shows exact <code>file:line</code> citations linked to GitHub at this commit.</p>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>
+(function () {
+  var root = document.documentElement;
+  var TIER = 'powatch-docs:tier', THEME = 'powatch-docs:theme';
+  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+  function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  function applyTier(t) {
+    if (!/^[123]$/.test(String(t))) t = '1';
+    root.dataset.tier = t;
+    document.querySelectorAll('[data-set-tier]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.setTier === String(t))); });
+    renderMermaid(false);
+  }
+  function applyTheme(m) {
+    if (m !== 'light' && m !== 'dark') m = 'auto';
+    if (m === 'auto') delete root.dataset.theme; else root.dataset.theme = m;
+    var l = document.querySelector('[data-theme-label]');
+    if (l) l.textContent = m[0].toUpperCase() + m.slice(1);
+    renderMermaid(true);
+  }
+
+  document.querySelectorAll('[data-set-tier]').forEach(function (b) {
+    b.addEventListener('click', function () { store(TIER, b.dataset.setTier); applyTier(b.dataset.setTier); });
+  });
+  var tb = document.querySelector('[data-theme-toggle]');
+  if (tb) tb.addEventListener('click', function () {
+    var cur = read(THEME) || 'auto';
+    var next = cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto';
+    store(THEME, next); applyTheme(next);
+  });
+  // The tabbed shell (artifact.html) drives level and theme for the report inside its frame.
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'powatch-docs') return;
+    if (d.tier) applyTier(d.tier);
+    if (d.theme) applyTheme(d.theme);
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', function () { renderMermaid(true); });
+  }
+
+  // ---- Mermaid: theme-aware SVG from the page's own tokens; re-rendered when the theme changes. ----
+  var seq = 0, lastKey = null;
+  function tok(n) { return getComputedStyle(root).getPropertyValue(n).trim(); }
+  function isDark() { return root.dataset.theme === 'dark' || (!root.dataset.theme && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); }
+  var chain = Promise.resolve();
+  function renderMermaid(force) { chain = chain.then(function () { return doRender(force); }).catch(function () { }); }
+  async function doRender(force) {
+    var blocks = document.querySelectorAll('.mmd');
+    if (!blocks.length) return;
+    if (!window.mermaid) {
+      blocks.forEach(function (b) {
+        if (b.querySelector('.fallback')) return;
+        var src = b.querySelector('script[type="text/plain"]');
+        var f = document.createElement('div'); f.className = 'fallback';
+        f.textContent = 'Diagram needs Mermaid 10.9.0 from cdn.jsdelivr.net (offline?). Source:\n\n' + (src ? src.textContent.trim() : '');
+        b.appendChild(f);
+      });
+      return;
+    }
+    var key = String(isDark());
+    if (key !== lastKey) force = true;
+    lastKey = key;
+    window.mermaid.initialize({
+      startOnLoad: false, securityLevel: 'strict', theme: 'base',
+      fontFamily: 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif',
+      flowchart: { htmlLabels: false, curve: 'basis', useMaxWidth: true },
+      sequence: { useMaxWidth: true, wrap: true, mirrorActors: false },
+      er: { useMaxWidth: true },
+      themeVariables: {
+        darkMode: isDark(), background: tok('--surface'), fontSize: '14px',
+        primaryColor: tok('--surface-2'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--accent'),
+        secondaryColor: tok('--accent-tint') || tok('--surface-2'), secondaryTextColor: tok('--ink'), secondaryBorderColor: tok('--line'),
+        tertiaryColor: tok('--surface'), tertiaryTextColor: tok('--ink'), tertiaryBorderColor: tok('--line'),
+        lineColor: tok('--ink-2'), textColor: tok('--ink'), mainBkg: tok('--surface-2'), nodeBorder: tok('--accent'),
+        clusterBkg: tok('--surface'), clusterBorder: tok('--line'), titleColor: tok('--ink'), edgeLabelBackground: tok('--surface'),
+        actorBkg: tok('--surface-2'), actorBorder: tok('--accent'), actorTextColor: tok('--ink'), actorLineColor: tok('--line'),
+        signalColor: tok('--ink-2'), signalTextColor: tok('--ink'), labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line'),
+        labelTextColor: tok('--ink'), loopTextColor: tok('--ink'), noteBkgColor: tok('--accent-tint') || tok('--surface-2'), noteTextColor: tok('--ink'), noteBorderColor: tok('--accent'),
+        activationBkgColor: tok('--surface-2'), activationBorderColor: tok('--accent'), sequenceNumberColor: '#ffffff',
+        attributeBackgroundColorOdd: tok('--surface'), attributeBackgroundColorEven: tok('--surface-2')
+      }
+    });
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (b.offsetParent === null && !b.dataset.done) continue; // hidden at this level: render when shown
+      if (b.dataset.done === key && !force) continue;
+      var src = b.querySelector('script[type="text/plain"]');
+      var out = b.querySelector('.out');
+      if (!src || !out) continue;
+      try {
+        var r = await window.mermaid.render('mmd' + (++seq), src.textContent.trim());
+        out.innerHTML = r.svg; b.dataset.done = key;
+      } catch (err) {
+        out.textContent = 'Diagram could not render: ' + (err && err.message ? err.message : err);
+      }
+    }
+  }
+
+  applyTheme(read(THEME) || 'auto');
+  applyTier(root.dataset.tier || read(TIER) || '1');
+})();
+</script>
+</body>
+</html>

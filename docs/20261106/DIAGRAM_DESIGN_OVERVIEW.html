@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en" data-tier="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="PoWatch NET_DOCS 2026-11-06 @ 284e0b8">
+<title>PoWatch — Alternative Overview (Diagram Design)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;
+--bg:#fcfcfb;--surface:#ffffff;--surface-2:#f3f2ef;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6b6a66;--line:#e4e2dc;
+--accent:#2a78d6;--accent-ink:#1d5fae;--accent-tint:rgba(42,120,214,.08);
+--good:#0a7a2f;--warn:#9a5b00;--bad:#c62f2e;--code-bg:#f3f2ef;
+--series-1:#2a78d6;
+--r:10px;--fs-xs:.78rem;--fs-sm:.9rem;--fs-md:1rem;--fs-lg:1.25rem;--fs-xl:clamp(1.6rem,1.2rem + 1.6vw,2.3rem);
+--sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--mono:ui-monospace,"Cascadia Code","SFMono-Regular",Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;
+--bg:#121211;--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--muted:#9a998f;--line:#34332f;
+--accent:#3987e5;--accent-ink:#8bb8f0;--accent-tint:rgba(57,135,229,.12);--good:#4cc36f;--warn:#e0a64a;--bad:#ef7473;--code-bg:#242422;--series-1:#3987e5}}
+:root[data-theme="dark"]{color-scheme:dark;
+--bg:#121211;--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--muted:#9a998f;--line:#34332f;
+--accent:#3987e5;--accent-ink:#8bb8f0;--accent-tint:rgba(57,135,229,.12);--good:#4cc36f;--warn:#e0a64a;--bad:#ef7473;--code-bg:#242422;--series-1:#3987e5}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs-md)/1.6 var(--sans);overflow-x:hidden}
+a{color:var(--accent-ink)}
+code,pre,kbd{font-family:var(--mono);font-size:.86em}
+code{background:var(--code-bg);padding:.08em .35em;border-radius:4px;overflow-wrap:anywhere}
+.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;z-index:9;background:var(--surface);padding:6px 10px}
+/* header */
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{max-width:1240px;margin:0 auto;padding:.55rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center}
+.brand{font-weight:700;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:.45rem;white-space:nowrap}
+.brand span{color:var(--muted);font-weight:500}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.pages{display:flex;flex-wrap:wrap;gap:.15rem;flex:1 1 420px;min-width:0}
+.pages a{font-size:var(--fs-sm);text-decoration:none;color:var(--ink-2);padding:.25rem .55rem;border-radius:6px}
+.pages a:hover{background:var(--surface-2)}
+.pages a[aria-current]{color:var(--ink);background:var(--surface-2);font-weight:600}
+.ctl{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.tier{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.tier button,.theme-btn{font:inherit;font-size:var(--fs-xs);border:0;background:transparent;color:var(--ink-2);padding:.35rem .6rem;cursor:pointer;min-height:32px}
+.tier button+button{border-left:1px solid var(--line)}
+.tier button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+.theme-btn{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+html.embedded .top,html.embedded .foot .t1-hint{display:none}
+/* tiers */
+[data-tier="1"] .t2,[data-tier="1"] .t3,[data-tier="2"] .t3{display:none!important}
+[data-tier="1"] a.cite,[data-tier="2"] a.cite{display:none}
+.tier-badge{display:inline-block;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.05rem .5rem;margin-left:.4rem;vertical-align:middle}
+/* layout */
+main{max-width:1240px;margin:0 auto;padding:1.5rem 1rem 2rem}
+.hero{padding:1.2rem 0 .6rem}
+.eyebrow{font-size:var(--fs-xs);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 .35rem}
+h1{font-size:var(--fs-xl);line-height:1.15;margin:0 0 .6rem;letter-spacing:-.01em}
+h2{font-size:var(--fs-lg);margin:2.2rem 0 .6rem;padding-top:.6rem;border-top:1px solid var(--line)}
+h3{font-size:var(--fs-md);margin:1.2rem 0 .35rem}
+p{margin:.4rem 0 .8rem;max-width:78ch}
+.lede{font-size:1.08rem;color:var(--ink-2);max-width:72ch}
+.eli5{background:var(--accent-tint);border-left:3px solid var(--accent);padding:.6rem .9rem;border-radius:0 8px 8px 0;max-width:none;margin:.4rem 0 1rem}
+.eli5::before{content:"In plain English · ";font-weight:700;color:var(--accent-ink)}
+.grid{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.grid.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.9rem 1rem;min-width:0}
+.card h3{margin-top:0}
+.card p:last-child{margin-bottom:0}
+.analogy{display:flex;gap:.7rem;align-items:flex-start}
+.analogy .ico{font-size:1.5rem;line-height:1}
+.analogy b{display:block}
+.muted{color:var(--muted)}
+.small{font-size:var(--fs-sm)}
+.pill{display:inline-block;font-size:var(--fs-xs);font-weight:600;padding:.05rem .5rem;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.pill.good{color:var(--good);border-color:currentColor;background:transparent}
+.pill.warn{color:var(--warn);border-color:currentColor;background:transparent}
+.pill.bad{color:var(--bad);border-color:currentColor;background:transparent}
+.pill.plan{color:var(--accent-ink);border-style:dashed;background:transparent}
+/* narrative step cards */
+ol.steps{list-style:none;counter-reset:s;padding:0;margin:.6rem 0 1rem;display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+ol.steps>li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.75rem .9rem .75rem 2.9rem;position:relative;min-width:0}
+ol.steps>li::before{content:counter(s);position:absolute;left:.8rem;top:.75rem;width:1.5rem;height:1.5rem;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:var(--fs-xs);display:grid;place-items:center}
+ol.steps>li b{display:block}
+/* figures */
+figure{margin:1rem 0;min-width:0}
+figcaption{font-size:var(--fs-sm);color:var(--muted);margin-top:.35rem}
+.mmd{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.8rem;overflow-x:auto;min-height:60px}
+.mmd .out svg{max-width:100%;height:auto;display:block;margin:0 auto}
+.mmd .fallback{white-space:pre-wrap;font-family:var(--mono);font-size:var(--fs-xs);color:var(--muted)}
+/* tables & code */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);margin:.6rem 0 1rem}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th,td{text-align:left;vertical-align:top;padding:.5rem .7rem;border-bottom:1px solid var(--line)}
+th{background:var(--surface-2);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:.7rem .9rem;overflow-x:auto;line-height:1.45;margin:.5rem 0 1rem}
+pre code{background:none;padding:0;overflow-wrap:normal}
+a.cite{font-family:var(--mono);font-size:var(--fs-xs);background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:.02rem .35rem;text-decoration:none;color:var(--accent-ink);overflow-wrap:anywhere;white-space:normal}
+a.cite::before{content:"⌖ ";opacity:.7}
+.evidence{font-size:var(--fs-sm);color:var(--ink-2)}
+.evidence::before{content:"Evidence: ";font-weight:600}
+details{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:.5rem .9rem;margin:.6rem 0}
+summary{cursor:pointer;font-weight:600}
+/* stat tiles */
+.tiles{display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));margin:1rem 0}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.8rem .9rem}
+.tile .label{font-size:var(--fs-sm);color:var(--ink-2)}
+.tile .value{font-size:2rem;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.tile .sub{font-size:var(--fs-xs);color:var(--muted)}
+.meter{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:.45rem}
+.meter>i{display:block;height:100%;background:var(--series-1);border-radius:4px}
+.callout{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:0 var(--r) var(--r) 0;background:var(--surface);padding:.7rem .9rem;margin:.8rem 0}
+.callout.ok{border-left-color:var(--good)}
+.callout.plan{border-left-color:var(--accent);border-left-style:dashed}
+.foot{max-width:1240px;margin:0 auto;padding:1rem 1rem 2rem;border-top:1px solid var(--line);font-size:var(--fs-sm);color:var(--muted)}
+.foot p{max-width:none}
+@media (max-width:560px){.tier button{padding:.35rem .45rem}.bar{gap:.4rem}h2{margin-top:1.6rem}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+@media print{.top{position:static}.t2,.t3{display:block!important}}
+</style>
+<script>try{var t=localStorage.getItem('powatch-docs:tier');if(t)document.documentElement.dataset.tier=t;var th=localStorage.getItem('powatch-docs:theme');if(th&&th!=='auto')document.documentElement.dataset.theme=th;}catch(e){}try{if(window.self!==window.top)document.documentElement.classList.add('embedded');}catch(e){document.documentElement.classList.add('embedded');}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="index.html"><span class="dot" aria-hidden="true"></span>PoWatch <span>docs</span></a>
+    <nav class="pages" aria-label="Documentation pages"><a href="index.html">Overview</a><a href="USER_WORKFLOW.html">User journeys</a><a href="VISUAL_ARCHITECTURE_DASHBOARD.html">Architecture</a><a href="AI_SERVICES_REPORT.html">AI & services</a><a href="AUTH_SECURITY_REPORT.html">Security</a><a href="DIAGRAM_DESIGN_OVERVIEW.html" aria-current="page">Alt overview</a><a href="artifact.html">Tabbed view</a></nav>
+    <div class="ctl">
+      <div class="tier" role="group" aria-label="Detail level">
+        <button type="button" data-set-tier="1" title="Simple: plain English, journeys and analogies">1 · Simple</button>
+        <button type="button" data-set-tier="2" title="Standard: adds diagrams and component maps">2 · Standard</button>
+        <button type="button" data-set-tier="3" title="Developer: adds file:line citations, schemas, DI and config">3 · Developer</button>
+      </div>
+      <button type="button" class="theme-btn" data-theme-toggle title="Theme: auto / light / dark">◐ <span data-theme-label>Auto</span></button>
+    </div>
+  </div>
+</header>
+<main id="main">
+<section class="hero">
+  <p class="eyebrow">Alternative overview · diagram-design style</p>
+  <h1>PoWatch, drawn in an editorial diagram style</h1>
+  <p class="eli5">The same system as the other pages, drawn by hand as four simple pictures: what runs where, how a frame becomes a story, how the code is layered, and where each kind of data may live.</p>
+  <p class="small muted">These diagrams follow <a href="https://github.com/cathrynlavery/diagram-design" target="_blank" rel="noopener">cathrynlavery/diagram-design</a> (MIT): inline SVG on a 4px grid, hairline strokes, one accent for the headline path, orthogonal connectors with 8px elbows, uppercase arrow labels of 14 characters or fewer on paper masks, at most 9 nodes per diagram, and the legend as a strip at the bottom. Its light and dark palettes are applied through CSS variables. On narrow screens each diagram scrolls inside its frame.</p>
+</section>
+<div class="dd-root">
+<h2>1 · What runs where</h2>
+<p class="eli5">Your device does the watching, the server does the counting, and outside services sign you in and (optionally) polish the words.</p>
+<figure><div class="dd-wrap"><svg class="dd" viewBox="0 0 960 464" role="img" aria-labelledby="arch-t arch-d"><title id="arch-t">PoWatch architecture</title><desc id="arch-d">Owner device runs sensing and queues ticks; the App Service API claims each batch once, merges rollups into storage, and an optional chat model rewords recaps.</desc><defs><marker id="ar-muted" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-muted" points="0 0, 8 3, 0 6"/></marker><marker id="ar-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-accent" points="0 0, 8 3, 0 6"/></marker><marker id="ar-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-link" points="0 0, 8 3, 0 6"/></marker></defs><rect class="paper" width="100%" height="100%"/><g class="band "><rect x="24" y="48" width="272" height="360" rx="8"/><text class="eyebrow-s" x="40" y="68">OWNER'S DEVICE</text></g><g class="band "><rect x="344" y="48" width="272" height="360" rx="8"/><text class="eyebrow-s" x="360" y="68">AZURE APP SERVICE</text></g><g class="band "><rect x="664" y="48" width="272" height="360" rx="8"/><text class="eyebrow-s" x="680" y="68">SERVICES</text></g><path class="a a-muted" d="M160 152 L160 196" marker-end="url(#ar-muted)"/><g class="al"><rect x="118" y="167" width="84" height="16" rx="2"/><text x="160" y="179" text-anchor="middle">BOXES · TEXT</text></g><path class="a a-muted" d="M160 264 L160 308" marker-end="url(#ar-muted)"/><g class="al"><rect x="138" y="279" width="44" height="16" rx="2"/><text x="160" y="291" text-anchor="middle">QUEUE</text></g><path class="a a-accent" d="M280 344 L312 344 Q320 344 320 336 L320 128 Q320 120 328 120 L356 120" marker-end="url(#ar-accent)"/><path class="a a-accent" d="M480 152 L480 196" marker-end="url(#ar-accent)"/><g class="al"><rect x="444" y="167" width="72" height="16" rx="2"/><text x="480" y="179" text-anchor="middle">CLAIM ONCE</text></g><path class="a a-muted" d="M600 232 L676 232" marker-end="url(#ar-muted)"/><g class="al"><rect x="618" y="223" width="44" height="16" rx="2"/><text x="640" y="235" text-anchor="middle">MERGE</text></g><path class="a a-muted" d="M680 260 L652 260 Q644 260 644 268 L644 320 Q644 328 636 328 L604 328" marker-end="url(#ar-muted)"/><path class="a a-muted dash" d="M600 352 L676 352" marker-end="url(#ar-muted)"/><g class="al"><rect x="614" y="343" width="52" height="16" rx="2"/><text x="640" y="355" text-anchor="middle">REWORD</text></g><path class="a a-link" d="M600 120 L676 120" marker-end="url(#ar-link)"/><g class="al"><rect x="612" y="111" width="56" height="16" rx="2"/><text x="640" y="123" text-anchor="middle">SIGN-IN</text></g><g class="n n-focal">
+  <rect class="mask" x="40" y="88" width="240" height="64" rx="6"/>
+  <rect class="box" x="40" y="88" width="240" height="64" rx="6"/>
+  <rect class="tag" x="52" y="98" width="76" height="16" rx="2"/>
+  <text class="tagt" x="58" y="109">JS WORKERS</text>
+  <text class="name" x="52" y="131">Sensing on-device</text>
+  <text class="sub" x="52" y="145">pixels · RF-DETR · captions · audio</text>
+</g><g class="n n-backend">
+  <rect class="mask" x="40" y="200" width="240" height="64" rx="6"/>
+  <rect class="box" x="40" y="200" width="240" height="64" rx="6"/>
+  <rect class="tag" x="52" y="210" width="84" height="16" rx="2"/>
+  <text class="tagt" x="58" y="221">BLAZOR WASM</text>
+  <text class="name" x="52" y="243">PoWatch app</text>
+  <text class="sub" x="52" y="257">tracker · TickBatcher · pages</text>
+</g><g class="n n-store">
+  <rect class="mask" x="40" y="312" width="240" height="64" rx="6"/>
+  <rect class="box" x="40" y="312" width="240" height="64" rx="6"/>
+  <rect class="tag" x="52" y="322" width="68" height="16" rx="2"/>
+  <text class="tagt" x="58" y="333">INDEXEDDB</text>
+  <text class="name" x="52" y="355">Outbox</text>
+  <text class="sub" x="52" y="369">unsent batches wait here</text>
+</g><g class="n n-backend">
+  <rect class="mask" x="360" y="88" width="240" height="64" rx="6"/>
+  <rect class="box" x="360" y="88" width="240" height="64" rx="6"/>
+  <rect class="tag" x="372" y="98" width="88" height="16" rx="2"/>
+  <text class="tagt" x="378" y="109">ASP.NET CORE</text>
+  <text class="name" x="372" y="131">API host</text>
+  <text class="sub" x="372" y="145">cookie auth · endpoints · hub</text>
+</g><g class="n n-focal">
+  <rect class="mask" x="360" y="200" width="240" height="64" rx="6"/>
+  <rect class="box" x="360" y="200" width="240" height="64" rx="6"/>
+  <rect class="tag" x="372" y="210" width="84" height="16" rx="2"/>
+  <text class="tagt" x="378" y="221">APPLICATION</text>
+  <text class="name" x="372" y="243">IngestService</text>
+  <text class="sub" x="372" y="257">ledger claim → rollup merge</text>
+</g><g class="n n-backend">
+  <rect class="mask" x="360" y="312" width="240" height="64" rx="6"/>
+  <rect class="box" x="360" y="312" width="240" height="64" rx="6"/>
+  <rect class="tag" x="372" y="322" width="84" height="16" rx="2"/>
+  <text class="tagt" x="378" y="333">APPLICATION</text>
+  <text class="name" x="372" y="355">Recaps, stories, Ask</text>
+  <text class="sub" x="372" y="369">template first · number check</text>
+</g><g class="n n-external">
+  <rect class="mask" x="680" y="88" width="240" height="64" rx="6"/>
+  <rect class="box" x="680" y="88" width="240" height="64" rx="6"/>
+  <rect class="tag" x="692" y="98" width="84" height="16" rx="2"/>
+  <text class="tagt" x="698" y="109">OIDC + PKCE</text>
+  <text class="name" x="692" y="131">Microsoft Entra ID</text>
+  <text class="sub" x="692" y="145">tenant allow-list</text>
+</g><g class="n n-store">
+  <rect class="mask" x="680" y="200" width="240" height="64" rx="6"/>
+  <rect class="box" x="680" y="200" width="240" height="64" rx="6"/>
+  <rect class="tag" x="692" y="210" width="96" height="16" rx="2"/>
+  <text class="tagt" x="698" y="221">AZURE STORAGE</text>
+  <text class="name" x="692" y="243">Tables + Blobs</text>
+  <text class="sub" x="692" y="257">9 tables · snapshots · key ring</text>
+</g><g class="n n-optional">
+  <rect class="mask" x="680" y="312" width="240" height="64" rx="6"/>
+  <rect class="box" x="680" y="312" width="240" height="64" rx="6"/>
+  <rect class="tag" x="692" y="322" width="64" height="16" rx="2"/>
+  <text class="tagt" x="698" y="333">OPTIONAL</text>
+  <text class="name" x="692" y="355">Chat model</text>
+  <text class="sub" x="692" y="369">Ollama · Gemini · Azure OpenAI</text>
+</g><g class="legend"><path class="a a-accent" d="M40 436 L72 436" marker-end="url(#ar-accent)"/><text x="84" y="440">Headline path</text><path class="a a-muted" d="M199.2 436 L231.2 436" marker-end="url(#ar-muted)"/><text x="243.2" y="440">Call</text><path class="a a-muted dash" d="M300.79999999999995 436 L332.79999999999995 436" marker-end="url(#ar-muted)"/><text x="344.79999999999995" y="440">Async or optional</text><path class="a a-link" d="M485.59999999999997 436 L517.5999999999999 436" marker-end="url(#ar-link)"/><text x="529.5999999999999" y="440">External sign-in</text></g></svg></div><figcaption>Architecture. The coral path is the one that matters: a batch every 10 seconds, claimed once.</figcaption></figure>
+<ol class="steps"><li><b>Sense</b>Workers turn frames and sound into boxes and short text.</li><li><b>Queue</b>The app packs 10-second ticks into the IndexedDB outbox.</li><li><b>Upload</b>Each batch is posted with a <code>batchKey</code>.</li><li><b>Claim once</b>IngestService merges totals only on the first claim, then pushes <code>statsChanged</code> to the owner's open tabs.</li><li><b>Tell</b>Recaps read the totals, and an optional model rewords them.</li></ol>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/IngestService.cs#L76-L92" target="_blank" rel="noopener">src/PoWatch.Application/Services/IngestService.cs:76-92</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Ingest/IngestEndpoints.cs#L42-L52" target="_blank" rel="noopener">src/PoWatch.Api/Features/Ingest/IngestEndpoints.cs:42-52</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L44-L48" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:44-48</a></p>
+
+<h2>2 · From a camera frame to a story</h2>
+<p class="eli5">A picture becomes numbers on your device. The numbers are counted once on the server, a template writes the story, and an AI may only polish the wording.</p>
+<figure><div class="dd-wrap"><svg class="dd" viewBox="0 0 960 400" role="img" aria-labelledby="flow-t flow-d"><title id="flow-t">From a camera frame to a story</title><desc id="flow-d">Row one: frame, on-device models, ten-second tick, outbox. Row two right to left: ledger claim, rollups, template recap, optional AI reword, story.</desc><defs><marker id="ar-muted" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-muted" points="0 0, 8 3, 0 6"/></marker><marker id="ar-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-accent" points="0 0, 8 3, 0 6"/></marker><marker id="ar-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-link" points="0 0, 8 3, 0 6"/></marker></defs><rect class="paper" width="100%" height="100%"/><path class="a a-muted" d="M380 104 L404 104" marker-end="url(#ar-muted)"/><path class="a a-muted" d="M568 104 L592 104" marker-end="url(#ar-muted)"/><path class="a a-muted" d="M756 104 L780 104" marker-end="url(#ar-muted)"/><path class="a a-accent" d="M864 136 L864 228" marker-end="url(#ar-accent)"/><g class="al"><rect x="824" y="175" width="80" height="16" rx="2"/><text x="864" y="187" text-anchor="middle">POST · ONCE</text></g><path class="a a-muted" d="M784 264 L760 264" marker-end="url(#ar-muted)"/><path class="a a-muted" d="M596 264 L572 264" marker-end="url(#ar-muted)"/><path class="a a-muted dash" d="M408 264 L384 264" marker-end="url(#ar-muted)"/><path class="a a-muted dash" d="M220 264 L196 264" marker-end="url(#ar-muted)"/><path class="a a-muted" d="M488 296 L488 316 Q488 324 480 324 L120 324 Q112 324 112 316 L112 300" marker-end="url(#ar-muted)"/><g class="al"><rect x="260" y="315" width="80" height="16" rx="2"/><text x="300" y="327" text-anchor="middle">IF AI FAILS</text></g><g class="n n-input">
+  <rect class="mask" x="220" y="72" width="160" height="64" rx="6"/>
+  <rect class="box" x="220" y="72" width="160" height="64" rx="6"/>
+  <rect class="tag" x="232" y="82" width="52" height="16" rx="2"/>
+  <text class="tagt" x="238" y="93">CAMERA</text>
+  <text class="name" x="232" y="115">Frame</text>
+  <text class="sub" x="232" y="129">never uploaded</text>
+</g><g class="n n-backend">
+  <rect class="mask" x="408" y="72" width="160" height="64" rx="6"/>
+  <rect class="box" x="408" y="72" width="160" height="64" rx="6"/>
+  <rect class="tag" x="420" y="82" width="56" height="16" rx="2"/>
+  <text class="tagt" x="426" y="93">BROWSER</text>
+  <text class="name" x="420" y="115">On-device models</text>
+  <text class="sub" x="420" y="129">boxes · words · sounds</text>
+</g><g class="n n-backend">
+  <rect class="mask" x="596" y="72" width="160" height="64" rx="6"/>
+  <rect class="box" x="596" y="72" width="160" height="64" rx="6"/>
+  <rect class="tag" x="608" y="82" width="76" height="16" rx="2"/>
+  <text class="tagt" x="614" y="93">EVERY 10 S</text>
+  <text class="name" x="608" y="115">Tick</text>
+  <text class="sub" x="608" y="129">motion · light · counts</text>
+</g><g class="n n-store">
+  <rect class="mask" x="784" y="72" width="160" height="64" rx="6"/>
+  <rect class="box" x="784" y="72" width="160" height="64" rx="6"/>
+  <rect class="tag" x="796" y="82" width="68" height="16" rx="2"/>
+  <text class="tagt" x="802" y="93">INDEXEDDB</text>
+  <text class="name" x="796" y="115">Outbox</text>
+  <text class="sub" x="796" y="129">retry-safe batches</text>
+</g><g class="n n-backend">
+  <rect class="mask" x="784" y="232" width="160" height="64" rx="6"/>
+  <rect class="box" x="784" y="232" width="160" height="64" rx="6"/>
+  <rect class="tag" x="796" y="242" width="52" height="16" rx="2"/>
+  <text class="tagt" x="802" y="253">LEDGER</text>
+  <text class="name" x="796" y="275">Claim batchKey</text>
+  <text class="sub" x="796" y="289">count only once</text>
+</g><g class="n n-store">
+  <rect class="mask" x="596" y="232" width="160" height="64" rx="6"/>
+  <rect class="box" x="596" y="232" width="160" height="64" rx="6"/>
+  <rect class="tag" x="608" y="242" width="56" height="16" rx="2"/>
+  <text class="tagt" x="614" y="253">ROLLUPS</text>
+  <text class="name" x="608" y="275">Totals</text>
+  <text class="sub" x="608" y="289">min · hour · day · all</text>
+</g><g class="n n-focal">
+  <rect class="mask" x="408" y="232" width="160" height="64" rx="6"/>
+  <rect class="box" x="408" y="232" width="160" height="64" rx="6"/>
+  <rect class="tag" x="420" y="242" width="64" height="16" rx="2"/>
+  <text class="tagt" x="426" y="253">TEMPLATE</text>
+  <text class="name" x="420" y="275">Recap</text>
+  <text class="sub" x="420" y="289">numbers are fixed here</text>
+</g><g class="n n-optional">
+  <rect class="mask" x="220" y="232" width="160" height="64" rx="6"/>
+  <rect class="box" x="220" y="232" width="160" height="64" rx="6"/>
+  <rect class="tag" x="232" y="242" width="84" height="16" rx="2"/>
+  <text class="tagt" x="238" y="253">OPTIONAL AI</text>
+  <text class="name" x="232" y="275">Reword</text>
+  <text class="sub" x="232" y="289">no new numbers</text>
+</g><g class="n n-backend">
+  <rect class="mask" x="32" y="232" width="160" height="64" rx="6"/>
+  <rect class="box" x="32" y="232" width="160" height="64" rx="6"/>
+  <rect class="tag" x="44" y="242" width="56" height="16" rx="2"/>
+  <text class="tagt" x="50" y="253">JOURNAL</text>
+  <text class="name" x="44" y="275">Story</text>
+  <text class="sub" x="44" y="289">day · session · week</text>
+</g><g class="legend"><path class="a a-accent" d="M40 372 L72 372" marker-end="url(#ar-accent)"/><text x="84" y="376">Upload, counted once</text><path class="a a-muted" d="M244 372 L276 372" marker-end="url(#ar-muted)"/><text x="288" y="376">Always</text><path class="a a-muted dash" d="M358.4 372 L390.4 372" marker-end="url(#ar-muted)"/><text x="402.4" y="376">Only when a model answers</text></g></svg></div><figcaption>Data flow, read left to right, then right to left.</figcaption></figure>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/docs/README.md#L11-L24" target="_blank" rel="noopener">docs/README.md:11-24</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Services/RecapPrompt.cs#L59-L63" target="_blank" rel="noopener">src/PoWatch.Shared/Services/RecapPrompt.cs:59-63</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/RecapService.cs#L129-L142" target="_blank" rel="noopener">src/PoWatch.Application/Services/RecapService.cs:129-142</a></p>
+
+<h2>3 · How the code is layered</h2>
+<p class="eli5">Like floors in a building: upper floors may use the stairs down, never up. The bottom floor (Domain) is pure maths and depends on nothing.</p>
+<figure><div class="dd-wrap"><svg class="dd" viewBox="0 0 960 480" role="img" aria-labelledby="stack-t stack-d"><title id="stack-t">Code layers</title><desc id="stack-d">Five stacked layers from Client down to Domain, with Shared beside them holding DTOs and browser-safe logic; references only point downward.</desc><defs><marker id="ar-muted" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-muted" points="0 0, 8 3, 0 6"/></marker><marker id="ar-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-accent" points="0 0, 8 3, 0 6"/></marker><marker id="ar-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-link" points="0 0, 8 3, 0 6"/></marker></defs><rect class="paper" width="100%" height="100%"/><path class="a a-muted" d="M656 100 L716 100" marker-end="url(#ar-muted)"/><g class="al"><rect x="668" y="91" width="40" height="16" rx="2"/><text x="688" y="103" text-anchor="middle">USES</text></g><path class="a a-muted" d="M656 316 L716 316" marker-end="url(#ar-muted)"/><g class="al"><rect x="668" y="307" width="40" height="16" rx="2"/><text x="688" y="319" text-anchor="middle">USES</text></g><path class="a a-accent" d="M48 132 L48 356" marker-end="url(#ar-accent)"/><g class="al"><rect x="28" y="235" width="40" height="16" rx="2"/><text x="48" y="247" text-anchor="middle">DOWN</text></g><g class="n n-backend">
+  <rect class="mask" x="80" y="68" width="576" height="64" rx="6"/>
+  <rect class="box" x="80" y="68" width="576" height="64" rx="6"/>
+  <rect class="tag" x="92" y="78" width="112" height="16" rx="2"/>
+  <text class="tagt" x="98" y="89">BLAZOR WASM + JS</text>
+  <text class="name" x="92" y="111">Client</text>
+  <text class="sub" x="92" y="125">pages · sensing workers · outbox</text>
+</g><g class="n n-backend">
+  <rect class="mask" x="80" y="140" width="576" height="64" rx="6"/>
+  <rect class="box" x="80" y="140" width="576" height="64" rx="6"/>
+  <rect class="tag" x="92" y="150" width="88" height="16" rx="2"/>
+  <text class="tagt" x="98" y="161">ASP.NET CORE</text>
+  <text class="name" x="92" y="183">Api</text>
+  <text class="sub" x="92" y="197">middleware · endpoints · hub · jobs</text>
+</g><g class="n n-backend">
+  <rect class="mask" x="80" y="212" width="576" height="64" rx="6"/>
+  <rect class="box" x="80" y="212" width="576" height="64" rx="6"/>
+  <rect class="tag" x="92" y="222" width="120" height="16" rx="2"/>
+  <text class="tagt" x="98" y="233">AZURE · AI · HTTP</text>
+  <text class="name" x="92" y="255">Infrastructure</text>
+  <text class="sub" x="92" y="269">table/blob stores · RecapAi · Open-Meteo</text>
+</g><g class="n n-backend">
+  <rect class="mask" x="80" y="284" width="576" height="64" rx="6"/>
+  <rect class="box" x="80" y="284" width="576" height="64" rx="6"/>
+  <rect class="tag" x="92" y="294" width="68" height="16" rx="2"/>
+  <text class="tagt" x="98" y="305">USE CASES</text>
+  <text class="name" x="92" y="327">Application</text>
+  <text class="sub" x="92" y="341">Ingest · StatsQuery · Recap · Ask · Share</text>
+</g><g class="n n-focal">
+  <rect class="mask" x="80" y="356" width="576" height="64" rx="6"/>
+  <rect class="box" x="80" y="356" width="576" height="64" rx="6"/>
+  <rect class="tag" x="92" y="366" width="76" height="16" rx="2"/>
+  <text class="tagt" x="98" y="377">PURE MATHS</text>
+  <text class="name" x="92" y="399">Domain</text>
+  <text class="sub" x="92" y="413">entities · PresenceStats · AnomalyMath</text>
+</g><g class="n n-store">
+  <rect class="mask" x="720" y="68" width="208" height="280" rx="6"/>
+  <rect class="box" x="720" y="68" width="208" height="280" rx="6"/>
+  <rect class="tag" x="732" y="78" width="52" height="16" rx="2"/>
+  <text class="tagt" x="738" y="89">SHARED</text>
+  <text class="name" x="732" y="111">Shared</text>
+  <text class="sub" x="732" y="125">DTOs · browser-safe C#</text>
+</g><text class="sub" x="732" y="160">CentroidTracker</text><text class="sub" x="732" y="176">TickBatcher</text><text class="sub" x="732" y="192">HighlightRules</text><text class="sub" x="732" y="208">RecapPrompt</text><text class="sub" x="732" y="224">VoiceBook</text><g class="legend"><path class="a a-accent" d="M40 452 L72 452" marker-end="url(#ar-accent)"/><text x="84" y="456">Allowed direction (ArchitectureBoundaryTests)</text><path class="a a-muted" d="M404 452 L436 452" marker-end="url(#ar-muted)"/><text x="448" y="456">References</text></g></svg></div><figcaption>Layer stack. Shared is the only project the browser and server both compile.</figcaption></figure>
+<p class="evidence t3">CLAUDE.md "Layers" · <code>tests/PoWatch.Unit/ArchitectureBoundaryTests.cs</code> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L69-L70" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:69-70</a></p>
+
+<h2>4 · Where each kind of data may live</h2>
+<p class="eli5">Three rooms. What you see and hear stays in the first, your notes and totals live in the second, and only a frozen, photo-free copy ever reaches the third.</p>
+<figure><div class="dd-wrap"><svg class="dd" viewBox="0 0 960 400" role="img" aria-labelledby="zones-t zones-d"><title id="zones-t">Where each kind of data is allowed to live</title><desc id="zones-d">Three nested zones: this browser keeps frames, audio, voiceprints and caption vectors; the user partition on the server keeps ticks, events, rollups and stories; a token-scoped public copy holds only a frozen recap.</desc><defs><marker id="ar-muted" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-muted" points="0 0, 8 3, 0 6"/></marker><marker id="ar-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-accent" points="0 0, 8 3, 0 6"/></marker><marker id="ar-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-link" points="0 0, 8 3, 0 6"/></marker></defs><rect class="paper" width="100%" height="100%"/><path class="a a-accent" d="M296 196 L340 196" marker-end="url(#ar-accent)"/><path class="a a-link" d="M620 196 L664 196" marker-end="url(#ar-link)"/><g class="zone zone-focal"><rect x="24" y="48" width="272" height="312" rx="8"/><text class="eyebrow-s" x="40" y="72">THIS BROWSER ONLY</text></g><g class="band "><rect x="344" y="48" width="276" height="312" rx="8"/><text class="eyebrow-s" x="360" y="68">OWNER'S PARTITION</text></g><g class="zone zone-ext"><rect x="668" y="48" width="268" height="312" rx="8"/><text class="eyebrow-s" x="684" y="72">ANYONE WITH TOKEN</text></g><g class="chip"><rect x="40" y="92" width="240" height="24" rx="2"/><text x="50" y="108">Camera frames</text></g><g class="chip"><rect x="40" y="132" width="240" height="24" rx="2"/><text x="50" y="148">Raw audio</text></g><g class="chip"><rect x="40" y="172" width="240" height="24" rx="2"/><text x="50" y="188">Voiceprints</text></g><g class="chip"><rect x="40" y="212" width="240" height="24" rx="2"/><text x="50" y="228">Caption vectors</text></g><g class="chip"><rect x="40" y="252" width="240" height="24" rx="2"/><text x="50" y="268">Time-lapse</text></g><g class="chip"><rect x="40" y="292" width="240" height="24" rx="2"/><text x="50" y="308">Outbox batches</text></g><g class="chip"><rect x="360" y="92" width="244" height="24" rx="2"/><text x="370" y="108">Sessions</text></g><g class="chip"><rect x="360" y="132" width="244" height="24" rx="2"/><text x="370" y="148">Ticks · events</text></g><g class="chip"><rect x="360" y="172" width="244" height="24" rx="2"/><text x="370" y="188">Rollups</text></g><g class="chip"><rect x="360" y="212" width="244" height="24" rx="2"/><text x="370" y="228">Stories</text></g><g class="chip"><rect x="360" y="252" width="244" height="24" rx="2"/><text x="370" y="268">Regulars</text></g><g class="chip"><rect x="360" y="292" width="244" height="24" rx="2"/><text x="370" y="308">Snapshots (SAS)</text></g><g class="chip"><rect x="684" y="92" width="236" height="24" rx="2"/><text x="694" y="108">Frozen day recap</text></g><g class="chip"><rect x="684" y="132" width="236" height="24" rx="2"/><text x="694" y="148">No moments</text></g><g class="chip"><rect x="684" y="172" width="236" height="24" rx="2"/><text x="694" y="188">No scripts · noindex</text></g><g class="chip"><rect x="684" y="212" width="236" height="24" rx="2"/><text x="694" y="228">1, 7 or 30 days</text></g><g class="legend"><path class="a a-accent" d="M40 380 L72 380" marker-end="url(#ar-accent)"/><text x="84" y="384">Leaves the device</text><path class="a a-link" d="M224.8 380 L256.8 380" marker-end="url(#ar-link)"/><text x="268.8" y="384">Shared by the owner</text></g></svg></div><figcaption>Trust zones. Snapshots are the only images that leave the device: highlights only, capped at 20 an hour, behind short-lived links.</figcaption></figure>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/Services/SensingSession.Voices.cs#L12" target="_blank" rel="noopener">src/PoWatch.Client/Services/SensingSession.Voices.cs:12</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Persistence/StatsEntityMapper.cs#L28-L31" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Persistence/StatsEntityMapper.cs:28-31</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/ShareService.cs#L35" target="_blank" rel="noopener">src/PoWatch.Application/Services/ShareService.cs:35</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Services/HighlightRules.cs#L13" target="_blank" rel="noopener">src/PoWatch.Shared/Services/HighlightRules.cs:13</a></p>
+</div>
+<style>
+.dd-root{--dd-paper:#f5f5f5;--dd-paper-2:#ececec;--dd-ink:#2d3142;--dd-muted:#4f5d75;--dd-soft:#5a6580;--dd-rule:rgba(45,49,66,.12);--dd-rule-solid:#bfc0c0;--dd-accent:#bf4520;--dd-accent-tint:rgba(191,69,32,.08);--dd-link:#2e5aa8;--dd-backend:#ffffff;--dd-ink-a:45,49,66}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])) .dd-root{--dd-paper:#2d3142;--dd-paper-2:#393e53;--dd-ink:#f5f5f5;--dd-muted:#bfc0c0;--dd-soft:#949eb2;--dd-rule:rgba(245,245,245,.12);--dd-rule-solid:rgba(191,192,192,.25);--dd-accent:#f08a59;--dd-accent-tint:rgba(240,138,89,.10);--dd-link:#739fdf;--dd-backend:#393e53;--dd-ink-a:245,245,245}}
+:root[data-theme="dark"] .dd-root{--dd-paper:#2d3142;--dd-paper-2:#393e53;--dd-ink:#f5f5f5;--dd-muted:#bfc0c0;--dd-soft:#949eb2;--dd-rule:rgba(245,245,245,.12);--dd-rule-solid:rgba(191,192,192,.25);--dd-accent:#f08a59;--dd-accent-tint:rgba(240,138,89,.10);--dd-link:#739fdf;--dd-backend:#393e53;--dd-ink-a:245,245,245}
+.hero h1,.dd-root h2{font-family:'Instrument Serif',Georgia,serif;font-weight:400;letter-spacing:-.01em}
+.hero h1{font-size:clamp(1.8rem,1.3rem + 2vw,2.6rem)}.dd-root h2{font-size:1.6rem}
+.dd-wrap{overflow-x:auto;border-radius:8px;background:var(--dd-paper);border:1px solid var(--dd-rule)}
+svg.dd{display:block;width:100%;min-width:720px;height:auto;font-family:'Geist',system-ui,sans-serif}
+svg.dd .paper{fill:var(--dd-paper)}
+svg.dd .band rect{fill:none;stroke:var(--dd-rule-solid);stroke-width:1;stroke-dasharray:4 3}
+svg.dd .zone rect{fill:var(--dd-paper-2);stroke:var(--dd-rule);stroke-width:1}
+svg.dd .zone-focal rect{fill:var(--dd-accent-tint);stroke:var(--dd-accent);stroke-dasharray:4 4}
+svg.dd .zone-ext rect{fill:rgba(var(--dd-ink-a),.03);stroke:rgba(var(--dd-ink-a),.3)}
+svg.dd .eyebrow-s{font-family:'Geist Mono',ui-monospace,monospace;font-size:9px;font-weight:500;letter-spacing:.18em;fill:var(--dd-soft)}
+svg.dd .mask{fill:var(--dd-paper)}
+svg.dd .box{stroke-width:1}
+svg.dd .n-backend .box{fill:var(--dd-backend);stroke:var(--dd-ink)}
+svg.dd .n-focal .box{fill:var(--dd-accent-tint);stroke:var(--dd-accent);stroke-width:1.2}
+svg.dd .n-store .box{fill:rgba(var(--dd-ink-a),.05);stroke:var(--dd-muted)}
+svg.dd .n-external .box{fill:rgba(var(--dd-ink-a),.03);stroke:rgba(var(--dd-ink-a),.3)}
+svg.dd .n-input .box{fill:rgba(79,93,117,.10);stroke:var(--dd-soft)}
+svg.dd .n-optional .box{fill:rgba(var(--dd-ink-a),.02);stroke:rgba(var(--dd-ink-a),.2);stroke-dasharray:4 3}
+svg.dd .tag{fill:none;stroke:var(--dd-rule-solid);stroke-width:.8}
+svg.dd .n-focal .tag{stroke:var(--dd-accent)}
+svg.dd .tagt{font-family:'Geist Mono',ui-monospace,monospace;font-size:8.5px;font-weight:500;letter-spacing:.12em;fill:var(--dd-muted)}
+svg.dd .n-focal .tagt{fill:var(--dd-accent)}
+svg.dd .name{font-size:14px;font-weight:600;fill:var(--dd-ink)}
+svg.dd .sub{font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;fill:var(--dd-soft)}
+svg.dd .a{fill:none;stroke-width:1}
+svg.dd .a-muted{stroke:var(--dd-muted)}svg.dd .a-accent{stroke:var(--dd-accent);stroke-width:1.2}svg.dd .a-link{stroke:var(--dd-link)}
+svg.dd .dash{stroke-dasharray:5 4}
+svg.dd .mk-muted{fill:var(--dd-muted)}svg.dd .mk-accent{fill:var(--dd-accent)}svg.dd .mk-link{fill:var(--dd-link)}
+svg.dd .al rect{fill:var(--dd-paper)}
+svg.dd .al text{font-family:'Geist Mono',ui-monospace,monospace;font-size:9px;letter-spacing:.06em;fill:var(--dd-muted)}
+svg.dd .chip rect{fill:var(--dd-backend);stroke:var(--dd-rule-solid);stroke-width:.8}
+svg.dd .chip text{font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;fill:var(--dd-ink)}
+svg.dd .legend text{font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;fill:var(--dd-muted)}
+</style>
+
+</main>
+<footer class="foot">
+  <p>Generated <time datetime="2026-11-06">2026-11-06</time> for commit <a href="https://github.com/punkouter27/PoWatch/commit/284e0b81432ed0dc92d6fdb6a5652e6bde97c916" target="_blank" rel="noopener"><code>284e0b8</code></a> on <code>master</code>.
+  Evidence order: source code → config → code comments → <code>docs/README.md</code>. No secrets or keys are reproduced; config values shown are committed, non-secret defaults.</p>
+  <p class="t1-hint">Detail level is remembered in this browser. Level 3 shows exact <code>file:line</code> citations linked to GitHub at this commit.</p>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>
+(function () {
+  var root = document.documentElement;
+  var TIER = 'powatch-docs:tier', THEME = 'powatch-docs:theme';
+  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+  function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  function applyTier(t) {
+    if (!/^[123]$/.test(String(t))) t = '1';
+    root.dataset.tier = t;
+    document.querySelectorAll('[data-set-tier]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.setTier === String(t))); });
+    renderMermaid(false);
+  }
+  function applyTheme(m) {
+    if (m !== 'light' && m !== 'dark') m = 'auto';
+    if (m === 'auto') delete root.dataset.theme; else root.dataset.theme = m;
+    var l = document.querySelector('[data-theme-label]');
+    if (l) l.textContent = m[0].toUpperCase() + m.slice(1);
+    renderMermaid(true);
+  }
+
+  document.querySelectorAll('[data-set-tier]').forEach(function (b) {
+    b.addEventListener('click', function () { store(TIER, b.dataset.setTier); applyTier(b.dataset.setTier); });
+  });
+  var tb = document.querySelector('[data-theme-toggle]');
+  if (tb) tb.addEventListener('click', function () {
+    var cur = read(THEME) || 'auto';
+    var next = cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto';
+    store(THEME, next); applyTheme(next);
+  });
+  // The tabbed shell (artifact.html) drives level and theme for the report inside its frame.
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'powatch-docs') return;
+    if (d.tier) applyTier(d.tier);
+    if (d.theme) applyTheme(d.theme);
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', function () { renderMermaid(true); });
+  }
+
+  // ---- Mermaid: theme-aware SVG from the page's own tokens; re-rendered when the theme changes. ----
+  var seq = 0, lastKey = null;
+  function tok(n) { return getComputedStyle(root).getPropertyValue(n).trim(); }
+  function isDark() { return root.dataset.theme === 'dark' || (!root.dataset.theme && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); }
+  var chain = Promise.resolve();
+  function renderMermaid(force) { chain = chain.then(function () { return doRender(force); }).catch(function () { }); }
+  async function doRender(force) {
+    var blocks = document.querySelectorAll('.mmd');
+    if (!blocks.length) return;
+    if (!window.mermaid) {
+      blocks.forEach(function (b) {
+        if (b.querySelector('.fallback')) return;
+        var src = b.querySelector('script[type="text/plain"]');
+        var f = document.createElement('div'); f.className = 'fallback';
+        f.textContent = 'Diagram needs Mermaid 10.9.0 from cdn.jsdelivr.net (offline?). Source:\n\n' + (src ? src.textContent.trim() : '');
+        b.appendChild(f);
+      });
+      return;
+    }
+    var key = String(isDark());
+    if (key !== lastKey) force = true;
+    lastKey = key;
+    window.mermaid.initialize({
+      startOnLoad: false, securityLevel: 'strict', theme: 'base',
+      fontFamily: 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif',
+      flowchart: { htmlLabels: false, curve: 'basis', useMaxWidth: true },
+      sequence: { useMaxWidth: true, wrap: true, mirrorActors: false },
+      er: { useMaxWidth: true },
+      themeVariables: {
+        darkMode: isDark(), background: tok('--surface'), fontSize: '14px',
+        primaryColor: tok('--surface-2'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--accent'),
+        secondaryColor: tok('--accent-tint') || tok('--surface-2'), secondaryTextColor: tok('--ink'), secondaryBorderColor: tok('--line'),
+        tertiaryColor: tok('--surface'), tertiaryTextColor: tok('--ink'), tertiaryBorderColor: tok('--line'),
+        lineColor: tok('--ink-2'), textColor: tok('--ink'), mainBkg: tok('--surface-2'), nodeBorder: tok('--accent'),
+        clusterBkg: tok('--surface'), clusterBorder: tok('--line'), titleColor: tok('--ink'), edgeLabelBackground: tok('--surface'),
+        actorBkg: tok('--surface-2'), actorBorder: tok('--accent'), actorTextColor: tok('--ink'), actorLineColor: tok('--line'),
+        signalColor: tok('--ink-2'), signalTextColor: tok('--ink'), labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line'),
+        labelTextColor: tok('--ink'), loopTextColor: tok('--ink'), noteBkgColor: tok('--accent-tint') || tok('--surface-2'), noteTextColor: tok('--ink'), noteBorderColor: tok('--accent'),
+        activationBkgColor: tok('--surface-2'), activationBorderColor: tok('--accent'), sequenceNumberColor: '#ffffff',
+        attributeBackgroundColorOdd: tok('--surface'), attributeBackgroundColorEven: tok('--surface-2')
+      }
+    });
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (b.offsetParent === null && !b.dataset.done) continue; // hidden at this level: render when shown
+      if (b.dataset.done === key && !force) continue;
+      var src = b.querySelector('script[type="text/plain"]');
+      var out = b.querySelector('.out');
+      if (!src || !out) continue;
+      try {
+        var r = await window.mermaid.render('mmd' + (++seq), src.textContent.trim());
+        out.innerHTML = r.svg; b.dataset.done = key;
+      } catch (err) {
+        out.textContent = 'Diagram could not render: ' + (err && err.message ? err.message : err);
+      }
+    }
+  }
+
+  applyTheme(read(THEME) || 'auto');
+  applyTier(root.dataset.tier || read(TIER) || '1');
+})();
+</script>
+</body>
+</html>

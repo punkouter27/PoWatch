@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" data-tier="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="PoWatch NET_DOCS 2026-11-06 @ 284e0b8">
+<title>PoWatch — AI & External Services</title>
+
+<style>
+:root{color-scheme:light;
+--bg:#fcfcfb;--surface:#ffffff;--surface-2:#f3f2ef;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6b6a66;--line:#e4e2dc;
+--accent:#2a78d6;--accent-ink:#1d5fae;--accent-tint:rgba(42,120,214,.08);
+--good:#0a7a2f;--warn:#9a5b00;--bad:#c62f2e;--code-bg:#f3f2ef;
+--series-1:#2a78d6;
+--r:10px;--fs-xs:.78rem;--fs-sm:.9rem;--fs-md:1rem;--fs-lg:1.25rem;--fs-xl:clamp(1.6rem,1.2rem + 1.6vw,2.3rem);
+--sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--mono:ui-monospace,"Cascadia Code","SFMono-Regular",Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;
+--bg:#121211;--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--muted:#9a998f;--line:#34332f;
+--accent:#3987e5;--accent-ink:#8bb8f0;--accent-tint:rgba(57,135,229,.12);--good:#4cc36f;--warn:#e0a64a;--bad:#ef7473;--code-bg:#242422;--series-1:#3987e5}}
+:root[data-theme="dark"]{color-scheme:dark;
+--bg:#121211;--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--muted:#9a998f;--line:#34332f;
+--accent:#3987e5;--accent-ink:#8bb8f0;--accent-tint:rgba(57,135,229,.12);--good:#4cc36f;--warn:#e0a64a;--bad:#ef7473;--code-bg:#242422;--series-1:#3987e5}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs-md)/1.6 var(--sans);overflow-x:hidden}
+a{color:var(--accent-ink)}
+code,pre,kbd{font-family:var(--mono);font-size:.86em}
+code{background:var(--code-bg);padding:.08em .35em;border-radius:4px;overflow-wrap:anywhere}
+.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;z-index:9;background:var(--surface);padding:6px 10px}
+/* header */
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{max-width:1240px;margin:0 auto;padding:.55rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center}
+.brand{font-weight:700;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:.45rem;white-space:nowrap}
+.brand span{color:var(--muted);font-weight:500}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.pages{display:flex;flex-wrap:wrap;gap:.15rem;flex:1 1 420px;min-width:0}
+.pages a{font-size:var(--fs-sm);text-decoration:none;color:var(--ink-2);padding:.25rem .55rem;border-radius:6px}
+.pages a:hover{background:var(--surface-2)}
+.pages a[aria-current]{color:var(--ink);background:var(--surface-2);font-weight:600}
+.ctl{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.tier{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.tier button,.theme-btn{font:inherit;font-size:var(--fs-xs);border:0;background:transparent;color:var(--ink-2);padding:.35rem .6rem;cursor:pointer;min-height:32px}
+.tier button+button{border-left:1px solid var(--line)}
+.tier button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+.theme-btn{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+html.embedded .top,html.embedded .foot .t1-hint{display:none}
+/* tiers */
+[data-tier="1"] .t2,[data-tier="1"] .t3,[data-tier="2"] .t3{display:none!important}
+[data-tier="1"] a.cite,[data-tier="2"] a.cite{display:none}
+.tier-badge{display:inline-block;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.05rem .5rem;margin-left:.4rem;vertical-align:middle}
+/* layout */
+main{max-width:1240px;margin:0 auto;padding:1.5rem 1rem 2rem}
+.hero{padding:1.2rem 0 .6rem}
+.eyebrow{font-size:var(--fs-xs);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 .35rem}
+h1{font-size:var(--fs-xl);line-height:1.15;margin:0 0 .6rem;letter-spacing:-.01em}
+h2{font-size:var(--fs-lg);margin:2.2rem 0 .6rem;padding-top:.6rem;border-top:1px solid var(--line)}
+h3{font-size:var(--fs-md);margin:1.2rem 0 .35rem}
+p{margin:.4rem 0 .8rem;max-width:78ch}
+.lede{font-size:1.08rem;color:var(--ink-2);max-width:72ch}
+.eli5{background:var(--accent-tint);border-left:3px solid var(--accent);padding:.6rem .9rem;border-radius:0 8px 8px 0;max-width:none;margin:.4rem 0 1rem}
+.eli5::before{content:"In plain English · ";font-weight:700;color:var(--accent-ink)}
+.grid{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.grid.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.9rem 1rem;min-width:0}
+.card h3{margin-top:0}
+.card p:last-child{margin-bottom:0}
+.analogy{display:flex;gap:.7rem;align-items:flex-start}
+.analogy .ico{font-size:1.5rem;line-height:1}
+.analogy b{display:block}
+.muted{color:var(--muted)}
+.small{font-size:var(--fs-sm)}
+.pill{display:inline-block;font-size:var(--fs-xs);font-weight:600;padding:.05rem .5rem;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.pill.good{color:var(--good);border-color:currentColor;background:transparent}
+.pill.warn{color:var(--warn);border-color:currentColor;background:transparent}
+.pill.bad{color:var(--bad);border-color:currentColor;background:transparent}
+.pill.plan{color:var(--accent-ink);border-style:dashed;background:transparent}
+/* narrative step cards */
+ol.steps{list-style:none;counter-reset:s;padding:0;margin:.6rem 0 1rem;display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+ol.steps>li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.75rem .9rem .75rem 2.9rem;position:relative;min-width:0}
+ol.steps>li::before{content:counter(s);position:absolute;left:.8rem;top:.75rem;width:1.5rem;height:1.5rem;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:var(--fs-xs);display:grid;place-items:center}
+ol.steps>li b{display:block}
+/* figures */
+figure{margin:1rem 0;min-width:0}
+figcaption{font-size:var(--fs-sm);color:var(--muted);margin-top:.35rem}
+.mmd{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.8rem;overflow-x:auto;min-height:60px}
+.mmd .out svg{max-width:100%;height:auto;display:block;margin:0 auto}
+.mmd .fallback{white-space:pre-wrap;font-family:var(--mono);font-size:var(--fs-xs);color:var(--muted)}
+/* tables & code */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);margin:.6rem 0 1rem}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th,td{text-align:left;vertical-align:top;padding:.5rem .7rem;border-bottom:1px solid var(--line)}
+th{background:var(--surface-2);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:.7rem .9rem;overflow-x:auto;line-height:1.45;margin:.5rem 0 1rem}
+pre code{background:none;padding:0;overflow-wrap:normal}
+a.cite{font-family:var(--mono);font-size:var(--fs-xs);background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:.02rem .35rem;text-decoration:none;color:var(--accent-ink);overflow-wrap:anywhere;white-space:normal}
+a.cite::before{content:"⌖ ";opacity:.7}
+.evidence{font-size:var(--fs-sm);color:var(--ink-2)}
+.evidence::before{content:"Evidence: ";font-weight:600}
+details{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:.5rem .9rem;margin:.6rem 0}
+summary{cursor:pointer;font-weight:600}
+/* stat tiles */
+.tiles{display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));margin:1rem 0}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.8rem .9rem}
+.tile .label{font-size:var(--fs-sm);color:var(--ink-2)}
+.tile .value{font-size:2rem;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.tile .sub{font-size:var(--fs-xs);color:var(--muted)}
+.meter{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:.45rem}
+.meter>i{display:block;height:100%;background:var(--series-1);border-radius:4px}
+.callout{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:0 var(--r) var(--r) 0;background:var(--surface);padding:.7rem .9rem;margin:.8rem 0}
+.callout.ok{border-left-color:var(--good)}
+.callout.plan{border-left-color:var(--accent);border-left-style:dashed}
+.foot{max-width:1240px;margin:0 auto;padding:1rem 1rem 2rem;border-top:1px solid var(--line);font-size:var(--fs-sm);color:var(--muted)}
+.foot p{max-width:none}
+@media (max-width:560px){.tier button{padding:.35rem .45rem}.bar{gap:.4rem}h2{margin-top:1.6rem}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+@media print{.top{position:static}.t2,.t3{display:block!important}}
+</style>
+<script>try{var t=localStorage.getItem('powatch-docs:tier');if(t)document.documentElement.dataset.tier=t;var th=localStorage.getItem('powatch-docs:theme');if(th&&th!=='auto')document.documentElement.dataset.theme=th;}catch(e){}try{if(window.self!==window.top)document.documentElement.classList.add('embedded');}catch(e){document.documentElement.classList.add('embedded');}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="index.html"><span class="dot" aria-hidden="true"></span>PoWatch <span>docs</span></a>
+    <nav class="pages" aria-label="Documentation pages"><a href="index.html">Overview</a><a href="USER_WORKFLOW.html">User journeys</a><a href="VISUAL_ARCHITECTURE_DASHBOARD.html">Architecture</a><a href="AI_SERVICES_REPORT.html" aria-current="page">AI & services</a><a href="AUTH_SECURITY_REPORT.html">Security</a><a href="DIAGRAM_DESIGN_OVERVIEW.html">Alt overview</a><a href="artifact.html">Tabbed view</a></nav>
+    <div class="ctl">
+      <div class="tier" role="group" aria-label="Detail level">
+        <button type="button" data-set-tier="1" title="Simple: plain English, journeys and analogies">1 · Simple</button>
+        <button type="button" data-set-tier="2" title="Standard: adds diagrams and component maps">2 · Standard</button>
+        <button type="button" data-set-tier="3" title="Developer: adds file:line citations, schemas, DI and config">3 · Developer</button>
+      </div>
+      <button type="button" class="theme-btn" data-theme-toggle title="Theme: auto / light / dark">◐ <span data-theme-label>Auto</span></button>
+    </div>
+  </div>
+</header>
+<main id="main">
+<section class="hero">
+  <p class="eyebrow">AI &amp; external services</p>
+  <h1>Which outside helpers PoWatch uses, and what they are allowed to do</h1>
+  <p class="eli5">PoWatch has two kinds of AI. "Eyes and ears" run on your own computer and turn the camera and microphone into notes. A "writer" on the server may reword the notes into nicer sentences, but a spell-checker for numbers throws its work away if it makes up a single number.</p>
+  <p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/docs/README.md#L26-L45" target="_blank" rel="noopener">docs/README.md:26-45</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Services/RecapPrompt.cs#L54-L63" target="_blank" rel="noopener">src/PoWatch.Shared/Services/RecapPrompt.cs:54-63</a></p>
+</section>
+
+<div class="tiles">
+  <div class="tile"><div class="label">On-device models</div><div class="value">6</div><div class="sub">detector, captioner, embedder, 3 audio (+ optional Ollama)</div></div>
+  <div class="tile"><div class="label">Server chat providers</div><div class="value">3</div><div class="sub">Ollama · Gemini · Azure OpenAI (+ Template)</div></div>
+  <div class="tile"><div class="label">Ask tool rounds, max</div><div class="value">4</div><div class="sub">get_stats · get_day · get_patterns · search_captions</div></div>
+  <div class="tile"><div class="label">Server AI in production</div><div class="value">Off</div><div class="sub"><code>AiProvider:Provider = Template</code></div></div>
+</div>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L33-L48" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:33-48</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/appsettings.Production.json#L21" target="_blank" rel="noopener">src/PoWatch.Api/appsettings.Production.json:21</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/AskService.cs#L26-L27" target="_blank" rel="noopener">src/PoWatch.Application/Services/AskService.cs:26-27</a></p>
+
+<h2>On your device: eyes and ears</h2>
+<p class="eli5">These models download once into the browser and run there. They see every frame and hear every sound, and none of that leaves the device. Only their short text answers do.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Job</th><th>Model</th><th>Runs on</th><th>What leaves the device</th><th class="t3">Source</th></tr></thead>
+<tbody>
+<tr><td>Find objects (~1 Hz)</td><td>RF-DETR Nano (fallback RT-DETRv2 R18), COCO's 80 classes</td><td>WebGPU fp16 → fp32, WASM q8 → fp32</td><td>Counts and boxes, inside ticks</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/wwwroot/js/sensing/detector-worker.js#L3" target="_blank" rel="noopener">src/PoWatch.Client/wwwroot/js/sensing/detector-worker.js:3</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/wwwroot/js/sensing/detector-worker.js#L19-L20" target="_blank" rel="noopener">src/PoWatch.Client/wwwroot/js/sensing/detector-worker.js:19-20</a></td></tr>
+<tr><td>Describe the scene</td><td>Local Ollama: MiniCPM-V (default), Qwen3-VL 8B, Qwen2.5-VL 7B</td><td><code>localhost:11434</code> on your GPU</td><td>One caption sentence</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/wwwroot/js/caption-models.js#L10" target="_blank" rel="noopener">src/PoWatch.Client/wwwroot/js/caption-models.js:10</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/Services/CaptionModels.cs#L16-L23" target="_blank" rel="noopener">src/PoWatch.Client/Services/CaptionModels.cs:16-23</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/wwwroot/js/inference-worker.js#L15" target="_blank" rel="noopener">src/PoWatch.Client/wwwroot/js/inference-worker.js:15</a></td></tr>
+<tr><td>…fallback captioner</td><td>Florence-2 base (in-browser)</td><td>WebGPU q4/fp16 → fp32 → WASM q8</td><td>One caption sentence</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/wwwroot/js/caption-models.js#L19-L32" target="_blank" rel="noopener">src/PoWatch.Client/wwwroot/js/caption-models.js:19-32</a></td></tr>
+<tr><td>Notice "new" captions, search</td><td>all-MiniLM-L6-v2 (int8, ~23 MB)</td><td>WASM</td><td>Nothing; vectors stay in IndexedDB</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/wwwroot/js/embedder.js#L2" target="_blank" rel="noopener">src/PoWatch.Client/wwwroot/js/embedder.js:2</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Services/HighlightRules.cs#L30" target="_blank" rel="noopener">src/PoWatch.Shared/Services/HighlightRules.cs:30</a></td></tr>
+<tr><td>Speech to words</td><td>Whisper base.en</td><td>WASM</td><td>The words (a <code>Speech</code> event)</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/wwwroot/js/audio-worker.js#L11" target="_blank" rel="noopener">src/PoWatch.Client/wwwroot/js/audio-worker.js:11</a></td></tr>
+<tr><td>Name a sound</td><td>AST (AudioSet)</td><td>WASM</td><td>A label such as "Dog" (a <code>Sound</code> event)</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/wwwroot/js/audio-worker.js#L12" target="_blank" rel="noopener">src/PoWatch.Client/wwwroot/js/audio-worker.js:12</a></td></tr>
+<tr><td>Who is speaking</td><td>WavLM base-plus-sv (~400 MB)</td><td>WASM</td><td>Only a regular's id; voiceprints stay in localStorage</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/wwwroot/js/audio-worker.js#L13" target="_blank" rel="noopener">src/PoWatch.Client/wwwroot/js/audio-worker.js:13</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Services/VoiceBook.cs#L21" target="_blank" rel="noopener">src/PoWatch.Shared/Services/VoiceBook.cs:21</a></td></tr>
+</tbody></table></div>
+<div class="callout ok"><b>Privacy boundary.</b> Frames never leave the device. The only uploads are highlight snapshots (first sighting, motion spike, notable caption), capped at 20 an hour by <code>HighlightRules</code>. Uploads go straight to Blob Storage through a link that is valid for 5 minutes and can only write.</div>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/docs/README.md#L41-L43" target="_blank" rel="noopener">docs/README.md:41-43</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Services/HighlightRules.cs#L13" target="_blank" rel="noopener">src/PoWatch.Shared/Services/HighlightRules.cs:13</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Persistence/SnapshotStores.cs#L14" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Persistence/SnapshotStores.cs:14</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Persistence/SnapshotStores.cs#L38" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Persistence/SnapshotStores.cs:38</a></p>
+
+<h2>On the server: the writer</h2>
+<p class="eli5">One "writer" interface (<code>IChatClient</code>) can be backed by three providers. "Auto" tries the free local one first, then the cloud. Whichever answers, the same number check applies.</p>
+<figure class="t2">
+  <div class="mmd"><script type="text/plain">
+flowchart LR
+  req["Recap, story, Ask,<br/>rule draft or headline"] --> pick{"Selected model<br/>(cookie, else config)"}
+  pick -- "Template" --> tpl["Template only,<br/>no AI call"]
+  pick -- "Auto" --> o{"Ollama lists<br/>the model? (1 s probe)"}
+  o -- "yes" --> ol["Ollama llama3.2"]
+  o -- "no" --> ge["Gemini flash-lite"]
+  ge -. "if not configured" .-> az["Azure OpenAI gpt-5.4-nano"]
+  ol & ge & az --> chk{"Every number<br/>is in the facts?"}
+  chk -- "yes" --> use["Show the model's wording"]
+  chk -- "no, timeout or error" --> nxt["Try the next model once,<br/>else keep the template"]
+  </script><div class="out" role="img" aria-label="Model selection: Template skips AI; Auto probes Ollama then falls back to Gemini then Azure OpenAI; every answer must pass the number check or the template wins."></div></div>
+  <figcaption>"Auto" walks the preference order Ollama → Gemini → Azure OpenAI and uses at most two models per request.</figcaption>
+</figure>
+<ol class="steps">
+  <li><b>Choose</b><code>GET/PUT /api/ai/models</code>. The choice rides in an HttpOnly cookie for a year, and an unknown id is rejected with 400.</li>
+  <li><b>Fence the facts</b>Captions, moment text and names go in as <code>&lt;facts&gt;</code>, with control characters and fence characters removed.</li>
+  <li><b>Ask with a time limit</b>Each model attempt gets its own timeout, and a failure moves on to the next model (<code>AiFallback</code>).</li>
+  <li><b>Check the numbers</b><code>KeepsToFacts</code> rejects any number the facts do not contain, including spelled-out ones ("three", "a dozen").</li>
+  <li><b>Cache</b>Replies are cached by prompt, model and provider, so reopening a day costs nothing.</li>
+</ol>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L44-L48" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:44-48</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L95-L105" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:95-105</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L78-L81" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:78-81</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/AiFallback.cs#L17-L46" target="_blank" rel="noopener">src/PoWatch.Application/Services/AiFallback.cs:17-46</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Services/RecapPrompt.cs#L24-L33" target="_blank" rel="noopener">src/PoWatch.Shared/Services/RecapPrompt.cs:24-33</a></p>
+
+<h2>How long the server waits before giving up</h2>
+<p class="eli5">Every outside call has a stopwatch. If a helper is too slow, PoWatch stops waiting and uses its fallback, so a page never hangs on an AI.</p>
+<figure>
+  <div class="card" id="waitChart" style="padding:.8rem 1rem">
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:.4rem;align-items:baseline">
+      <b>Time limit per attempt, in seconds</b>
+      <button type="button" class="theme-btn" id="waitToggle" aria-pressed="false">Show as table</button>
+    </div>
+    <div id="waitPlot" style="position:relative"></div>
+    <div id="waitTable" hidden></div>
+  </div>
+  <figcaption>One series, one hue. Hover or focus a bar for its source. The values are code constants, not measurements.</figcaption>
+</figure>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L52" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:52</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/DependencyInjection.cs#L31" target="_blank" rel="noopener">src/PoWatch.Infrastructure/DependencyInjection.cs:31</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/RecapService.cs#L26" target="_blank" rel="noopener">src/PoWatch.Application/Services/RecapService.cs:26</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/AssistService.cs#L18" target="_blank" rel="noopener">src/PoWatch.Application/Services/AssistService.cs:18</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/AskService.cs#L30" target="_blank" rel="noopener">src/PoWatch.Application/Services/AskService.cs:30</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/StoryService.cs#L27" target="_blank" rel="noopener">src/PoWatch.Application/Services/StoryService.cs:27</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/PeriodStoryService.cs#L26" target="_blank" rel="noopener">src/PoWatch.Application/Services/PeriodStoryService.cs:26</a></p>
+<script>
+(function () {
+  var data = [
+    { k: 'Week / month story', v: 45, src: 'PeriodStoryService.cs:26' },
+    { k: 'Ask PoWatch', v: 30, src: 'AskService.cs:30' },
+    { k: 'Session story', v: 30, src: 'StoryService.cs:27' },
+    { k: 'Day recap rewording', v: 20, src: 'RecapService.cs:26' },
+    { k: 'Watch rule / headline', v: 20, src: 'AssistService.cs:18' },
+    { k: 'Open-Meteo weather', v: 15, src: 'Infrastructure/DependencyInjection.cs:31' },
+    { k: 'Ollama "is it up?" probe', v: 1, src: 'RecapAi.cs:52' }
+  ];
+  var plot = document.getElementById('waitPlot'), table = document.getElementById('waitTable');
+  var max = 50, rowH = 30, labelW = 190;
+  function draw() {
+    var w = Math.max(280, plot.clientWidth || 600);
+    var lw = w < 480 ? 140 : labelW, pw = w - lw - 40, h = data.length * rowH + 26;
+    var x = function (v) { return lw + (v / max) * pw; };
+    var s = '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Bar chart of time limits per attempt in seconds">';
+    [0, 10, 20, 30, 40, 50].forEach(function (t) {
+      s += '<line x1="' + x(t) + '" x2="' + x(t) + '" y1="0" y2="' + (h - 20) + '" stroke="var(--line)" stroke-width="1"/>';
+      s += '<text x="' + x(t) + '" y="' + (h - 6) + '" text-anchor="middle" font-size="11" fill="var(--muted)">' + t + '</text>';
+    });
+    data.forEach(function (d, i) {
+      var y = i * rowH + 6, bw = Math.max(2, x(d.v) - lw);
+      s += '<g class="bar" tabindex="0" data-i="' + i + '" role="img" aria-label="' + d.k + ': ' + d.v + ' seconds">';
+      s += '<rect x="0" y="' + (y - 4) + '" width="' + w + '" height="' + rowH + '" fill="transparent"/>';
+      s += '<text x="' + (lw - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="var(--ink-2)">' + d.k + '</text>';
+      s += bw >= 8
+        ? '<path d="M' + lw + ' ' + y + 'h' + (bw - 4) + 'a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4h-' + (bw - 4) + 'z" fill="var(--series-1)"/>'
+        : '<path d="M' + lw + ' ' + y + 'h' + bw + 'v18h-' + bw + 'z" fill="var(--series-1)"/>';
+      if (i < 2 || i === data.length - 1) s += '<text x="' + (lw + bw + 6) + '" y="' + (y + 13) + '" font-size="12" fill="var(--ink)">' + d.v + ' s</text>';
+      s += '</g>';
+    });
+    s += '</svg><div id="waitTip" role="status" style="position:absolute;pointer-events:none;display:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:.35rem .55rem;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.12);max-width:240px"></div>';
+    plot.innerHTML = s;
+    var tip = document.getElementById('waitTip');
+    plot.querySelectorAll('.bar').forEach(function (g) {
+      function show() {
+        var d = data[+g.dataset.i], r = g.getBoundingClientRect(), pr = plot.getBoundingClientRect();
+        tip.innerHTML = '<b>' + d.k + '</b><br>' + d.v + ' seconds<br><span style="color:var(--muted)">' + d.src + '</span>';
+        tip.style.display = 'block';
+        tip.style.left = Math.min(pr.width - 250, Math.max(0, x(d.v) - 40)) + 'px';
+        tip.style.top = (r.bottom - pr.top + 2) + 'px';
+        g.querySelector('path').setAttribute('fill-opacity', '.8');
+      }
+      function hide() { tip.style.display = 'none'; g.querySelector('path').removeAttribute('fill-opacity'); }
+      g.addEventListener('mouseenter', show); g.addEventListener('focus', show);
+      g.addEventListener('mouseleave', hide); g.addEventListener('blur', hide);
+    });
+  }
+  table.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Call</th><th>Seconds</th><th>Source</th></tr></thead><tbody>' +
+    data.map(function (d) { return '<tr><td>' + d.k + '</td><td>' + d.v + '</td><td><code>' + d.src + '</code></td></tr>'; }).join('') + '</tbody></table></div>';
+  var btn = document.getElementById('waitToggle');
+  btn.addEventListener('click', function () {
+    var t = table.hidden; table.hidden = !t; plot.hidden = t;
+    btn.setAttribute('aria-pressed', String(t)); btn.textContent = t ? 'Show as chart' : 'Show as table';
+  });
+  draw();
+  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(draw, 120); });
+})();
+</script>
+
+<h2>Other outside services</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Service</th><th>Task</th><th>Cost</th><th>When it is missing</th><th class="t3">Source</th></tr></thead>
+<tbody>
+<tr><td>Open-Meteo (archive, forecast, geocoding)</td><td>Each day's weather and sun; "do wet days run busier?"</td><td>Free, no key</td><td>The weather is left out of those days. Archive results are cached a day, forecasts an hour.</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/OpenMeteoWeatherSource.cs#L19-L21" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/OpenMeteoWeatherSource.cs:19-21</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/OpenMeteoWeatherSource.cs#L36-L38" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/OpenMeteoWeatherSource.cs:36-38</a></td></tr>
+<tr><td>Azure Communication Services Email</td><td>The weekly digest, from Monday 08:00 in the user's zone</td><td>Pay per email</td><td><i>Not declared (default: <code>NoDigestSender</code> at <code>DigestEmail.cs:21</code>)</i>. The switch is disabled and says why.</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/DigestEmail.cs#L18-L23" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/DigestEmail.cs:18-23</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/DigestMailer.cs#L14" target="_blank" rel="noopener">src/PoWatch.Application/Services/DigestMailer.cs:14</a></td></tr>
+<tr><td>Microsoft Entra ID</td><td>Sign-in (OIDC)</td><td>Free tier</td><td><i>Not declared (default: empty <code>ClientId</code> at <code>appsettings.json:8</code>)</i>. Microsoft sign-in returns 404, and only Dev/Test guest sign-in works.</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Auth/AuthEndpoints.cs#L46-L49" target="_blank" rel="noopener">src/PoWatch.Api/Features/Auth/AuthEndpoints.cs:46-49</a></td></tr>
+<tr><td>Azure Key Vault</td><td>Secrets such as <code>Gemini--ApiKey</code></td><td>Per operation</td><td>Off in production (<code>EnableKeyVault: false</code>) until the identity has <i>Key Vault Secrets User</i>.</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/appsettings.Production.json#L14-L15" target="_blank" rel="noopener">src/PoWatch.Api/appsettings.Production.json:14-15</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L34-L36" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:34-36</a></td></tr>
+<tr><td>Hugging Face CDN</td><td>Downloads browser model weights once</td><td>Free</td><td>The service worker caches the app shell but not the ~20 MB vision runtime, so without a network there is no new sensing. The demo room still runs.</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/docs/README.md#L171-L174" target="_blank" rel="noopener">docs/README.md:171-174</a></td></tr>
+<tr><td>Chrome built-in Prompt API</td><td>Rewords the recap in the browser when the server has no model</td><td>Free, on device</td><td>The template stays, under the same number check.</td><td class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/wwwroot/js/local-ai.js#L8-L9" target="_blank" rel="noopener">src/PoWatch.Client/wwwroot/js/local-ai.js:8-9</a></td></tr>
+</tbody></table></div>
+
+<h2>Cost &amp; safety boundaries</h2>
+<div class="grid two">
+  <div class="card"><h3>Cost guards</h3>
+    <ul>
+      <li>Production defaults to <b>Template</b>, so it makes no paid AI calls until someone opts in.</li>
+      <li>"Auto" prefers free local Ollama, and the probe answer is trusted for 30 s.</li>
+      <li>Replies are cached by prompt, so the same facts never cost twice. The cache is in memory with a 200 MB cap and is lost on restart.</li>
+      <li>Ask may make at most four tool rounds, and its captions search looks back a bounded number of days.</li>
+    </ul>
+    <p class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L36-L37" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:36-37</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L71-L72" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:71-72</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/AskService.cs#L21" target="_blank" rel="noopener">src/PoWatch.Application/Services/AskService.cs:21</a></p>
+  </div>
+  <div class="card"><h3>Safety guards</h3>
+    <ul>
+      <li><b>Prompt injection:</b> observed text is fenced data, and the system prompt says to ignore instructions inside it.</li>
+      <li><b>Hallucinated numbers:</b> <code>KeepsToFacts</code> rejects any reply containing a number the facts lack.</li>
+      <li><b>Structured output:</b> the model answers in a JSON schema, so there is no free-text parsing.</li>
+      <li><b>No secrets in labels:</b> model labels show neither credentials nor endpoints.</li>
+      <li><b>Watch rules</b> drafted by AI are checked against the 80 detector labels and real hours, then confirmed by the user.</li>
+    </ul>
+    <p class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Services/RecapPrompt.cs#L16-L22" target="_blank" rel="noopener">src/PoWatch.Shared/Services/RecapPrompt.cs:16-22</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/AssistService.cs#L38" target="_blank" rel="noopener">src/PoWatch.Application/Services/AssistService.cs:38</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/AssistService.cs#L50-L54" target="_blank" rel="noopener">src/PoWatch.Application/Services/AssistService.cs:50-54</a></p>
+  </div>
+</div>
+
+<h2>Offline &amp; fallback behaviour</h2>
+<p class="eli5">If any helper is missing, PoWatch steps down a level rather than breaking.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>What fails</th><th>What the user sees</th></tr></thead>
+<tbody>
+<tr><td>No network while recording</td><td>Batches wait in the IndexedDB outbox and are sent later. The app shell opens offline from the service worker.</td></tr>
+<tr><td>No local Ollama</td><td>Captions come from in-browser Florence-2, and Settings shows which one ran.</td></tr>
+<tr><td>No WebGPU</td><td>The models run on WASM, multi-threaded thanks to COOP/COEP.</td></tr>
+<tr><td>Server AI slow, failing or inventing numbers</td><td>The next model is tried once, then the template recap or story stays.</td></tr>
+<tr><td>No server AI at all</td><td>Recaps and stories come from the template. Ask and rule drafting answer 503 with a reason.</td></tr>
+<tr><td>QuestPDF native engine missing</td><td>The PDF link answers an explained 503.</td></tr>
+<tr><td>No camera</td><td>A deterministic demo room (walker, dog, cat, cup, changing light) drives the same pipeline.</td></tr>
+</tbody></table></div>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Ask/AskEndpoints.cs#L26-L32" target="_blank" rel="noopener">src/PoWatch.Api/Features/Ask/AskEndpoints.cs:26-32</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Recaps/RecapEndpoints.cs#L59" target="_blank" rel="noopener">src/PoWatch.Api/Features/Recaps/RecapEndpoints.cs:59</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/RequestPipeline.cs#L56-L67" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/RequestPipeline.cs:56-67</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/docs/README.md#L181-L183" target="_blank" rel="noopener">docs/README.md:181-183</a></p>
+
+<h2 class="t3">Configuration <span class="tier-badge">Level 3</span></h2>
+<div class="t3">
+<p>Committed, non-secret defaults (keys are blank by design and come from Key Vault or App Service settings):</p>
+<pre><code>// src/PoWatch.Api/appsettings.json:31-50
+"AzureOpenAi": { "Endpoint": "https://po-aiservices-shared2.cognitiveservices.azure.com/", "ApiKey": "", "DeploymentName": "gpt-5.4-nano" },
+"Gemini":      { "Endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/", "ApiKey": "", "Model": "gemini-flash-lite-latest" },
+"Ollama":      { "Endpoint": "http://localhost:11434/v1/", "Model": "llama3.2" },
+"AiProvider":  { "Provider": "Template" }   // Development: "Auto" (appsettings.Development.json:33)</code></pre>
+<pre><code>// src/PoWatch.Infrastructure/Runtime/RecapAi.cs:78-81 — every provider gets the same pipeline
+_clients.Add(id, new ChatClientBuilder(client)
+    .UseFunctionInvocation(configure: f =&gt; f.MaximumIterationsPerRequest = MaxToolRounds)
+    .UseDistributedCache(configure: cache =&gt; cache.CacheKeyAdditionalValues = [id, model])
+    .Build(services));</code></pre>
+<p>Azure OpenAI with an empty <code>ApiKey</code> signs in with the app's Entra identity (<code>DefaultAzureCredential</code>, scope <code>cognitiveservices.azure.com/.default</code>) <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L181-L193" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:181-193</a>. Gemini is offered only when its key is set <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L165-L169" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:165-169</a>.</p>
+</div>
+
+</main>
+<footer class="foot">
+  <p>Generated <time datetime="2026-11-06">2026-11-06</time> for commit <a href="https://github.com/punkouter27/PoWatch/commit/284e0b81432ed0dc92d6fdb6a5652e6bde97c916" target="_blank" rel="noopener"><code>284e0b8</code></a> on <code>master</code>.
+  Evidence order: source code → config → code comments → <code>docs/README.md</code>. No secrets or keys are reproduced; config values shown are committed, non-secret defaults.</p>
+  <p class="t1-hint">Detail level is remembered in this browser. Level 3 shows exact <code>file:line</code> citations linked to GitHub at this commit.</p>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>
+(function () {
+  var root = document.documentElement;
+  var TIER = 'powatch-docs:tier', THEME = 'powatch-docs:theme';
+  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+  function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  function applyTier(t) {
+    if (!/^[123]$/.test(String(t))) t = '1';
+    root.dataset.tier = t;
+    document.querySelectorAll('[data-set-tier]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.setTier === String(t))); });
+    renderMermaid(false);
+  }
+  function applyTheme(m) {
+    if (m !== 'light' && m !== 'dark') m = 'auto';
+    if (m === 'auto') delete root.dataset.theme; else root.dataset.theme = m;
+    var l = document.querySelector('[data-theme-label]');
+    if (l) l.textContent = m[0].toUpperCase() + m.slice(1);
+    renderMermaid(true);
+  }
+
+  document.querySelectorAll('[data-set-tier]').forEach(function (b) {
+    b.addEventListener('click', function () { store(TIER, b.dataset.setTier); applyTier(b.dataset.setTier); });
+  });
+  var tb = document.querySelector('[data-theme-toggle]');
+  if (tb) tb.addEventListener('click', function () {
+    var cur = read(THEME) || 'auto';
+    var next = cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto';
+    store(THEME, next); applyTheme(next);
+  });
+  // The tabbed shell (artifact.html) drives level and theme for the report inside its frame.
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'powatch-docs') return;
+    if (d.tier) applyTier(d.tier);
+    if (d.theme) applyTheme(d.theme);
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', function () { renderMermaid(true); });
+  }
+
+  // ---- Mermaid: theme-aware SVG from the page's own tokens; re-rendered when the theme changes. ----
+  var seq = 0, lastKey = null;
+  function tok(n) { return getComputedStyle(root).getPropertyValue(n).trim(); }
+  function isDark() { return root.dataset.theme === 'dark' || (!root.dataset.theme && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); }
+  var chain = Promise.resolve();
+  function renderMermaid(force) { chain = chain.then(function () { return doRender(force); }).catch(function () { }); }
+  async function doRender(force) {
+    var blocks = document.querySelectorAll('.mmd');
+    if (!blocks.length) return;
+    if (!window.mermaid) {
+      blocks.forEach(function (b) {
+        if (b.querySelector('.fallback')) return;
+        var src = b.querySelector('script[type="text/plain"]');
+        var f = document.createElement('div'); f.className = 'fallback';
+        f.textContent = 'Diagram needs Mermaid 10.9.0 from cdn.jsdelivr.net (offline?). Source:\n\n' + (src ? src.textContent.trim() : '');
+        b.appendChild(f);
+      });
+      return;
+    }
+    var key = String(isDark());
+    if (key !== lastKey) force = true;
+    lastKey = key;
+    window.mermaid.initialize({
+      startOnLoad: false, securityLevel: 'strict', theme: 'base',
+      fontFamily: 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif',
+      flowchart: { htmlLabels: false, curve: 'basis', useMaxWidth: true },
+      sequence: { useMaxWidth: true, wrap: true, mirrorActors: false },
+      er: { useMaxWidth: true },
+      themeVariables: {
+        darkMode: isDark(), background: tok('--surface'), fontSize: '14px',
+        primaryColor: tok('--surface-2'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--accent'),
+        secondaryColor: tok('--accent-tint') || tok('--surface-2'), secondaryTextColor: tok('--ink'), secondaryBorderColor: tok('--line'),
+        tertiaryColor: tok('--surface'), tertiaryTextColor: tok('--ink'), tertiaryBorderColor: tok('--line'),
+        lineColor: tok('--ink-2'), textColor: tok('--ink'), mainBkg: tok('--surface-2'), nodeBorder: tok('--accent'),
+        clusterBkg: tok('--surface'), clusterBorder: tok('--line'), titleColor: tok('--ink'), edgeLabelBackground: tok('--surface'),
+        actorBkg: tok('--surface-2'), actorBorder: tok('--accent'), actorTextColor: tok('--ink'), actorLineColor: tok('--line'),
+        signalColor: tok('--ink-2'), signalTextColor: tok('--ink'), labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line'),
+        labelTextColor: tok('--ink'), loopTextColor: tok('--ink'), noteBkgColor: tok('--accent-tint') || tok('--surface-2'), noteTextColor: tok('--ink'), noteBorderColor: tok('--accent'),
+        activationBkgColor: tok('--surface-2'), activationBorderColor: tok('--accent'), sequenceNumberColor: '#ffffff',
+        attributeBackgroundColorOdd: tok('--surface'), attributeBackgroundColorEven: tok('--surface-2')
+      }
+    });
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (b.offsetParent === null && !b.dataset.done) continue; // hidden at this level: render when shown
+      if (b.dataset.done === key && !force) continue;
+      var src = b.querySelector('script[type="text/plain"]');
+      var out = b.querySelector('.out');
+      if (!src || !out) continue;
+      try {
+        var r = await window.mermaid.render('mmd' + (++seq), src.textContent.trim());
+        out.innerHTML = r.svg; b.dataset.done = key;
+      } catch (err) {
+        out.textContent = 'Diagram could not render: ' + (err && err.message ? err.message : err);
+      }
+    }
+  }
+
+  applyTheme(read(THEME) || 'auto');
+  applyTier(root.dataset.tier || read(TIER) || '1');
+})();
+</script>
+</body>
+</html>

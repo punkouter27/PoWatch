@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en" data-tier="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="PoWatch NET_DOCS 2026-11-06 @ 284e0b8">
+<title>PoWatch — Security & Access Control</title>
+
+<style>
+:root{color-scheme:light;
+--bg:#fcfcfb;--surface:#ffffff;--surface-2:#f3f2ef;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6b6a66;--line:#e4e2dc;
+--accent:#2a78d6;--accent-ink:#1d5fae;--accent-tint:rgba(42,120,214,.08);
+--good:#0a7a2f;--warn:#9a5b00;--bad:#c62f2e;--code-bg:#f3f2ef;
+--series-1:#2a78d6;
+--r:10px;--fs-xs:.78rem;--fs-sm:.9rem;--fs-md:1rem;--fs-lg:1.25rem;--fs-xl:clamp(1.6rem,1.2rem + 1.6vw,2.3rem);
+--sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--mono:ui-monospace,"Cascadia Code","SFMono-Regular",Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;
+--bg:#121211;--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--muted:#9a998f;--line:#34332f;
+--accent:#3987e5;--accent-ink:#8bb8f0;--accent-tint:rgba(57,135,229,.12);--good:#4cc36f;--warn:#e0a64a;--bad:#ef7473;--code-bg:#242422;--series-1:#3987e5}}
+:root[data-theme="dark"]{color-scheme:dark;
+--bg:#121211;--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--muted:#9a998f;--line:#34332f;
+--accent:#3987e5;--accent-ink:#8bb8f0;--accent-tint:rgba(57,135,229,.12);--good:#4cc36f;--warn:#e0a64a;--bad:#ef7473;--code-bg:#242422;--series-1:#3987e5}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs-md)/1.6 var(--sans);overflow-x:hidden}
+a{color:var(--accent-ink)}
+code,pre,kbd{font-family:var(--mono);font-size:.86em}
+code{background:var(--code-bg);padding:.08em .35em;border-radius:4px;overflow-wrap:anywhere}
+.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;z-index:9;background:var(--surface);padding:6px 10px}
+/* header */
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{max-width:1240px;margin:0 auto;padding:.55rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center}
+.brand{font-weight:700;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:.45rem;white-space:nowrap}
+.brand span{color:var(--muted);font-weight:500}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.pages{display:flex;flex-wrap:wrap;gap:.15rem;flex:1 1 420px;min-width:0}
+.pages a{font-size:var(--fs-sm);text-decoration:none;color:var(--ink-2);padding:.25rem .55rem;border-radius:6px}
+.pages a:hover{background:var(--surface-2)}
+.pages a[aria-current]{color:var(--ink);background:var(--surface-2);font-weight:600}
+.ctl{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.tier{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.tier button,.theme-btn{font:inherit;font-size:var(--fs-xs);border:0;background:transparent;color:var(--ink-2);padding:.35rem .6rem;cursor:pointer;min-height:32px}
+.tier button+button{border-left:1px solid var(--line)}
+.tier button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+.theme-btn{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+html.embedded .top,html.embedded .foot .t1-hint{display:none}
+/* tiers */
+[data-tier="1"] .t2,[data-tier="1"] .t3,[data-tier="2"] .t3{display:none!important}
+[data-tier="1"] a.cite,[data-tier="2"] a.cite{display:none}
+.tier-badge{display:inline-block;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.05rem .5rem;margin-left:.4rem;vertical-align:middle}
+/* layout */
+main{max-width:1240px;margin:0 auto;padding:1.5rem 1rem 2rem}
+.hero{padding:1.2rem 0 .6rem}
+.eyebrow{font-size:var(--fs-xs);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 .35rem}
+h1{font-size:var(--fs-xl);line-height:1.15;margin:0 0 .6rem;letter-spacing:-.01em}
+h2{font-size:var(--fs-lg);margin:2.2rem 0 .6rem;padding-top:.6rem;border-top:1px solid var(--line)}
+h3{font-size:var(--fs-md);margin:1.2rem 0 .35rem}
+p{margin:.4rem 0 .8rem;max-width:78ch}
+.lede{font-size:1.08rem;color:var(--ink-2);max-width:72ch}
+.eli5{background:var(--accent-tint);border-left:3px solid var(--accent);padding:.6rem .9rem;border-radius:0 8px 8px 0;max-width:none;margin:.4rem 0 1rem}
+.eli5::before{content:"In plain English · ";font-weight:700;color:var(--accent-ink)}
+.grid{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.grid.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.9rem 1rem;min-width:0}
+.card h3{margin-top:0}
+.card p:last-child{margin-bottom:0}
+.analogy{display:flex;gap:.7rem;align-items:flex-start}
+.analogy .ico{font-size:1.5rem;line-height:1}
+.analogy b{display:block}
+.muted{color:var(--muted)}
+.small{font-size:var(--fs-sm)}
+.pill{display:inline-block;font-size:var(--fs-xs);font-weight:600;padding:.05rem .5rem;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.pill.good{color:var(--good);border-color:currentColor;background:transparent}
+.pill.warn{color:var(--warn);border-color:currentColor;background:transparent}
+.pill.bad{color:var(--bad);border-color:currentColor;background:transparent}
+.pill.plan{color:var(--accent-ink);border-style:dashed;background:transparent}
+/* narrative step cards */
+ol.steps{list-style:none;counter-reset:s;padding:0;margin:.6rem 0 1rem;display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+ol.steps>li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.75rem .9rem .75rem 2.9rem;position:relative;min-width:0}
+ol.steps>li::before{content:counter(s);position:absolute;left:.8rem;top:.75rem;width:1.5rem;height:1.5rem;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:var(--fs-xs);display:grid;place-items:center}
+ol.steps>li b{display:block}
+/* figures */
+figure{margin:1rem 0;min-width:0}
+figcaption{font-size:var(--fs-sm);color:var(--muted);margin-top:.35rem}
+.mmd{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.8rem;overflow-x:auto;min-height:60px}
+.mmd .out svg{max-width:100%;height:auto;display:block;margin:0 auto}
+.mmd .fallback{white-space:pre-wrap;font-family:var(--mono);font-size:var(--fs-xs);color:var(--muted)}
+/* tables & code */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);margin:.6rem 0 1rem}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th,td{text-align:left;vertical-align:top;padding:.5rem .7rem;border-bottom:1px solid var(--line)}
+th{background:var(--surface-2);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:.7rem .9rem;overflow-x:auto;line-height:1.45;margin:.5rem 0 1rem}
+pre code{background:none;padding:0;overflow-wrap:normal}
+a.cite{font-family:var(--mono);font-size:var(--fs-xs);background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:.02rem .35rem;text-decoration:none;color:var(--accent-ink);overflow-wrap:anywhere;white-space:normal}
+a.cite::before{content:"⌖ ";opacity:.7}
+.evidence{font-size:var(--fs-sm);color:var(--ink-2)}
+.evidence::before{content:"Evidence: ";font-weight:600}
+details{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:.5rem .9rem;margin:.6rem 0}
+summary{cursor:pointer;font-weight:600}
+/* stat tiles */
+.tiles{display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));margin:1rem 0}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:.8rem .9rem}
+.tile .label{font-size:var(--fs-sm);color:var(--ink-2)}
+.tile .value{font-size:2rem;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.tile .sub{font-size:var(--fs-xs);color:var(--muted)}
+.meter{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:.45rem}
+.meter>i{display:block;height:100%;background:var(--series-1);border-radius:4px}
+.callout{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:0 var(--r) var(--r) 0;background:var(--surface);padding:.7rem .9rem;margin:.8rem 0}
+.callout.ok{border-left-color:var(--good)}
+.callout.plan{border-left-color:var(--accent);border-left-style:dashed}
+.foot{max-width:1240px;margin:0 auto;padding:1rem 1rem 2rem;border-top:1px solid var(--line);font-size:var(--fs-sm);color:var(--muted)}
+.foot p{max-width:none}
+@media (max-width:560px){.tier button{padding:.35rem .45rem}.bar{gap:.4rem}h2{margin-top:1.6rem}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+@media print{.top{position:static}.t2,.t3{display:block!important}}
+</style>
+<script>try{var t=localStorage.getItem('powatch-docs:tier');if(t)document.documentElement.dataset.tier=t;var th=localStorage.getItem('powatch-docs:theme');if(th&&th!=='auto')document.documentElement.dataset.theme=th;}catch(e){}try{if(window.self!==window.top)document.documentElement.classList.add('embedded');}catch(e){document.documentElement.classList.add('embedded');}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="index.html"><span class="dot" aria-hidden="true"></span>PoWatch <span>docs</span></a>
+    <nav class="pages" aria-label="Documentation pages"><a href="index.html">Overview</a><a href="USER_WORKFLOW.html">User journeys</a><a href="VISUAL_ARCHITECTURE_DASHBOARD.html">Architecture</a><a href="AI_SERVICES_REPORT.html">AI & services</a><a href="AUTH_SECURITY_REPORT.html" aria-current="page">Security</a><a href="DIAGRAM_DESIGN_OVERVIEW.html">Alt overview</a><a href="artifact.html">Tabbed view</a></nav>
+    <div class="ctl">
+      <div class="tier" role="group" aria-label="Detail level">
+        <button type="button" data-set-tier="1" title="Simple: plain English, journeys and analogies">1 · Simple</button>
+        <button type="button" data-set-tier="2" title="Standard: adds diagrams and component maps">2 · Standard</button>
+        <button type="button" data-set-tier="3" title="Developer: adds file:line citations, schemas, DI and config">3 · Developer</button>
+      </div>
+      <button type="button" class="theme-btn" data-theme-toggle title="Theme: auto / light / dark">◐ <span data-theme-label>Auto</span></button>
+    </div>
+  </div>
+</header>
+<main id="main">
+<section class="hero">
+  <p class="eyebrow">Security &amp; access control</p>
+  <h1>Who can get in, what they can touch, and what happens when they try more</h1>
+  <p class="eli5">PoWatch is a building where every door is locked unless it has a sign saying "public". Microsoft checks your ID at the entrance. You then wear a tamper-proof visitor badge (a cookie) that only opens your own drawer in the filing cabinet.</p>
+  <p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L11-L16" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:11-16</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L126-L138" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:126-138</a></p>
+</section>
+
+<div class="tiles">
+  <div class="tile"><div class="label">Default for a new route</div><div class="value">Deny</div><div class="sub">fallback policy requires a signed-in cookie</div></div>
+  <div class="tile"><div class="label">Badge lifetime</div><div class="value">24 h</div><div class="sub">sliding; HttpOnly, Secure, SameSite=Strict</div></div>
+  <div class="tile"><div class="label">Share-link token</div><div class="value">128 bit</div><div class="sub">random, 22 base64url characters</div></div>
+  <div class="tile"><div class="label">Requests a minute, per user</div><div class="value">300</div><div class="sub">batch ingest alone uses about 6</div>
+    <div class="meter" role="img" aria-label="About 6 of 300 requests a minute used by batch ingest"><i style="width:2%"></i></div></div>
+</div>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L132-L138" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:132-138</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L37-L45" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:37-45</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/ShareService.cs#L16" target="_blank" rel="noopener">src/PoWatch.Application/Services/ShareService.cs:16</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/ShareService.cs#L68-L69" target="_blank" rel="noopener">src/PoWatch.Application/Services/ShareService.cs:68-69</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/RateLimiting.cs#L8-L13" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/RateLimiting.cs:8-13</a></p>
+
+<h2>Signing in</h2>
+<p class="eli5">PoWatch never sees your password. Microsoft does the checking and sends back a signed note. The server reads it, checks your organisation is on the guest list, and gives your browser a sealed badge. The browser can wear the badge but cannot open it.</p>
+<figure class="t2">
+  <div class="mmd"><script type="text/plain">
+sequenceDiagram
+  autonumber
+  participant U as Browser
+  participant A as PoWatch API
+  participant M as Microsoft Entra ID
+  U->>A: GET /auth/login/microsoft?returnUrl=/journal
+  A->>A: Keep returnUrl only if it is a local path
+  A-->>U: Redirect to Microsoft (code flow + PKCE)
+  U->>M: Sign in
+  M-->>U: Redirect back with a one-time code
+  U->>A: GET /signin-oidc?code=…
+  A->>M: Swap the code for tokens
+  A->>A: Check the issuer's tenant is on AllowedTenants
+  A-->>U: Set encrypted HttpOnly cookie, go to /journal
+  U->>A: GET /api/stats/presence (cookie sent automatically)
+  A->>A: Cookie gives the user id, so only that user's partition is read
+  </script><div class="out" role="img" aria-label="Sign-in sequence: browser to API to Microsoft with code flow and PKCE, tenant check, encrypted cookie issued, later API calls read only the user's own partition."></div></div>
+</figure>
+<ol class="steps">
+  <li><b>Start</b><code>/auth/login/microsoft</code> issues an OIDC challenge (authorization code with PKCE, scopes <code>openid profile email</code>).</li>
+  <li><b>No open redirects</b><code>returnUrl</code> must start with <code>/</code> and must not start with <code>//</code>. Anything else becomes <code>/</code>.</li>
+  <li><b>Tenant gate</b>The issuer's tenant id must exactly match an entry in <code>AzureAd:AllowedTenants</code>. A substring match is not enough.</li>
+  <li><b>Badge</b>The cookie is named <code>__Host-PoWatch.Auth</code>. It is HttpOnly, Secure-only and SameSite=Strict, and its key ring lives in Blob Storage so restarts do not log people out.</li>
+  <li><b>XHR-friendly</b>An API call without a badge gets <code>401</code> and a forbidden one gets <code>403</code>, never an HTML redirect.</li>
+</ol>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Auth/AuthEndpoints.cs#L46-L55" target="_blank" rel="noopener">src/PoWatch.Api/Features/Auth/AuthEndpoints.cs:46-55</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Auth/AuthEndpoints.cs#L100-L106" target="_blank" rel="noopener">src/PoWatch.Api/Features/Auth/AuthEndpoints.cs:100-106</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L59-L91" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:59-91</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/PoPlatform.cs#L77-L78" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/PoPlatform.cs:77-78</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/DataProtectionSetup.cs#L29-L48" target="_blank" rel="noopener">src/PoWatch.Api/Security/DataProtectionSetup.cs:29-48</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L46-L48" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:46-48</a></p>
+
+<h2>Per-environment behaviour</h2>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>Production</th><th>Development</th><th>Test</th></tr></thead>
+<tbody>
+<tr><td>Microsoft sign-in</td><td>When <code>AzureAd:ClientId</code> is set</td><td>When set</td><td>—</td></tr>
+<tr><td>Guest sign-in (<code>FakeAuth</code>)</td><td><span class="pill good">Impossible: start-up throws</span></td><td>On</td><td>On (header <code>X-Fake-User</code>)</td></tr>
+<tr><td>Error details in responses</td><td>Hidden</td><td>Shown</td><td>Shown</td></tr>
+<tr><td>Rate limiting</td><td>On</td><td>On</td><td>Off (suites share one guest)</td></tr>
+<tr><td>HTTPS redirect</td><td>On</td><td>Off (HTTP only)</td><td>On</td></tr>
+<tr><td>Dev seed <code>/api/dev/seed</code></td><td>Not mapped</td><td>Mapped</td><td>Mapped</td></tr>
+<tr><td>OpenAPI / Scalar UI</td><td>Not mapped</td><td>Mapped</td><td>Not mapped</td></tr>
+</tbody></table></div>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L103-L110" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:103-110</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/appsettings.Production.json#L12-L13" target="_blank" rel="noopener">src/PoWatch.Api/appsettings.Production.json:12-13</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/appsettings.Development.json#L24-L25" target="_blank" rel="noopener">src/PoWatch.Api/appsettings.Development.json:24-25</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/appsettings.Test.json#L10-L11" target="_blank" rel="noopener">src/PoWatch.Api/appsettings.Test.json:10-11</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/RateLimiting.cs#L23" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/RateLimiting.cs:23</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L103-L115" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:103-115</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Dev/DevSeedEndpoints.cs#L18-L20" target="_blank" rel="noopener">src/PoWatch.Api/Features/Dev/DevSeedEndpoints.cs:18-20</a></p>
+
+<h2>Permissions: who can touch what</h2>
+<p class="eli5">There are no admin roles. Each person sees only their own data, because every lookup starts from their user id and is filed under it. The only things anyone can open without signing in are listed below.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Surface</th><th>Who</th><th>Wall that keeps others out</th></tr></thead>
+<tbody>
+<tr><td>SPA shell, static files</td><td><span class="pill">Anyone</span></td><td>Contains no data</td></tr>
+<tr><td><code>/health</code>, <code>/health/live</code>, <code>/diag/boot</code></td><td><span class="pill">Anyone</span></td><td>Readiness only</td></tr>
+<tr><td><code>/auth/*</code></td><td><span class="pill">Anyone</span></td><td>Sign-in routes; <code>/auth/me</code> reports the state</td></tr>
+<tr><td><code>/s/{token}</code>, <code>/s/{token}/card.png</code></td><td><span class="pill warn">Anyone with the token</span></td><td>Frozen copy only; expired or revoked links are refused</td></tr>
+<tr><td><code>/api/*</code>, <code>/hubs/stats</code></td><td><span class="pill good">Signed-in owner</span></td><td>Partition key = escaped user id; hub pushes go to <code>Clients.User(userId)</code></td></tr>
+<tr><td>Snapshot images</td><td><span class="pill good">Owner, via a short-lived link</span></td><td>Path must start with the owner's prefix and contain no <code>..</code>. Read links last 30 minutes, upload links 5.</td></tr>
+</tbody></table></div>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L132" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:132</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L142-L145" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:142-145</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/HealthEndpoints.cs#L44-L48" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/HealthEndpoints.cs:44-48</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Shares/ShareEndpoints.cs#L56-L83" target="_blank" rel="noopener">src/PoWatch.Api/Features/Shares/ShareEndpoints.cs:56-83</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Persistence/StatsEntityMapper.cs#L28-L31" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Persistence/StatsEntityMapper.cs:28-31</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Stats/StatsHub.cs#L27-L28" target="_blank" rel="noopener">src/PoWatch.Api/Features/Stats/StatsHub.cs:27-28</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Persistence/SnapshotStores.cs#L14-L15" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Persistence/SnapshotStores.cs:14-15</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Persistence/SnapshotStores.cs#L94-L97" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Persistence/SnapshotStores.cs:94-97</a></p>
+
+<h2>What happens on an unauthorised or bad request</h2>
+<figure class="t2">
+  <div class="mmd"><script type="text/plain">
+flowchart TD
+  r["Request"] --> pub{"Marked public?"}
+  pub -- "yes" --> ok1["Served"]
+  pub -- "no" --> badge{"Valid badge?"}
+  badge -- "no" --> e401["401, no redirect"]
+  badge -- "yes" --> rl{"Under 300 a minute?"}
+  rl -- "no" --> e429["429 Too Many Requests"]
+  rl -- "yes" --> own{"Is it the caller's<br/>own session or token?"}
+  own -- "no" --> e404["404 Not Found<br/>(existence is not revealed)"]
+  own -- "yes" --> val{"Batch shape and<br/>time window valid?"}
+  val -- "no" --> e400["400 with the reasons"]
+  val -- "yes" --> ok2["200"]
+  </script><div class="out" role="img" aria-label="Decision tree: public routes are served; otherwise missing badge returns 401, over the rate limit 429, someone else's resource 404, invalid batch 400, else 200."></div></div>
+</figure>
+<ol class="steps">
+  <li><b>No badge</b>401. The client shows the sign-in page.</li>
+  <li><b>Too fast</b>429, from a sliding window of 300 per minute in 6 segments. The limit is keyed by user id, or by IP address when anonymous.</li>
+  <li><b>Not yours</b>Lookups are made inside your own partition, so another user's session simply "does not exist" (404).</li>
+  <li><b>Malformed</b>The FluentValidation shape check and domain time checks return 400 with readable reasons.</li>
+  <li><b>Crash</b>500 ProblemDetails with a trace id. The stack trace is hidden unless <code>ExposeDebugDetailsInUi</code> is on.</li>
+</ol>
+<p class="evidence t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/RateLimiting.cs#L17-L32" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/RateLimiting.cs:17-32</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/IngestService.cs#L33-L57" target="_blank" rel="noopener">src/PoWatch.Application/Services/IngestService.cs:33-57</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Ingest/IngestEndpoints.cs#L26-L41" target="_blank" rel="noopener">src/PoWatch.Api/Features/Ingest/IngestEndpoints.cs:26-41</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/RequestPipeline.cs#L14-L39" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/RequestPipeline.cs:14-39</a></p>
+
+<h2>Protecting tokens, keys and secrets</h2>
+<div class="grid two">
+  <div class="card"><h3>Tokens</h3><p>This is the BFF pattern: the Blazor client never sees an access token. Microsoft's tokens are saved inside the encrypted cookie on the server's side (<code>SaveTokens = true</code>).</p><p class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L14" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:14</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L68" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:68</a></p></div>
+  <div class="card"><h3>Cookie keys</h3><p>The Data Protection key ring is persisted to the <code>dataprotection-keys</code> blob, using managed identity when a service URI is set, under application name <code>PoWatch</code>.</p><p class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/DataProtectionSetup.cs#L34-L48" target="_blank" rel="noopener">src/PoWatch.Api/Security/DataProtectionSetup.cs:34-48</a></p></div>
+  <div class="card"><h3>Secrets</h3><p>No secret is committed. Keys are blank in <code>appsettings.json</code> and come from Key Vault (<code>Gemini--ApiKey</code>) or App Service settings. Azure OpenAI prefers keyless Entra sign-in.</p><p class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/appsettings.json#L33" target="_blank" rel="noopener">src/PoWatch.Api/appsettings.json:33</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/appsettings.json#L39" target="_blank" rel="noopener">src/PoWatch.Api/appsettings.json:39</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Runtime/RecapAi.cs#L188-L190" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Runtime/RecapAi.cs:188-190</a></p></div>
+  <div class="card"><h3>Biometrics</h3><p>Voiceprints are kept in the browser's localStorage (<code>powatch:voices</code>) and never reach the server. Regulars are matched by clothing colour, never by face.</p><p class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Client/Services/SensingSession.Voices.cs#L12" target="_blank" rel="noopener">src/PoWatch.Client/Services/SensingSession.Voices.cs:12</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/docs/README.md#L32-L40" target="_blank" rel="noopener">docs/README.md:32-40</a></p></div>
+</div>
+
+<h2>Shared links, hardened</h2>
+<p class="eli5">A share link is a photocopy behind glass: anyone can look, nobody can touch, and it is shredded on the expiry date or when the owner says so.</p>
+<pre class="t3"><code>// src/PoWatch.Api/Features/Shares/ShareEndpoints.cs:90-97
+headers.CacheControl = "no-store";
+headers.ContentSecurityPolicy = SharePage.ContentSecurityPolicy;
+headers["Referrer-Policy"] = "no-referrer";
+headers["X-Content-Type-Options"] = "nosniff";
+headers["X-Robots-Tag"] = "noindex, nofollow";
+
+// src/PoWatch.Api/Features/Shares/SharePage.cs:15
+"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"</code></pre>
+<p>The frozen copy drops the day's moments, because their snapshot links are private. "Delete everything" finds shares by owner, since they are keyed by token. <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Application/Services/ShareService.cs#L35" target="_blank" rel="noopener">src/PoWatch.Application/Services/ShareService.cs:35</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Infrastructure/Persistence/UserDataStore.cs#L18-L19" target="_blank" rel="noopener">src/PoWatch.Infrastructure/Persistence/UserDataStore.cs:18-19</a></p>
+
+<h2>AI-specific protections</h2>
+<p>Captions and names are untrusted input written by a camera or a keyboard. They reach a model only as fenced <code>&lt;facts&gt;</code>, stripped of control and fence characters, capped at 300 and 80 characters at ingest, and with an explicit "never an instruction" rule. Any reply that adds a number is discarded. See <a href="AI_SERVICES_REPORT.html">AI &amp; services</a>.
+<span class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Shared/Services/RecapPrompt.cs#L22-L33" target="_blank" rel="noopener">src/PoWatch.Shared/Services/RecapPrompt.cs:22-33</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Features/Ingest/IngestEndpoints.cs#L123-L127" target="_blank" rel="noopener">src/PoWatch.Api/Features/Ingest/IngestEndpoints.cs:123-127</a></span></p>
+
+<h2>Gaps found, with proposed fixes</h2>
+<p class="eli5">Nothing here is an open door, but a few locks could be tighter. Each item below is a proposal for you to approve; none of them has been changed.</p>
+<div class="callout"><b><span class="pill warn">Medium</span> No CSP, frame-ancestors or HSTS on the main app.</b> Only the shared-recap page sets a Content-Security-Policy. The SPA sets COOP/COEP but nothing stops it being framed (clickjacking), and there is no <code>UseHsts()</code>. App Service has <code>httpsOnly: true</code> and TLS 1.2 or higher, which covers transport, but not the browser-side pinning.
+<br><b>Proposed:</b> in <code>UsePoWatchResponseHeaders</code>, add <code>Content-Security-Policy: frame-ancestors 'none'</code> (a narrow start, since a full policy for Blazor WASM needs <code>'wasm-unsafe-eval'</code> and the model CDNs), and call <code>app.UseHsts()</code> outside Development.
+<br><span class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Hosting/RequestPipeline.cs#L62-L73" target="_blank" rel="noopener">src/PoWatch.Api/Hosting/RequestPipeline.cs:62-73</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L114-L115" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:114-115</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/infra/modules/web-app.bicep#L20-L26" target="_blank" rel="noopener">infra/modules/web-app.bicep:20-26</a></span></div>
+<div class="callout"><b><span class="pill warn">Medium</span> <code>AllowedTenants</code> is empty by default.</b> <i>Not declared (default: <code>[]</code> at <code>appsettings.json:12</code>)</i>. Any Microsoft account can sign in and get its own empty partition. Production logs a warning about it.
+<br><b>Proposed:</b> set <code>AzureAd__AllowedTenants__0</code> in App Service settings, and add it to <code>SCRIPTS/ensure-azure-access.ps1</code> or the Bicep so a re-provision keeps it, if the app is meant for one tenant.
+<br><span class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/appsettings.json#L12" target="_blank" rel="noopener">src/PoWatch.Api/appsettings.json:12</a> <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L56-L57" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:56-57</a></span></div>
+<div class="callout"><b><span class="pill">Low</span> Tokens are saved but never used.</b> <code>SaveTokens = true</code> stores the id and access tokens in the cookie, but no code calls <code>GetTokenAsync</code>. This makes the cookie bigger and keeps tokens that serve no purpose.
+<br><b>Proposed:</b> set <code>SaveTokens = false</code>. The sign-out path does not need an <code>id_token_hint</code> for the /common authority.
+<br><span class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/AuthenticationSetup.cs#L68" target="_blank" rel="noopener">src/PoWatch.Api/Security/AuthenticationSetup.cs:68</a></span></div>
+<div class="callout plan"><b><span class="pill plan">Proposed / Not Yet Implemented</span> Envelope-encrypt the cookie key ring with Key Vault.</b> The code itself calls <code>ProtectKeysWithAzureKeyVault</code> "a reasonable future hardening step". Today the keys are protected by storage RBAC alone.
+<br><span class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Security/DataProtectionSetup.cs#L21-L22" target="_blank" rel="noopener">src/PoWatch.Api/Security/DataProtectionSetup.cs:21-22</a></span></div>
+<div class="callout plan"><b><span class="pill plan">Proposed / Not Yet Implemented</span> A shared AI reply cache.</b> The recap cache is in memory (200 MB) and is lost on restart. The code notes Redis or SQL as the swap-in. This affects cost more than security.
+<br><span class="t3"><a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/src/PoWatch.Api/Program.cs#L71-L72" target="_blank" rel="noopener">src/PoWatch.Api/Program.cs:71-72</a></span></div>
+
+<h2 class="t3">Authorization wiring <span class="tier-badge">Level 3</span></h2>
+<pre class="t3"><code>// src/PoWatch.Api/Security/AuthenticationSetup.cs:118-138
+var defaultSchemes = flags.DeveloperBypassAuth
+    ? new[] { CookieScheme, FakeAuthHandler.SchemeName }
+    : new[] { CookieScheme };
+var defaultPolicy = new AuthorizationPolicyBuilder(defaultSchemes).RequireAuthenticatedUser().Build();
+// Default deny, COOKIE-ONLY on purpose: the always-succeeds FakeAuth scheme must not
+// auto-authenticate a guest on AllowAnonymous endpoints such as /auth/me.
+var fallbackPolicy = new AuthorizationPolicyBuilder(CookieScheme).RequireAuthenticatedUser().Build();
+builder.Services.AddAuthorizationBuilder().SetDefaultPolicy(defaultPolicy).SetFallbackPolicy(fallbackPolicy);</code></pre>
+<pre class="t3"><code>// src/PoWatch.Api/Security/CurrentUser.cs:14-18 — the partition id
+public static string? Id(ClaimsPrincipal? user) =>
+    user?.FindFirst(EntraObjectId)?.Value      // Entra object id: stable across apps and sign-ins
+    ?? user?.FindFirst("oid")?.Value
+    ?? user?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+    ?? user?.FindFirst("sub")?.Value;</code></pre>
+<p class="t3">The deploy is health-gated: <code>/health/live</code> must report this commit in <code>X-Commit</code>, then <code>/health</code> must answer 200. <a class="cite" href="https://github.com/punkouter27/PoWatch/blob/284e0b81432ed0dc92d6fdb6a5652e6bde97c916/.github/workflows/deploy.yml#L150-L163" target="_blank" rel="noopener">.github/workflows/deploy.yml:150-163</a></p>
+
+</main>
+<footer class="foot">
+  <p>Generated <time datetime="2026-11-06">2026-11-06</time> for commit <a href="https://github.com/punkouter27/PoWatch/commit/284e0b81432ed0dc92d6fdb6a5652e6bde97c916" target="_blank" rel="noopener"><code>284e0b8</code></a> on <code>master</code>.
+  Evidence order: source code → config → code comments → <code>docs/README.md</code>. No secrets or keys are reproduced; config values shown are committed, non-secret defaults.</p>
+  <p class="t1-hint">Detail level is remembered in this browser. Level 3 shows exact <code>file:line</code> citations linked to GitHub at this commit.</p>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>
+(function () {
+  var root = document.documentElement;
+  var TIER = 'powatch-docs:tier', THEME = 'powatch-docs:theme';
+  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+  function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  function applyTier(t) {
+    if (!/^[123]$/.test(String(t))) t = '1';
+    root.dataset.tier = t;
+    document.querySelectorAll('[data-set-tier]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.setTier === String(t))); });
+    renderMermaid(false);
+  }
+  function applyTheme(m) {
+    if (m !== 'light' && m !== 'dark') m = 'auto';
+    if (m === 'auto') delete root.dataset.theme; else root.dataset.theme = m;
+    var l = document.querySelector('[data-theme-label]');
+    if (l) l.textContent = m[0].toUpperCase() + m.slice(1);
+    renderMermaid(true);
+  }
+
+  document.querySelectorAll('[data-set-tier]').forEach(function (b) {
+    b.addEventListener('click', function () { store(TIER, b.dataset.setTier); applyTier(b.dataset.setTier); });
+  });
+  var tb = document.querySelector('[data-theme-toggle]');
+  if (tb) tb.addEventListener('click', function () {
+    var cur = read(THEME) || 'auto';
+    var next = cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto';
+    store(THEME, next); applyTheme(next);
+  });
+  // The tabbed shell (artifact.html) drives level and theme for the report inside its frame.
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'powatch-docs') return;
+    if (d.tier) applyTier(d.tier);
+    if (d.theme) applyTheme(d.theme);
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', function () { renderMermaid(true); });
+  }
+
+  // ---- Mermaid: theme-aware SVG from the page's own tokens; re-rendered when the theme changes. ----
+  var seq = 0, lastKey = null;
+  function tok(n) { return getComputedStyle(root).getPropertyValue(n).trim(); }
+  function isDark() { return root.dataset.theme === 'dark' || (!root.dataset.theme && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); }
+  var chain = Promise.resolve();
+  function renderMermaid(force) { chain = chain.then(function () { return doRender(force); }).catch(function () { }); }
+  async function doRender(force) {
+    var blocks = document.querySelectorAll('.mmd');
+    if (!blocks.length) return;
+    if (!window.mermaid) {
+      blocks.forEach(function (b) {
+        if (b.querySelector('.fallback')) return;
+        var src = b.querySelector('script[type="text/plain"]');
+        var f = document.createElement('div'); f.className = 'fallback';
+        f.textContent = 'Diagram needs Mermaid 10.9.0 from cdn.jsdelivr.net (offline?). Source:\n\n' + (src ? src.textContent.trim() : '');
+        b.appendChild(f);
+      });
+      return;
+    }
+    var key = String(isDark());
+    if (key !== lastKey) force = true;
+    lastKey = key;
+    window.mermaid.initialize({
+      startOnLoad: false, securityLevel: 'strict', theme: 'base',
+      fontFamily: 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif',
+      flowchart: { htmlLabels: false, curve: 'basis', useMaxWidth: true },
+      sequence: { useMaxWidth: true, wrap: true, mirrorActors: false },
+      er: { useMaxWidth: true },
+      themeVariables: {
+        darkMode: isDark(), background: tok('--surface'), fontSize: '14px',
+        primaryColor: tok('--surface-2'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--accent'),
+        secondaryColor: tok('--accent-tint') || tok('--surface-2'), secondaryTextColor: tok('--ink'), secondaryBorderColor: tok('--line'),
+        tertiaryColor: tok('--surface'), tertiaryTextColor: tok('--ink'), tertiaryBorderColor: tok('--line'),
+        lineColor: tok('--ink-2'), textColor: tok('--ink'), mainBkg: tok('--surface-2'), nodeBorder: tok('--accent'),
+        clusterBkg: tok('--surface'), clusterBorder: tok('--line'), titleColor: tok('--ink'), edgeLabelBackground: tok('--surface'),
+        actorBkg: tok('--surface-2'), actorBorder: tok('--accent'), actorTextColor: tok('--ink'), actorLineColor: tok('--line'),
+        signalColor: tok('--ink-2'), signalTextColor: tok('--ink'), labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line'),
+        labelTextColor: tok('--ink'), loopTextColor: tok('--ink'), noteBkgColor: tok('--accent-tint') || tok('--surface-2'), noteTextColor: tok('--ink'), noteBorderColor: tok('--accent'),
+        activationBkgColor: tok('--surface-2'), activationBorderColor: tok('--accent'), sequenceNumberColor: '#ffffff',
+        attributeBackgroundColorOdd: tok('--surface'), attributeBackgroundColorEven: tok('--surface-2')
+      }
+    });
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (b.offsetParent === null && !b.dataset.done) continue; // hidden at this level: render when shown
+      if (b.dataset.done === key && !force) continue;
+      var src = b.querySelector('script[type="text/plain"]');
+      var out = b.querySelector('.out');
+      if (!src || !out) continue;
+      try {
+        var r = await window.mermaid.render('mmd' + (++seq), src.textContent.trim());
+        out.innerHTML = r.svg; b.dataset.done = key;
+      } catch (err) {
+        out.textContent = 'Diagram could not render: ' + (err && err.message ? err.message : err);
+      }
+    }
+  }
+
+  applyTheme(read(THEME) || 'auto');
+  applyTier(root.dataset.tier || read(TIER) || '1');
+})();
+</script>
+</body>
+</html>

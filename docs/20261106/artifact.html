@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" data-tier="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoWatch — Documentation Suite</title>
+<style>
+:root{color-scheme:light;--bg:#fcfcfb;--surface:#fff;--surface-2:#f3f2ef;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6b6a66;--line:#e4e2dc;--accent:#2a78d6;--accent-tint:rgba(42,120,214,.08);
+--sans:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;--bg:#121211;--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--muted:#9a998f;--line:#34332f;--accent:#3987e5;--accent-tint:rgba(57,135,229,.12)}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#121211;--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--muted:#9a998f;--line:#34332f;--accent:#3987e5;--accent-tint:rgba(57,135,229,.12)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans);display:flex;flex-direction:column;overflow-x:hidden}
+header{position:sticky;top:0;z-index:3;background:var(--bg);border-bottom:1px solid var(--line)}
+.row{display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center;padding:.55rem 1rem;max-width:1360px;margin:0 auto}
+.brand{font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:.45rem}
+.brand small{color:var(--muted);font-weight:500}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.ctl{display:flex;gap:.5rem;align-items:center;margin-left:auto;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button,.btn{font:inherit;font-size:.78rem;border:0;background:transparent;color:var(--ink-2);padding:.35rem .6rem;cursor:pointer;min-height:32px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+.btn{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.tabs{display:flex;gap:.25rem;overflow-x:auto;padding:0 1rem;max-width:1360px;margin:0 auto;scrollbar-width:thin}
+.tabs button{font:inherit;font-size:.88rem;white-space:nowrap;border:0;border-bottom:2px solid transparent;background:none;color:var(--ink-2);padding:.5rem .7rem;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{font-size:.78rem;color:var(--muted);padding:0 1rem .45rem;max-width:1360px;margin:0 auto}
+main{flex:1;display:flex;min-height:0}
+iframe{flex:1;width:100%;border:0;background:var(--bg);min-height:70vh}
+footer{font-size:.75rem;color:var(--muted);padding:.4rem 1rem;border-top:1px solid var(--line)}
+footer a{color:inherit}
+@media (max-width:560px){.seg button{padding:.35rem .45rem}}
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <div class="brand"><span class="dot" aria-hidden="true"></span>PoWatch <small>documentation suite</small></div>
+    <div class="ctl">
+      <div class="seg" role="group" aria-label="Detail level">
+        <button type="button" data-tier="1" title="Simple: plain English, journeys and analogies">1 · Simple</button>
+        <button type="button" data-tier="2" title="Standard: adds diagrams and component maps">2 · Standard</button>
+        <button type="button" data-tier="3" title="Developer: adds file:line citations, schemas, DI and config">3 · Developer</button>
+      </div>
+      <button type="button" class="btn" id="theme">◐ <span id="themeLabel">Auto</span></button>
+    </div>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Reports" id="tabs"></div>
+  <div class="hint" id="hint"></div>
+</header>
+<main><iframe id="view" title="Report" loading="eager"></iframe></main>
+<footer>Generated 2026-11-06 for commit <a href="https://github.com/punkouter27/PoWatch/commit/284e0b81432ed0dc92d6fdb6a5652e6bde97c916" target="_blank" rel="noopener">284e0b8</a> · each tab is a standalone page in the same folder.</footer>
+<script>
+(function () {
+  var TABS = [{"file":"index.html","nav":"Overview"},{"file":"USER_WORKFLOW.html","nav":"User journeys"},{"file":"VISUAL_ARCHITECTURE_DASHBOARD.html","nav":"Architecture"},{"file":"AI_SERVICES_REPORT.html","nav":"AI & services"},{"file":"AUTH_SECURITY_REPORT.html","nav":"Security"},{"file":"DIAGRAM_DESIGN_OVERVIEW.html","nav":"Alt overview"}];
+  var SLUG = { 'index.html': 'overview', 'USER_WORKFLOW.html': 'journeys', 'VISUAL_ARCHITECTURE_DASHBOARD.html': 'architecture', 'AI_SERVICES_REPORT.html': 'ai', 'AUTH_SECURITY_REPORT.html': 'security', 'DIAGRAM_DESIGN_OVERVIEW.html': 'alt' };
+  var HINT = { '1': 'Level 1 · plain-English summaries, journeys and analogies.', '2': 'Level 2 · adds component maps, sequence flows and the data model.', '3': 'Level 3 · adds exact file:line citations (linked to GitHub), schemas, DI and config.' };
+  // Locally the overview is index.html beside this file; in the hosted copy this shell is the entry page, so the overview ships as overview.html.
+  var local = /artifact\.html$/i.test(location.pathname);
+  function src(file) { return file === 'index.html' && !local ? 'overview.html' : file; }
+  var root = document.documentElement, frame = document.getElementById('view'), tabs = document.getElementById('tabs');
+  function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+  var tier = read('powatch-docs:tier') || '1', theme = read('powatch-docs:theme') || 'auto';
+
+  function push() { try { frame.contentWindow.postMessage({ type: 'powatch-docs', tier: tier, theme: theme }, '*'); } catch (e) { } }
+  function setTier(t) {
+    tier = t; store('powatch-docs:tier', t);
+    document.querySelectorAll('[data-tier]').forEach(function (b) { if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', String(b.dataset.tier === t)); });
+    document.getElementById('hint').textContent = HINT[t]; push();
+  }
+  function setTheme(m) {
+    theme = m; store('powatch-docs:theme', m);
+    if (m === 'auto') delete root.dataset.theme; else root.dataset.theme = m;
+    document.getElementById('themeLabel').textContent = m[0].toUpperCase() + m.slice(1); push();
+  }
+  function open(file, focus) {
+    TABS.forEach(function (t) {
+      var b = document.getElementById('tab-' + SLUG[t.file]);
+      b.setAttribute('aria-selected', String(t.file === file)); b.tabIndex = t.file === file ? 0 : -1;
+      if (t.file === file && focus) b.focus();
+    });
+    frame.src = src(file);
+    frame.title = (TABS.find(function (t) { return t.file === file; }) || {}).nav || 'Report';
+    if (location.hash !== '#' + SLUG[file]) history.replaceState(null, '', '#' + SLUG[file]);
+  }
+  TABS.forEach(function (t) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.role = 'tab'; b.id = 'tab-' + SLUG[t.file]; b.textContent = t.nav;
+    b.setAttribute('aria-controls', 'view');
+    b.addEventListener('click', function () { open(t.file); });
+    tabs.appendChild(b);
+  });
+  tabs.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    var i = TABS.findIndex(function (t) { return document.getElementById('tab-' + SLUG[t.file]).getAttribute('aria-selected') === 'true'; });
+    i = (i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length; open(TABS[i].file, true);
+  });
+  frame.addEventListener('load', push);
+  document.querySelectorAll('.seg [data-tier]').forEach(function (b) { b.addEventListener('click', function () { setTier(b.dataset.tier); }); });
+  document.getElementById('theme').addEventListener('click', function () { setTheme(theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto'); });
+  function fromHash() {
+    var h = location.hash.slice(1);
+    var hit = TABS.find(function (t) { return SLUG[t.file] === h; });
+    open(hit ? hit.file : TABS[0].file);
+  }
+  window.addEventListener('hashchange', fromHash);
+  setTier(/^[123]$/.test(tier) ? tier : '1'); setTheme(/^(auto|light|dark)$/.test(theme) ? theme : 'auto');
+  fromHash();
+})();
+</script>
+</body>
+</html>
