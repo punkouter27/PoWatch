@@ -6,8 +6,10 @@ using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 using PoWatch.Shared.Models;
 using PoWatch.Shared.Services;
+using PoWatch.Application.Features.Recaps;
+using PoWatch.Application.Features.Sessions;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Stories;
 
 /// <summary>
 /// A session's story: a recap of every ten minutes (a chapter) kept as the session runs, and once it

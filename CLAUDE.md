@@ -38,7 +38,7 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   browser-safe C# parts (`CentroidTracker`, `TickBatcher`, `VlmScheduler`, `AdaptiveCadence`,
   `HighlightRules`) sit in `PoWatch.Shared/Services` so unit tests can cover them. Unsent batches wait
   in the IndexedDB outbox (`js/outbox.js`).
-- **Ingest:** `Api/Features/Ingest` → `Application/Services/IngestService.cs`. It claims each `batchKey`
+- **Ingest:** `Api/Features/Ingest` → `Application/Features/Ingest/IngestService.cs`. It claims each `batchKey`
   once in `PoWatchIngestLedger`, writes raw rows and merges minute/hour/day/all rollups; the endpoint
   then pushes `statsChanged` through `NotifyStatsChangedAsync` (`Api/Features/Stats/StatsHub.cs`).
 - **Reads:** `StatsQueryService` reads rollups and calls the pure stat math in `PoWatch.Domain/Services`

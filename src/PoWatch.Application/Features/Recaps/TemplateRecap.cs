@@ -2,8 +2,9 @@ using System.Globalization;
 using Humanizer;
 using PoWatch.Domain.Models;
 using PoWatch.Shared.Models;
+using PoWatch.Application.Features.Stories;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Recaps;
 
 /// <summary>Everything a recap is written from, gathered once.</summary>
 public sealed record RecapFacts(

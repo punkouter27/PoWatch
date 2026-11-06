@@ -5,8 +5,10 @@ using PoWatch.Application.Contracts;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 using PoWatch.Shared.Models;
+using PoWatch.Application.Features.Ask;
+using PoWatch.Application.Features.Recaps;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Digest;
 
 /// <summary>
 /// The week in review: a Monday-to-Sunday week against the one before, read from the day rollups,

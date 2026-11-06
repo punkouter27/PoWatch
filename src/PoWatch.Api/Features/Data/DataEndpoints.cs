@@ -3,7 +3,7 @@ using System.Text;
 using PoWatch.Api.Features.Stats;
 using PoWatch.Api.Security;
 using PoWatch.Application.Contracts;
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Stats;
 
 namespace PoWatch.Api.Features.Data;
 

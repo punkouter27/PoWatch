@@ -6,8 +6,9 @@ using PoWatch.Application.Contracts;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 using PoWatch.Shared.Models;
+using PoWatch.Application.Features.Stats;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Ask;
 
 /// <summary>
 /// "Ask PoWatch": answers a plain-language question about the user's own statistics. The model gets

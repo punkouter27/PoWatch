@@ -6,8 +6,10 @@ using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 using PoWatch.Shared.Models;
 using PoWatch.Shared.Services;
+using PoWatch.Application.Features.Recaps;
+using PoWatch.Application.Features.Sessions;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Stories;
 
 /// <summary>
 /// The story of a whole week (Monday to Sunday) or calendar month: each day told first — by its

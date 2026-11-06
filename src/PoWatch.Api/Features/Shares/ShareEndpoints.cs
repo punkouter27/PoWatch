@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Caching.Hybrid;
 using PoWatch.Api.Features.Recaps;
 using PoWatch.Api.Security;
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Shares;
 using PoWatch.Shared.Models;
 
 namespace PoWatch.Api.Features.Shares;

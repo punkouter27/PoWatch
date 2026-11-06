@@ -2,7 +2,7 @@ using PoWatch.Application.Contracts;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Regulars;
 
 public sealed record Observation(Regular Regular, bool IsNew);
 

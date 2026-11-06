@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Hybrid;
 using PoWatch.Api.Features.Stats;
 using PoWatch.Api.Security;
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Ingest;
 using PoWatch.Domain.Models;
 using PoWatch.Shared.Models;
 

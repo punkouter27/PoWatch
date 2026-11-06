@@ -3,7 +3,7 @@ using PoWatch.Application.Contracts;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Data;
 
 /// <summary>
 /// Applies each user's retention window: raw ticks, scene events, snapshots and ingest claims older

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Caching.Hybrid;
 using PoWatch.Api.Security;
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Stats;
 
 namespace PoWatch.Api.Features.Stats;
 

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Time.Testing;
 using PoWatch.Application.Contracts;
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Sessions;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 

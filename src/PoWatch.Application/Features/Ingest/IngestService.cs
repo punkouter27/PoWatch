@@ -1,8 +1,10 @@
 using PoWatch.Application.Contracts;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
+using PoWatch.Application.Features.Regulars;
+using PoWatch.Application.Features.Sessions;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Ingest;
 
 public sealed record IngestOutcome(bool SessionFound, bool Accepted, bool Replayed, IReadOnlyList<string> Errors);
 

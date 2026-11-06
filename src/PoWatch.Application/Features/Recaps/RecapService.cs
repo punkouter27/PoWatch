@@ -7,8 +7,10 @@ using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 using PoWatch.Shared.Models;
 using PoWatch.Shared.Services;
+using PoWatch.Application.Features.Stats;
+using PoWatch.Application.Features.Stories;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Recaps;
 
 /// <summary>
 /// Writes recaps for a session or a day. The template recap is always built; when an AI chat client

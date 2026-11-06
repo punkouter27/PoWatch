@@ -4,7 +4,7 @@ using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 using PoWatch.Shared.Models;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Weather;
 
 /// <summary>
 /// The weather at the caller's chosen place for the last year, and whether wet days are busier than

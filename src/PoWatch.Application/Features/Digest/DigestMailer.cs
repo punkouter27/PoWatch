@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using PoWatch.Application.Contracts;
 using PoWatch.Domain.Services;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Digest;
 
 /// <summary>
 /// Mails last week's digest to everyone who turned the weekly email on: once a week, from Monday

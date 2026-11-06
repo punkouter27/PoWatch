@@ -2,7 +2,7 @@ using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application;
 
 /// <summary>
 /// Runs one AI job down the request's model chain (the chosen model, then the next configured one):

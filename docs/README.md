@@ -198,6 +198,12 @@ the observed minutes only.
 `Diagnostics` (the `/system` page), `Settings` and `Account`; `Layout` is the shell, `Components` holds
 the parts shared between features, `Services` the state and API client.
 
+**Server layout.** The server is sliced the same way: each feature has a folder under `Api/Features`
+(endpoints) and, when it has logic, one of the same name under `Application/Features` (its services,
+namespace `PoWatch.Application.Features.{Name}`): Ask, Data (retention), Digest, Ingest, Recaps, Regulars,
+Sessions, Shares, Stats, Stories, Weather. What every feature shares sits at the Application root
+(`AiFallback`, `ApplicationJson`), and the storage ports in `Application/Contracts`.
+
 ## API surface
 
 | Route | Purpose |

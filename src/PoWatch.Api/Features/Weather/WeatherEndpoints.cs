@@ -1,5 +1,5 @@
 using PoWatch.Api.Security;
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Weather;
 
 namespace PoWatch.Api.Features.Weather;
 

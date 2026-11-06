@@ -1,6 +1,6 @@
 using PoWatch.Api.Security;
 using PoWatch.Application.Contracts;
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Recaps;
 using PoWatch.Shared.Models;
 
 namespace PoWatch.Api.Features.Snapshots;

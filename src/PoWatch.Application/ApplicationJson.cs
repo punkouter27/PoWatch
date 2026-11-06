@@ -2,8 +2,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using PoWatch.Shared.Models;
 using PoWatch.Shared.Services;
+using PoWatch.Application.Features.Ask;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application;
 
 /// <summary>
 /// Source-generated JSON for the chat client's structured replies (web defaults: camelCase, case-insensitive),

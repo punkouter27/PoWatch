@@ -1,4 +1,4 @@
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Shares;
 using PoWatch.Domain.Models;
 
 namespace PoWatch.Unit;

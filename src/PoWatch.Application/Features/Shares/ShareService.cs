@@ -4,8 +4,10 @@ using System.Text.Json;
 using PoWatch.Application.Contracts;
 using PoWatch.Domain.Models;
 using PoWatch.Shared.Models;
+using PoWatch.Application.Features.Recaps;
+using PoWatch.Application.Features.Stats;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Shares;
 
 /// <summary>
 /// Shared recap links. Sharing freezes the day's recap as it reads now, without its moments (their

@@ -1,7 +1,7 @@
 using PoWatch.Application.Contracts;
 using PoWatch.Domain.Models;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Sessions;
 
 /// <summary>Starts, stops and lists a user's observation sessions. Start and stop are both safe to retry.</summary>
 public sealed class SessionService(ISessionRepository sessions, TimeProvider time)

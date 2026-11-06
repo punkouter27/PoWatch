@@ -1,6 +1,6 @@
 using PoWatch.Domain.Models;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Stories;
 
 /// <summary>
 /// The words <see cref="SceneNarrator"/> tells a story in: sounds as a person would name them, light and

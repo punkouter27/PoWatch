@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using PoWatch.Shared.Models;
 using PoWatch.Shared.Services;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Ask;
 
 /// <summary>
 /// Small one-shot jobs for the optional chat client: a watch rule drafted from a sentence, and a

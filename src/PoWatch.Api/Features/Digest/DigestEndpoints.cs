@@ -1,5 +1,5 @@
 using PoWatch.Api.Security;
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Digest;
 using PoWatch.Domain.Services;
 
 namespace PoWatch.Api.Features.Digest;

@@ -1,8 +1,8 @@
 using System.Globalization;
 using PoWatch.Domain.Models;
-using static PoWatch.Application.Services.NarrationWords;
+using static PoWatch.Application.Features.Stories.NarrationWords;
 
-namespace PoWatch.Application.Services;
+namespace PoWatch.Application.Features.Stories;
 
 /// <summary>
 /// Tells what happened in front of the camera from the scene events: who came in and from where, what

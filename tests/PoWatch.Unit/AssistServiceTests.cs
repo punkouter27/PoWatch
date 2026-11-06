@@ -1,6 +1,6 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Ask;
 
 namespace PoWatch.Unit;
 

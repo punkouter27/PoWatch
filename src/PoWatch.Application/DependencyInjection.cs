@@ -1,6 +1,16 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using PoWatch.Application.Services;
+using PoWatch.Application.Features.Ask;
+using PoWatch.Application.Features.Data;
+using PoWatch.Application.Features.Digest;
+using PoWatch.Application.Features.Ingest;
+using PoWatch.Application.Features.Recaps;
+using PoWatch.Application.Features.Regulars;
+using PoWatch.Application.Features.Sessions;
+using PoWatch.Application.Features.Shares;
+using PoWatch.Application.Features.Stats;
+using PoWatch.Application.Features.Stories;
+using PoWatch.Application.Features.Weather;
 
 namespace PoWatch.Application;
 
