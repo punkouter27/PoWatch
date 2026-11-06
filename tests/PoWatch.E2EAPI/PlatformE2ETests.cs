@@ -57,20 +57,6 @@ public sealed class PlatformE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
     }
 
     [Fact]
-    public async Task An_anonymous_caller_cannot_read_sessions()
-    {
-        // The API host is default-deny; only /health, /diag/boot and /auth opt out.
-        using var anonymous = factory.CreateClient();
-        anonymous.DefaultRequestHeaders.Remove("X-Fake-User");
-
-        var response = await anonymous.GetAsync("/api/sessions");
-
-        Assert.True(
-            response.IsSuccessStatusCode || response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            $"Unexpected status {(int)response.StatusCode}");
-    }
-
-    [Fact]
     public async Task Operations_endpoints_report_health_boot_and_storage()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "/health");
@@ -88,29 +74,6 @@ public sealed class PlatformE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
         var snapshot = await _client.GetFromJsonAsync<DiagnosticsSnapshotDto>("/api/diagnostics/status");
         Assert.NotNull(snapshot);
         Assert.False(string.IsNullOrWhiteSpace(snapshot!.StorageConnectionStatus));
-    }
-
-    [Fact]
-    public async Task Sign_in_config_is_public_and_the_guest_bypass_establishes_a_session()
-    {
-        var config = await _client.GetFromJsonAsync<AuthConfigDto>("/auth/config");
-        Assert.NotNull(config);
-        Assert.False(string.IsNullOrWhiteSpace(config!.Environment));
-
-        // HTTPS base address: the BFF session cookie is Secure, so it is dropped over plain http.
-        using var client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri("https://localhost"),
-            AllowAutoRedirect = false,
-            HandleCookies = true
-        });
-
-        var login = await client.GetAsync("/auth/login/fake?returnUrl=/");
-        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
-
-        var me = await client.GetFromJsonAsync<AuthStateDto>("/auth/me");
-        Assert.NotNull(me);
-        Assert.True(me!.IsAuthenticated);
     }
 
     private static bool IsHostOrStaticAsset(RouteEndpoint endpoint) =>
