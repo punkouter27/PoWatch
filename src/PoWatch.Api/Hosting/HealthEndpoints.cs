@@ -28,18 +28,12 @@ internal static class HealthEndpoints
             ResponseWriter = async (context, report) =>
             {
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(new
-                {
-                    status = report.Status.ToString(),
-                    durationMs = report.TotalDuration.TotalMilliseconds,
-                    checks = report.Entries.Select(e => new
-                    {
-                        name = e.Key,
-                        status = e.Value.Status.ToString(),
-                        description = e.Value.Description,
-                        durationMs = e.Value.Duration.TotalMilliseconds
-                    })
-                });
+                await context.Response.WriteAsJsonAsync(new HealthReportBody(
+                    report.Status.ToString(),
+                    report.TotalDuration.TotalMilliseconds,
+                    [.. report.Entries.Select(e => new HealthCheckBody(
+                        e.Key, e.Value.Status.ToString(), e.Value.Description, e.Value.Duration.TotalMilliseconds))]),
+                    ApiJson.Default.HealthReportBody);
             }
         }).AllowAnonymous();
 
@@ -47,24 +41,17 @@ internal static class HealthEndpoints
         // stays reachable when a downstream dependency is degraded; 503 until storage is ready.
         app.MapGet("/diag/boot", (StartupReadiness readiness, IOptions<FeatureFlagsOptions> flags, IConfiguration config, IWebHostEnvironment env) =>
             {
-                var payload = new
-                {
-                    environment = env.EnvironmentName,
-                    ready = readiness.StorageReady,
-                    storage = new
-                    {
-                        configured = !string.IsNullOrWhiteSpace(config["AzureStorage:ConnectionString"])
-                                     || !string.IsNullOrWhiteSpace(config["AzureStorage:ServiceUri"]),
-                        ready = readiness.StorageReady,
-                        detail = readiness.StorageDetail
-                    },
-                    keyVault = new
-                    {
-                        enabled = flags.Value.EnableKeyVault,
-                        uriConfigured = !string.IsNullOrWhiteSpace(config["KeyVault:Uri"])
-                    }
-                };
-                return readiness.StorageReady ? Results.Ok(payload) : Results.Json(payload, statusCode: StatusCodes.Status503ServiceUnavailable);
+                var payload = new DiagBootBody(
+                    env.EnvironmentName,
+                    readiness.StorageReady,
+                    new DiagBootStorage(
+                        !string.IsNullOrWhiteSpace(config["AzureStorage:ConnectionString"])
+                        || !string.IsNullOrWhiteSpace(config["AzureStorage:ServiceUri"]),
+                        readiness.StorageReady,
+                        readiness.StorageDetail),
+                    new DiagBootKeyVault(flags.Value.EnableKeyVault, !string.IsNullOrWhiteSpace(config["KeyVault:Uri"])));
+                return Results.Json(payload, ApiJson.Default.DiagBootBody,
+                    statusCode: readiness.StorageReady ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
             })
             .WithName("DiagBoot")
             .WithSummary("Per-dependency readiness (no secrets).")

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.JSInterop;
 
 namespace PoWatch.Client.Services;
@@ -11,6 +12,11 @@ namespace PoWatch.Client.Services;
 /// </summary>
 public static class SafeJsInterop
 {
+    // What JSInterop's own InvokeAsync<T> keeps on T so its result can be deserialized; restating it
+    // here lets the trim analyzer follow T through the wrapper.
+    private const DynamicallyAccessedMemberTypes JsonSerialized =
+        DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.PublicProperties;
+
     /// <summary>Fire-and-forget; never throws. Returns true when the JS call actually ran.</summary>
     public static async Task<bool> TryInvokeVoidAsync(this IJSRuntime js, string identifier, params object?[] args)
     {
@@ -26,12 +32,7 @@ public static class SafeJsInterop
     }
 
     /// <summary>Returns <c>default</c> instead of throwing when the bridge is missing.</summary>
-    // IL2091 (trim): the generic type T propagates whatever DynamicallyAccessedMemberTypes the
-    // caller already declared on their own InvokeAsync<T> call site, so this passthrough can't
-    // re-state the annotation. Suppress at the call: every existing call site already gives the
-    // analyzer the right view (Inferable, Record, plain DTOs, etc.).
-#pragma warning disable IL2091
-    public static async Task<T?> TryInvokeAsync<T>(this IJSRuntime js, string identifier, params object?[] args)
+    public static async Task<T?> TryInvokeAsync<[DynamicallyAccessedMembers(JsonSerialized)] T>(this IJSRuntime js, string identifier, params object?[] args)
     {
         try
         {
@@ -42,7 +43,6 @@ public static class SafeJsInterop
             return default;
         }
     }
-#pragma warning restore IL2091
 
     /// <summary>
     /// The failures an optional bridge may cause: the browser navigated away or the circuit dropped

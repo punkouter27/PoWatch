@@ -33,7 +33,7 @@ internal static class RequestPipeline
             details.Extensions["traceId"] = context.TraceIdentifier;
 
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await context.Response.WriteAsJsonAsync(details);
+            await context.Response.WriteAsJsonAsync(details, ApiJson.Default.ProblemDetails);
         }));
         return app;
     }

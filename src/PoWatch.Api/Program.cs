@@ -9,6 +9,7 @@ using PoWatch.Application;
 using PoWatch.Application.Options;
 using PoWatch.Infrastructure;
 using PoWatch.Infrastructure.Runtime;
+using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -42,12 +43,12 @@ builder.Services.Configure<FeatureFlagsOptions>(builder.Configuration.GetSection
 // aborts boot with an actionable message instead of throwing lazily on first use.
 builder.Services.AddOptions<AzureStorageOptions>()
     .Bind(builder.Configuration.GetSection("AzureStorage"))
-    .ValidateDataAnnotations()
     .ValidateOnStart();
-builder.Services.AddOptions<PoWatch.Application.Options.AzureOpenAiOptions>()
+builder.Services.AddOptions<AzureOpenAiOptions>()
     .Bind(builder.Configuration.GetSection("AzureOpenAi"))
-    .ValidateDataAnnotations()
     .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<AzureStorageOptions>, AzureStorageOptionsValidator>();
+builder.Services.AddSingleton<IValidateOptions<AzureOpenAiOptions>, AzureOpenAiOptionsValidator>();
 
 // Durable, shared Data Protection keyring so BFF auth cookies survive recycle/scale-out.
 builder.AddPoWatchDataProtection();
@@ -142,7 +143,9 @@ app.MapPoLiveness();
 app.MapFallbackToFile("index.html").AllowAnonymous();
 
 // An unknown API route is a 404, not the SPA host page with a 200 (the more specific pattern wins).
-app.MapFallback("/api/{**rest}", () => Results.NotFound()).AllowAnonymous();
+// A RequestDelegate on purpose: the Request Delegate Generator intercepts MapFallback(pattern, Delegate)
+// and registers it under the default {*path:nonfile} pattern, which would swallow every SPA route.
+app.MapFallback("/api/{**rest}", context => Results.NotFound().ExecuteAsync(context)).AllowAnonymous();
 
 await app.RunAsync();
 
