@@ -31,6 +31,7 @@
          …) are attached before Blazor's first OnAfterRenderAsync interop call.
          NOTE: theme-controller.js runs on this same deferred schedule — before Blazor boots and
          paints the app shell, so there is no theme flash, but it is NOT synchronous. -->
+    <script src="js/error-report.js"></script>
     <script src="js/theme-controller.js" defer></script>
     <script src="js/worker-rpc.js" defer></script>
     <script src="js/inference-bridge.js" defer></script>

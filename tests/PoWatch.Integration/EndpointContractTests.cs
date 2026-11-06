@@ -51,6 +51,15 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task A_browser_can_report_an_unhandled_error_to_the_server_log()
+    {
+        var response = await _client.PostAsJsonAsync("/api/diagnostics/client-error",
+            new { message = "Unhandled exception rendering component", stack = new string('x', 20_000), url = "http://localhost/", userAgent = "test" });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Diagnostics_report_storage_and_mask_every_secret()
     {
         var snapshot = await _client.GetFromJsonAsync<DiagnosticsSnapshotDto>("/api/diagnostics/status");
