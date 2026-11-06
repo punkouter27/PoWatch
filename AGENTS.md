@@ -13,13 +13,15 @@ Rules for any agent working in this repository.
 ### 3. Architecture & Setup
 * **Keep Docs Updated:** Check `DOCS/` and `README.md` first to get an overview of app quickly (if they exist)
 * **Fully Automated:** Run all builds, scripts, and setup commands directly. Do not ask the user to run terminal commands.
+* **Shared Components:** Look to consolidate functionality and UI into shared components when possible.
 
 ### 4. UI & Output Rules
 * **UI Previews:** For visual changes, save before-and-after HTML mockups to `SCREENSHOTS/{YYMMDD}-{feature}.html` / Annotate screenshots and show in a single PNG the before and after with notes
 * **Clarifying Questions:** If modifying more than 100 lines and no pending questions exist, list 3 key follow-up questions about future direction or logic.
+* **Problems Found:** If there are problems found, propose a solution as well for the user to approve.
 * **Required Footers:**
   * **Short Recap:** If your response is over 100 words, add a recap under 20 words at the very end.
-  * **3-Level Summary:** If a code change is over 20 lines, add 3 single-sentence summaries:
+  * **3-Level Summary:** If a code change is over 20 lines, add 3 single-sentence summaries and include a diagram to make the changes easier to understand (https://github.com/cathrynlavery/diagram-design):
     * *Toddler:* Explain the idea simply.
     * *Child:* Explain what the app actually does now.
     * *Adult:* Explain how it was built.
