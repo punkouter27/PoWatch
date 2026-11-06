@@ -56,9 +56,13 @@
     [Parameter] public string? Section { get; set; }
 
     private string _section = "recording";
+    private string? _applied;
 
+    // Only a new Section moves the tab: the drawer re-renders with the same one while you click around.
     protected override void OnParametersSet()
     {
+        if (Section == _applied) return;
+        _applied = Section;
         if (Section is { } section && Sections.Any(t => t.Key == section)) _section = section;
         else if (Section is { } old && Moved.TryGetValue(old, out var moved)) _section = moved;
     }

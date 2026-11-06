@@ -33,7 +33,7 @@ else
         <div class="history-recap-foot">
             <span class="term-stat-hint">WRITTEN BY @Recap.Source.ToUpperInvariant()@(Rewriting ? " · A MODEL IS REWORDING IT…" : string.Empty)</span>
             <ExportMenu Test="day-export">
-                <a class="term-menu-item" href="@PoWatchApiClient.DayRecapPdfUrl(Day, TimeZoneInfo.Local.Id)" download="PoWatch-@(DayKey).pdf" data-test="history-recap-pdf"><span>Recap <i>this page, as a PDF</i></span><b>PDF</b></a>
+                <a class="term-menu-item" href="@PoWatchApiClient.DayRecapPdfUrl(Day, TimeZoneInfo.Local.Id)" download="PoWatch-@(DayKey).pdf" onclick="return powatchFiles.save(event, this)" data-test="history-recap-pdf"><span>Recap <i>this page, as a PDF</i></span><b>PDF</b></a>
                 <a class="term-menu-item" href="@PoWatchApiClient.AllStatsUrl(StatsQuery.ForDay(Day))" download="PoWatch-@(DayKey).json" data-test="history-day-json"><span>Everything stored <i>every tick, event and stat of the day</i></span><b>JSON</b></a>
             </ExportMenu>
             @if (_share is null)

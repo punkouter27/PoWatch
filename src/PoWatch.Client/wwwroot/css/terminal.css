@@ -659,10 +659,8 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 .live-spots { margin: 8px 0 0; font: 11px var(--term-mono); color: var(--term-muted); }
 
-.heat-modes { display: inline-flex; gap: 2px; }
-.heat-mode { border: 1px solid transparent; background: none; color: var(--term-muted); font: inherit; letter-spacing: inherit; padding: 0 5px; cursor: pointer; border-radius: 2px; }
-.heat-mode:hover { color: var(--term-text); }
-.heat-mode--on { color: var(--term-text); border-color: var(--term-line); }
+.live-heat-label { margin: 0 0 4px; font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; color: var(--term-dim); }
+.live-heat + .live-heat-label { margin-top: 10px; }
 
 .live-who { list-style: none; margin: 0; padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 4px 14px; font: 12px var(--term-mono); color: var(--term-muted); border-bottom: 1px solid var(--term-line); }
 
@@ -700,29 +698,25 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .rz-tabview-nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
 .rz-tabview-nav li a { font-family: var(--term-mono); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
 
-/* ── While you were away ───────────────────────────────────────────────── */
+/* ── Session saved ───────────────────────────────────────────────────── */
 
-/* The recap card floats over the page (top right, under the header), so Live's grid keeps the whole
-   screen; it scrolls inside itself when the story is long. Above the phone tab bar (30), below the
-   header (40) so the bell and Settings drawers, which hang from it, open over the card. */
-.away-card {
-    position: fixed;
-    z-index: 35;
-    top: 56px;
-    right: 12px;
-    width: min(560px, calc(100vw - 24px));
-    max-height: calc(100vh - 72px - var(--term-bottom-bar));
-    border-color: var(--term-accent);
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+/* One line on Live after a session ends, in the page's own flow (never over it): what was saved, its
+   headline numbers, and the way into the Journal. Wraps on a phone. */
+.away-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 6px 10px;
+    border: 1px solid var(--term-accent);
+    border-radius: var(--term-radius);
+    background: color-mix(in srgb, var(--term-accent) 8%, var(--term-surface));
+    font: var(--fs-sm) var(--term-mono);
 }
-.away-card .term-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-/* Solid, not glass: it floats over panels whose charts would show through. (Beats the dark theme's panel glass.) */
-:root .term-panel.away-card, :root:not([data-theme="light"]) .term-panel.away-card {
-    background: linear-gradient(180deg, rgba(110, 190, 255, 0.08), rgba(110, 190, 255, 0.02)), var(--term-surface);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
-}
-.away-card .term-panel-head .term-icon-button { min-width: 28px; min-height: 28px; }
+.away-title { color: var(--term-accent); letter-spacing: 0.04em; }
+.away-facts { display: inline-flex; flex-wrap: wrap; gap: 4px 14px; color: var(--term-muted); }
+.away-facts b { color: var(--term-text); }
+.away-actions { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 
 
 /* ── Naming prompts ───────────────────────────────────────────────────── */
@@ -989,24 +983,20 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
    motion energy right, "In frame" below); the longer views take the corners. Charts flex to fit; the
    feed and the motion grid keep 16:9 (the boxes are placed in frame percentages). */
 @media (min-width: 1280px) and (min-height: 700px) {
-    .dash { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
-    .dash:has(> .stats-answer) { grid-template-rows: auto auto minmax(0, 1fr); }
+    .dash { height: 100%; display: flex; flex-direction: column; }
+    .dash > .dash-grid { flex: 1; }
     .dash-grid {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
-        grid-template-rows: minmax(0, 1fr) minmax(0, 1.9fr) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
         grid-template-areas:
-            "heat    metrics curve"
-            "heat    camera  energy"
-            "week    inframe env";
+            "heat    metrics inframe"
+            "heat    camera  env";
         min-height: 0;
     }
     .dash-grid .live-camera { grid-area: camera; }
     .dash-grid .cell-metrics { grid-area: metrics; }
     .dash-grid .cell-inframe { grid-area: inframe; }
     .dash-grid .cell-heat { grid-area: heat; }
-    .dash-grid .cell-energy { grid-area: energy; }
-    .dash-grid .cell-curve { grid-area: curve; }
-    .dash-grid .cell-week { grid-area: week; }
     .dash-grid .term-panel.cell-env { grid-area: env; }
     .dash-grid .stats-pending { min-height: 0; height: 100%; }
     /* Short screens keep the camera's share; the cells around it scroll instead (key metrics, and the room under its light curve). */
@@ -1237,9 +1227,9 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 @media (pointer: coarse) {
     .term-button, .term-header .term-button, .term-icon-button, .term-key, .term-menu-item,
     .history-nav .term-button, .stats-toolbar .term-button, .regulars-merge .term-button,
-    .rule-row .term-icon-button, .rule-form .term-button, .away-card .term-panel-head .term-icon-button,
+    .rule-row .term-icon-button, .rule-form .term-button, .away-bar .term-icon-button,
     .settings-search .term-button, .moment-filters .term-button, .history-share .term-button { min-height: 44px; }
-    .term-icon-button, .rule-row .term-icon-button, .away-card .term-panel-head .term-icon-button { min-width: 44px; }
+    .term-icon-button, .rule-row .term-icon-button, .away-bar .term-icon-button { min-width: 44px; }
     .term-key { font-size: 12px; }
     .regulars-bar input[type="search"], .regulars-merge select, .regular-name input, .stats-ask input,
     .rule-form select, .rule-form input, .name-prompt input, .settings-search input, .history-share input { min-height: 44px; }
@@ -1281,6 +1271,23 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 /* ── Shared small parts ───────────────────────────────────────────────── */
 
 /* Buttons that belong together sit joined, as one control. */
+/* A short message that a download or action failed (files.js), above the phone tab bar. */
+.term-toast {
+    position: fixed;
+    z-index: 60;
+    left: 50%;
+    bottom: calc(16px + var(--term-bottom-bar));
+    transform: translateX(-50%);
+    max-width: min(560px, calc(100vw - 24px));
+    padding: 8px 14px;
+    border: 1px solid var(--term-red);
+    border-radius: var(--term-radius);
+    background: var(--term-surface);
+    color: var(--term-text);
+    font: var(--fs-sm) var(--term-mono);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+}
+
 /* Export ▾: a native <details> that drops a short list of files under its button. */
 .export-menu { position: relative; display: inline-flex; }
 .export-menu > summary { display: inline-flex; align-items: center; list-style: none; cursor: pointer; }

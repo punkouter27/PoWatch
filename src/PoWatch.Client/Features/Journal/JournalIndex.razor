@@ -68,9 +68,14 @@
             }
         </ChildContent>
     </TerminalPanel>
+
+    <PatternsTab Query="@PatternsQuery" />
 </div>
 
 @code {
+    /// <summary>Today against the usual day, for the pattern panels under the index.</summary>
+    private static readonly StatsQuery PatternsQuery = StatsQuery.For("today");
+
     private const double MinSeconds = 10;
     private const int Page = 20;
 

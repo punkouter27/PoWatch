@@ -40,8 +40,9 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.GetByTestId("header-stop").ClickAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("STANDBY");
 
-        // Stopping shows the recap: the session's own numbers and its moments.
+        // Stopping shows one "session saved" line on Live: the session's own numbers and the way into the Journal.
         await Assertions.Expect(page.GetByTestId("away-card")).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Assertions.Expect(page.GetByTestId("away-open")).ToHaveAttributeAsync("href", new System.Text.RegularExpressions.Regex("journal/s/"));
         await Assertions.Expect(page.GetByTestId("away-visits")).Not.ToContainTextAsync("0", new() { Timeout = 15_000 });
         await Assertions.Expect(page.GetByTestId("away-card")).ToContainTextAsync("of the session");
         await Assertions.Expect(page.GetByTestId("away-pdf")).ToHaveAttributeAsync("href", new System.Text.RegularExpressions.Regex(@"^api/recaps/session/.+\.pdf$"));
@@ -66,15 +67,19 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("header-stop")).ToBeVisibleAsync(new() { Timeout = 30_000 });
         await Assertions.Expect(page.GetByTestId("stats-window")).ToContainTextAsync("Recording session", new() { Timeout = 30_000 });
         await Assertions.Expect(page.GetByTestId("stats-occupancy")).Not.ToContainTextAsync("0.0%", new() { Timeout = 45_000 });
-        await Assertions.Expect(page.Locator("[data-test=stats-presence] .rz-chart svg").First).ToBeVisibleAsync();
-
-        // Every family is on the Live grid (space under the motion grid, classes in "In frame"); pipeline counters are on System.
-        foreach (var content in new[] { "stats-space", "live-census", "stats-patterns", "stats-environment" })
+        // Live holds the session's families (space, classes in "In frame", the room); patterns over days are
+        // in the Journal; pipeline counters are on System.
+        foreach (var content in new[] { "stats-space", "live-census", "stats-environment" })
         {
             await Assertions.Expect(page.GetByTestId(content)).ToBeVisibleAsync(new() { Timeout = 30_000 });
         }
 
         await page.GetByTestId("header-stop").ClickAsync();
+        // Leaving Live leaves the "session saved" line behind: nothing covers the Journal's controls.
+        await page.GetByTestId("nav-journal").ClickAsync();
+        await Assertions.Expect(page.Locator("[data-test=stats-patterns] .rz-chart svg").First).ToBeVisibleAsync(new() { Timeout = 30_000 });
+        await Assertions.Expect(page.GetByTestId("away-card")).ToHaveCountAsync(0);
+        await page.GetByTestId("history-prev").ClickAsync(new() { Timeout = 5_000 });
         await page.GoToSystemAsync();
         await page.OpenSystemTabAsync("Pipeline");
         await Assertions.Expect(page.GetByTestId("stats-all-frames")).Not.ToContainTextAsync("—", new() { Timeout = 30_000 });

@@ -1,6 +1,7 @@
 @inherits StatsTabBase<PatternStatsDto>
 
-@* "Today vs usual" by the number (σ, rhythm, trend) is in Live's key metrics; these are its shapes. *@
+@* Your usual, as shapes, under the Journal's index: today's occupancy by hour against the usual day, and
+   the last 28 days by weekday and hour. Live keeps the same comparison as numbers (σ, rhythm, trend). *@
 <TerminalPanel Title="Today's curve vs usual" Class="cell-curve" Test="@(Data is null ? null : "stats-patterns")">
     @if (Data is null)
     {

@@ -12,7 +12,6 @@
 
     @* App.razor moves focus here after every navigation, so keyboard and screen-reader users land in the page. *@
     <main class="term-body" id="main-content" tabindex="-1">
-        <AwayCard />
         @* Keyed on the section, not the full URI: a query change (?range=, ?start=) or a deeper
            segment (/journal/2026-10-03) must not rebuild the page. *@
         <ErrorBoundary @key="Section(Nav.Uri)">

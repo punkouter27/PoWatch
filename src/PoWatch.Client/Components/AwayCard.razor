@@ -1,6 +1,7 @@
-@* "While you were away": the headline numbers for a session so far, its best moments with their
-   snapshots, and what was seen. Mounted once in the layout and shown whenever SensingSession.Recap is
-   set — when any Stop control ends a session, or when Live notices you came back to the tab. *@
+@* "Session saved": one line on Live after a session ends (any Stop control, or Live noticing you came back
+   to the tab). It names the session, gives its headline numbers and links to the Journal, where the story,
+   replay and moments are; it sits in Live's own layout, so it never covers anything. Showing it also asks
+   for the story, which writes whatever is due after Stop: the last chapter and the story itself. *@
 @implements IDisposable
 @using System.Globalization
 @inject PoWatchApiClient Api
@@ -10,54 +11,39 @@
 @if (_shown is { } recap)
 {
     var tag = SessionDto.Tag(recap.Session.Id);
-    <section class="term-panel away-card" data-test="away-card" aria-labelledby="away-title">
-        <header class="term-panel-head">
-            <h2 id="away-title">@(recap.AwayFor is { } away ? $"While you were away · {DisplayText.Duration(away.TotalSeconds)}" : "Session recap")</h2>
-            <span class="term-panel-meta">SESSION @tag · @DisplayText.Duration(recap.Session.DurationSeconds)</span>
-            <a class="term-button" href="@StoryLinks.Session(recap.Session.Id)" title="This session in the Journal: story, replay and timeline" data-test="away-open">Open</a>
-            <a class="term-button" href="@PoWatchApiClient.SessionRecapPdfUrl(recap.Session.Id)" download="PoWatch-session-@(tag[1..]).pdf" data-test="away-pdf">PDF ↓</a>
+    <section class="away-bar" data-test="away-card" aria-label="Session saved">
+        <b class="away-title">@(recap.AwayFor is { } away ? $"While you were away · {DisplayText.Duration(away.TotalSeconds)}" : "Session saved")</b>
+        <span class="term-stat-hint">@tag · @DisplayText.Duration(recap.Session.DurationSeconds)</span>
+        @if (_presence is { } p)
+        {
+            <span class="away-facts">
+                <span data-test="away-visits"><b>@p.Visits.ToString(CultureInfo.InvariantCulture)</b> visits</span>
+                <span><b>@p.Occupancy.ToString("0%", CultureInfo.InvariantCulture)</b> of the session in frame</span>
+                <span>peak <b>@p.PeakConcurrency.ToString(CultureInfo.InvariantCulture)</b></span>
+            </span>
+        }
+        else
+        {
+            <span class="term-stat-hint">Adding it up…</span>
+        }
+        <span class="away-actions">
+            <a class="term-button term-button--primary" href="@StoryLinks.Session(recap.Session.Id)" title="Its story, replay, timeline and moments in the Journal" data-test="away-open">Open in Journal →</a>
+            <a class="term-button" href="@PoWatchApiClient.SessionRecapPdfUrl(recap.Session.Id)" download="PoWatch-session-@(tag[1..]).pdf"
+               onclick="return powatchFiles.save(event, this)" data-test="away-pdf">PDF ↓</a>
             <button class="term-icon-button" @onclick="Close" aria-label="Dismiss" data-test="away-close">✕</button>
-        </header>
-        <div class="term-panel-body">
-            @if (_presence is null)
-            {
-                <p class="term-empty">Adding it up…</p>
-            }
-            else
-            {
-                <div class="term-stats">
-                    <StatCell Label="Visits" Value="@_presence.Visits.ToString(CultureInfo.InvariantCulture)" Test="away-visits" />
-                    <StatCell Label="Occupancy" Value="@_presence.Occupancy.ToString("0%", CultureInfo.InvariantCulture)" Hint="of the session" />
-                    <StatCell Label="Peak at once" Value="@_presence.PeakConcurrency.ToString(CultureInfo.InvariantCulture)" />
-                    <StatCell Label="Busiest" Value="@(_presence.BusiestStartUtc?.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture) ?? "—")" />
-                    <StatCell Label="Seen" Value="@(_objects?.Classes.Count.ToString(CultureInfo.InvariantCulture) ?? "0")" Hint="@string.Join(", ", _objects?.Classes.Take(4).Select(c => c.Name) ?? [])" />
-                    <StatCell Label="Moments" Value="@_moments.Count.ToString(CultureInfo.InvariantCulture)" />
-                </div>
-
-                @* Asking for the story writes whatever is due: after Stop, the last chapter and the story itself. *@
-                <SessionStory SessionId="@recap.Session.Id" />
-
-                @if (_moments.Count > 0)
-                {
-                    <ol class="moment-list moment-list--snaps">
-                        @foreach (var moment in _moments.Take(3))
-                        {
-                            <MomentLine Entry="@TimelineEntry.From(moment)" />
-                        }
-                    </ol>
-                }
-            }
-        </div>
+        </span>
     </section>
 }
 
 @code {
     private SessionRecap? _shown;
     private PresenceStatsDto? _presence;
-    private ObjectStatsDto? _objects;
-    private IReadOnlyList<MomentDto> _moments = [];
 
-    protected override void OnInitialized() => Sensing.Changed += OnChanged;
+    protected override void OnInitialized()
+    {
+        Sensing.Changed += OnChanged;
+        _ = ShowAsync();
+    }
 
     // Sensing fires several times a second; only a new (or dismissed) recap needs a render.
     private void OnChanged()
@@ -69,21 +55,19 @@
     {
         if (ReferenceEquals(Sensing.Recap, _shown)) return;
         _shown = Sensing.Recap;
-        (_presence, _objects, _moments) = (null, null, []);
+        _presence = null;
         StateHasChanged();
         if (_shown is not { } recap) return;
 
-        var query = StatsQuery.For("session", recap.Session.Id);
-        var presence = Api.GetPresenceAsync(query);
-        var objects = Api.GetObjectsAsync(query);
-        var moments = Api.GetMomentsAsync(recap.Session.Id);
-        await Task.WhenAll(presence, objects, moments);
+        var presence = Api.GetPresenceAsync(StatsQuery.For("session", recap.Session.Id));
+        var story = Api.UpdateStoryAsync(recap.Session.Id);
+        await Task.WhenAll(presence, story);
         if (!ReferenceEquals(recap, _shown)) return;
-        (_presence, _objects, _moments) = (presence.Result, objects.Result, moments.Result);
+        _presence = presence.Result;
         StateHasChanged();
     }
 
-    /// <summary>The last recap card dismissed in this browser, so a reload does not bring it back.</summary>
+    /// <summary>The last recap dismissed in this browser, so a reload does not bring it back.</summary>
     public const string DismissedKey = "powatch:recap-dismissed";
 
     private void Close()

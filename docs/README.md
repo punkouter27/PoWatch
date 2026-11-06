@@ -53,7 +53,7 @@ camera ──► browser (all sensing on-device)                        server
 |---|---|---|
 | A · Presence & space | occupancy, visits, dwell percentiles, peak at once, empty/still streaks, busiest minute, heatmaps, entry/exit edges | Live |
 | B · Objects & regulars | classes seen, rarest, regulars leaderboard (recognised by look, never by face; by voice in the browser that learned it) | Live, Settings ("Who PoWatch knows"), the stories |
-| C · Patterns & anomalies | hour × weekday, rhythm score, "today vs usual" z-scores, trend, busy-hour forecast | Live |
+| C · Patterns & anomalies | hour × weekday, rhythm score, "today vs usual" z-scores, trend, busy-hour forecast | Live (the numbers), the Journal index (the shapes) |
 | D · Environment & captions | light curve, lights on/off, daylight estimate, palette, word cloud, weirdest caption, recaps | Live, the Journal |
 | E · Pipeline | frames per layer, FPS, latency, detector confidence, uptime, storage | /system |
 
@@ -62,23 +62,27 @@ camera ──► browser (all sensing on-device)                        server
 `/` Live, always one session: the one being recorded, until it is stopped, then it stays as the last
 session (a session's "Live view", `?session=`, opens another; one that is not yours, or not a session id,
 says so and shows your latest). Leaving or reloading the page ends a recording; coming back within two
-minutes shows its recap card, unless it was dismissed. The recap card floats over the page (top right,
-scrolling inside itself); starting a new session clears it. One bar names the session, with an "Ask" box
-and "JSON ↓" for every number behind it. Under it a 3×3 with the camera in the middle (one
+minutes shows it as saved, unless that was dismissed. After any Stop, Live shows one "Session saved" line
+under its bar, in the page's own flow (never over anything, and only on Live): the session's visits,
+occupancy and peak, "Open in Journal →", its PDF and ✕; showing it also writes the session's last chapter
+and story. Starting a new session clears it. One bar names the session, with an "Ask" box and, once there
+is a session, "JSON ↓" for every number behind it. Under it five panels with the camera in the middle (one
 Start button; a synthetic demo whenever stopped) and, under the picture, its narration: every caption
 (SAW), line of speech (SAID), recognised sound (HEARD), coming and going (IN/OUT) and notable moment,
 newest first, a few lines tall and scrolling (`Features/Live/LiveNarration.razor`; while recording it is
 the browser's own list in `LiveSensingState.Narration`, after that what the server kept). Around it: key
-metrics beside your usual day (σ, rhythm, trend, next busy hour) above, who is in frame with every class
-seen below, Space down the left (the 16×9 grid, switchable between motion NOW and the session's motion or
-people heat, then where motion and people mostly were, the busiest door and the entries and exits by
-edge), motion energy right, and the light curve, the week and the room in the other corners. Detector boxes and the "now" counts show only while recording, and visits an hour only once
+metrics beside your usual day (σ, rhythm, trend, next busy hour) above, Space down the left (two 16×9
+grids, motion now over where people were this session, then where motion and people mostly were, the
+busiest door and the entries and exits by edge), and on the right who is in frame with every class seen,
+over the room (light curve, palette, caption words). Detector boxes and the "now" counts show only while recording, and visits an hour only once
 ten minutes have been observed. A desktop holds the whole grid in the viewport (the camera keeps 16:9);
-narrower screens stack it, and a phone turns the panels after "In frame" into a strip you swipe through ·
+narrower screens stack it, and a phone turns the panels after "In frame" into a strip you swipe through.
+Patterns over days are the Journal's, not Live's ·
 `/journal` the Journal, everything that happened: on the left the index (the year, with the weather's
 effect once a place is set; links to the week's and month's stories;
 every day that has sessions, newest first, with its sessions inside it; "Older sessions" pages back
-through the latest hundred), on the right the reader, laid out the same for a day and a session: the
+through the latest hundred; then your usual as shapes: today's curve against the usual day and the last
+28 days by hour and weekday), on the right the reader, laid out the same for a day and a session: the
 story first, then the replay with the timeline of every line under it · `/journal/{yyyy-MM-dd}` a day
 (`/journal` opens on today): the recap (an "Export ▾" menu with its PDF and JSON, and a share link), the day's numbers in
 one row, its weather, the week against the week before and the caption words folded under them, the
@@ -92,7 +96,7 @@ reloads, links and Back/Forward keep their place. On a desktop each Journal colu
 on a phone the reader comes first. Every page needs a sign-in.
 
 **Lines of what happened** (`Services/TimelineEntry.cs`, `Components/MomentLine.razor`). Live's
-narration, a session's or a day's timeline, a day's moments and the recap card's moments are all the
+narration, a session's or a day's timeline, and a day's moments are all the
 same line: the time, a tag (SAW · SAID · HEARD · IN · OUT · ★), the sentence ("Sam came in", "Sam: “hello”")
 and the snapshot when one was kept. Replay events carry the regular's name (`Who`) for speech, entries
 and exits. Recognition lands a moment after someone comes in, so an entrance is named after the fact: on
@@ -119,6 +123,11 @@ tab over the hub (plus a desktop notification where allowed).
 menus and share links in the Journal, watch rules, the weather place, the weekly email and shared
 links in Settings are always there. "Reset to defaults" puts this browser's choices back (dark, low
 sound, captions on, MiniCPM-V); rules and the account's server settings stay.
+
+**Downloads that can fail.** PDFs are made on the server, so their links (the Journal's Export menus, the
+"Session saved" line) fetch first and save only a real file (`wwwroot/js/files.js`); a failure says why in a
+toast instead of saving an error as a `.pdf`. The bell's "Watch rules" and "Name everyone at once" links open
+Settings on the Alerts and People tabs.
 
 **Saving the words.** Live's narration and every timeline in the Journal (a day's or a session's, as
 filtered) have a "Text ↓" link: the lines as a plain-text file, oldest first, one per line ("2026-11-01
@@ -316,7 +325,7 @@ the chapters are joined into one story, in order: by the model under the same nu
 writes only what has fallen due, so a missed one is caught up by the next; a backlog (a sleeping tab,
 a session closed as stale) is written from the template, with the model kept for the newest chapter.
 Models are asked for a story of the scene, not statistics, under the same number check. The story
-shows in the Journal's reader for the session and on the recap card after Stop
+shows in the Journal's reader for the session (Live's "Session saved" line asks for it after Stop)
 (one chapter is not listed again under the story it already is); each asks for
 it, so a session closed without Stop gets its story the first time someone opens it. Stories are kept
 like rollups: retention does not prune them, "delete everything" does.

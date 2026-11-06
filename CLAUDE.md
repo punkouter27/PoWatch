@@ -65,4 +65,7 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
 - **The client is trim-analyzed.** Anything serialized in `PoWatch.Client` goes through `PoWatchJsonContext`
   (source-generated); add new DTOs there.
 - **Folders.** At most two directory levels under each project; scripts live in `SCRIPTS/`.
+- **PDFs fail on Windows on ARM.** QuestPDF ships no `win-arm64` native library, so on an ARM machine every
+  PDF endpoint answers 503 (the client shows why in a toast). Production is x64 and unaffected; to make PDFs
+  locally, install the x64 .NET 10 SDK and run with `-r win-x64`.
 - **Pushing to `master` deploys to production.** The deploy gate is `GET /health` returning 200.

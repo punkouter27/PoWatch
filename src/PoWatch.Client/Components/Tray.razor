@@ -63,7 +63,7 @@
             @if (_week is { } week)
             {
                 <a class="tray-item tray-item--week" href="@StoryLinks.Period("week", _weekEnd)" @onclick="DismissWeekAsync" data-test="tray-week">
-                    <span class="tray-kicker">● THE WEEK IN REVIEW · OPEN HISTORY →</span>
+                    <span class="tray-kicker">● THE WEEK IN REVIEW · OPEN IN JOURNAL →</span>
                     <b>@week.Summary</b>
                 </a>
             }
@@ -77,7 +77,11 @@
                 <button class="term-menu-item" @onclick="Clear" data-test="tray-clear"><span>Clear</span><b>@(_alerts.Count + (_week is null ? 0 : 1))</b></button>
             }
 
-            <button type="button" class="term-menu-item" @onclick="() => Drawers.Show(DrawerState.Settings)" data-test="tray-rules-link"><span>Watch rules</span><b>SETTINGS →</b></button>
+            @if (Sensing.Live.Prompts.Count > 0)
+            {
+                <button type="button" class="term-menu-item" @onclick="@(() => Drawers.ShowSettings("people"))" data-test="tray-people-link"><span>Name everyone at once</span><b>PEOPLE →</b></button>
+            }
+            <button type="button" class="term-menu-item" @onclick="@(() => Drawers.ShowSettings("alerts"))" data-test="tray-rules-link"><span>Watch rules</span><b>ALERTS →</b></button>
         </ChildContent>
     </Drawer>
 </div>

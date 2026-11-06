@@ -16,7 +16,7 @@
         { label: 'Start or stop observing', hint: 'Space', run: toggleSession },
         { label: 'Start the demo scene', hint: '', run: () => click('start-demo') || Blazor.navigateTo('?start=demo') },
         { label: 'Notifications', hint: '', run: () => click('tray-toggle') },
-        { label: 'Settings: theme, sound, captions, watch rules, your data', hint: '', run: () => click('settings-menu') },
+        { label: 'Settings: recording, people, alerts, AI models, your data', hint: '', run: () => click('settings-menu') },
         { label: 'System status', hint: '', run: () => Blazor.navigateTo('system') },
         { label: 'Full screen', hint: '', run: () => document.documentElement.requestFullscreen?.() },
     ];

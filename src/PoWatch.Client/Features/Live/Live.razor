@@ -11,9 +11,10 @@
 
 @* Everything on one screen, always about one session: the one recording now, else the latest (or the
    one a Journal link names, ?session=). One bar (which session, the question box and
-   the download), then a 3×3 around the camera (CSS dissolves each family's own grid into this one). Under
-   the camera runs its narration: everything seen, said and heard, and who came and went. On a phone the
-   panels after "In frame" become a strip you swipe through. Longer views live in the Journal. *@
+   the download), a "session saved" line after a Stop, then five panels around the camera: Space down the
+   left, key metrics above, who is in frame and the room on the right. Under the camera runs its narration:
+   everything seen, said and heard, and who came and went. On a phone the panels after "In frame" become a
+   strip you swipe through. Patterns over days (today's curve, hour × weekday) live in the Journal. *@
 <div class="dash">
     <div class="stats-toolbar" data-test="stats-toolbar">
         <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
@@ -28,11 +29,16 @@
                 <input id="ask" @bind="_question" @bind:event="oninput" maxlength="300" autocomplete="off" placeholder="Ask: when is it usually busiest?" disabled="@_asking" />
                 <button type="submit" class="term-button" disabled="@(_asking || string.IsNullOrWhiteSpace(_question))">@(_asking ? "…" : "Ask")</button>
             </form>
-            @* The grid shows the headlines; this file has every number behind them. *@
-            <a class="term-button" href="@PoWatchApiClient.AllStatsUrl(_query)" download="PoWatch-session.json"
-               title="Every number for this session, as one JSON file" aria-label="Download every number for this session (JSON)" data-test="stats-json">JSON ↓</a>
+            @* The grid shows the headlines; this file has every number behind them (once there is a session to have numbers). *@
+            @if (!_query.IsEmpty)
+            {
+                <a class="term-button" href="@PoWatchApiClient.AllStatsUrl(_query)" download="PoWatch-session.json"
+                   title="Every number for this session, as one JSON file" aria-label="Download every number for this session (JSON)" data-test="stats-json">JSON ↓</a>
+            }
         </div>
     </div>
+
+    <AwayCard />
 
     @if (_answer is not null)
     {
@@ -94,32 +100,18 @@
             }
         </nav>
         <div class="dash-more" @ref="_more">
-            @* The room's space in one panel: motion right now, or the session's motion or people heat, then
-               where things mostly happen and which edge of the frame they come and go by. *@
+            @* The room's space in one panel: where motion is right now, where people and animals spent the
+               session, where things mostly happen and which edge of the frame they come and go by. *@
             <TerminalPanel Title="Space" Class="cell-heat" Test="live-motion-grid">
-                <Aside>
-                    <span class="heat-modes" role="group" aria-label="What the grid shows">
-                        @foreach (var (mode, label) in HeatModes)
-                        {
-                            <button type="button" class="heat-mode @(_heatMode == mode ? "heat-mode--on" : null)" aria-pressed="@(_heatMode == mode ? "true" : "false")"
-                                    @onclick="() => _heatMode = mode" data-test="@($"heat-mode-{mode}")">@label</button>
-                        }
-                    </span>
-                </Aside>
+                <Aside>16×9</Aside>
                 <ChildContent>
+                    <p class="live-heat-label">MOTION NOW</p>
                     <div class="live-heat">
-                        @switch (_heatMode)
-                        {
-                            case "session":
-                                <HeatGrid Values="@(_space?.MotionHeat ?? [])" Label="Motion across the frame this session" CellTitle="@((i, v) => $"{Cell(i)} · {v:P0} of the hottest")" />
-                                break;
-                            case "people":
-                                <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred this session" CellTitle="@((i, v) => $"{Cell(i)} · {v:P0}")" />
-                                break;
-                            default:
-                                <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
-                                break;
-                        }
+                        <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
+                    </div>
+                    <p class="live-heat-label">PEOPLE THIS SESSION</p>
+                    <div class="live-heat">
+                        <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred this session" CellTitle="@((i, v) => $"{Cell(i)} · {v:P0}")" />
                     </div>
                     @if (_space is { } space)
                     {
@@ -137,8 +129,6 @@
             </TerminalPanel>
 
             @* Pipeline numbers are operations, not the room: they live on System. *@
-            <PresenceTab Query="@_query" />
-            <PatternsTab Query="@_query" />
             <EnvironmentTab Query="@_query" />
         </div>
     </div>

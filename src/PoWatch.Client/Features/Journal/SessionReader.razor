@@ -21,7 +21,7 @@ else
             <a class="term-link" href="@($"?session={_session.Id}")" title="This session on Live">Live view →</a>
             <a class="term-link" href="@StoryLinks.DayOf(_session)" title="That day's recap, replay and timeline">Day →</a>
             <ExportMenu Test="session-export">
-                <a class="term-menu-item" href="@PoWatchApiClient.SessionRecapPdfUrl(_session.Id)" download="PoWatch-session-@(tag[1..]).pdf" data-test="session-pdf"><span>Recap <i>the session, as a PDF</i></span><b>PDF</b></a>
+                <a class="term-menu-item" href="@PoWatchApiClient.SessionRecapPdfUrl(_session.Id)" download="PoWatch-session-@(tag[1..]).pdf" onclick="return powatchFiles.save(event, this)" data-test="session-pdf"><span>Recap <i>the session, as a PDF</i></span><b>PDF</b></a>
                 <a class="term-menu-item" href="@PoWatchApiClient.AllStatsUrl(StatsQuery.For("session", _session.Id))" download="PoWatch-session-@(tag[1..]).json" data-test="session-json"><span>Everything stored <i>every tick, event and stat of the session</i></span><b>JSON</b></a>
             </ExportMenu>
         </Aside>

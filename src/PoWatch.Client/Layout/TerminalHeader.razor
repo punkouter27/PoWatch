@@ -48,7 +48,7 @@
 
     @* Inside the header so it hangs from its bottom edge (terminal.css), like the bell's drawer. *@
     <Drawer Title="Settings" Open="@Drawers.IsOpen(DrawerState.Settings)" OnClose="Drawers.Close" Test="settings-drawer">
-        <SettingsPanel />
+        <SettingsPanel Section="@Drawers.Section" />
     </Drawer>
 </header>
 
