@@ -5,7 +5,7 @@
 @inject NavigationManager Navigation
 
 @* One row: brand, section keys, then status, Start/Stop, bell and Settings at the right. The AI model
-   choices live in Settings → Recording; section keys become the phone's bottom tab bar. *@
+   choices live in Settings → Advanced; section keys become the phone's bottom tab bar. *@
 <header class="term-header" data-test="term-header">
     <a class="term-brand" href="" aria-label="PoWatch home">
         PoWatch <span class="term-brand-mark">TERM</span>
@@ -35,8 +35,14 @@
 
     <Tray />
 
+    @* Dark or light, remembered in this browser (theme-controller.js); one press, no trip into Settings. *@
+    <button type="button" class="term-icon-button" onclick="powatchTheme.toggle()"
+            aria-label="Switch between dark and light" title="Dark / light" data-test="theme-toggle">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" /></svg>
+    </button>
+
     <button type="button" class="term-icon-button @(SettingsOpen ? "term-icon-button--on" : null)" @onclick="ToggleSettings"
-            aria-label="Settings" aria-expanded="@(SettingsOpen ? "true" : "false")" title="Settings: recording and AI, people, alerts, sharing, look, account" data-test="settings-menu">
+            aria-label="Settings" aria-expanded="@(SettingsOpen ? "true" : "false")" title="Settings: recording, people, alerts and sharing, advanced" data-test="settings-menu">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
     </button>
 

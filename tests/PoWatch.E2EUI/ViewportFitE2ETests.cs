@@ -80,7 +80,7 @@ public sealed class ViewportFitE2ETests
         await page.SetViewportSizeAsync(1440, 900);
 
         // Chromium's fake camera (see PlaywrightFixture); captions off so no vision model downloads.
-        await page.OpenSettingsAsync("recording");
+        await page.OpenSettingsAsync("advanced");
         await page.GetByTestId("ai-caption-model").SelectOptionAsync("off");
         await page.GetByTestId("nav-live").ClickAsync();
         await page.GetByTestId("start-camera").ClickAsync();
@@ -88,7 +88,7 @@ public sealed class ViewportFitE2ETests
 
         // Leaving Live must not stop sensing: the camera element lives in the layout, and System
         // (reached from Settings) shows the frame rate this browser is sampling at.
-        await page.OpenSettingsAsync("account");
+        await page.OpenSettingsAsync("advanced");
         await page.GetByTestId("nav-system").ClickAsync();
         await page.OpenSystemTabAsync("Pipeline");
         await Assertions.Expect(page.GetByTestId("stat-pixel-hz")).Not.ToContainTextAsync("0.0", new() { Timeout = 30_000 });

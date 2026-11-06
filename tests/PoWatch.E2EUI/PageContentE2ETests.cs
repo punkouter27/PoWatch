@@ -68,7 +68,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("stats-occupancy")).Not.ToContainTextAsync("0.0%", new() { Timeout = 45_000 });
         await Assertions.Expect(page.Locator("[data-test=stats-presence] .rz-chart svg").First).ToBeVisibleAsync();
 
-        // Every family is on the Live grid (classes in "In frame"); pipeline counters are on System.
+        // Every family is on the Live grid (space under the motion grid, classes in "In frame"); pipeline counters are on System.
         foreach (var content in new[] { "stats-space", "live-census", "stats-patterns", "stats-environment" })
         {
             await Assertions.Expect(page.GetByTestId(content)).ToBeVisibleAsync(new() { Timeout = 30_000 });
@@ -216,7 +216,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
-        await page.OpenSettingsAsync("account");
+        await page.OpenSettingsAsync("advanced");
         await page.GetByTestId("sign-out").ClickAsync();
 
         await Assertions.Expect(page.GetByTestId("login-shell")).ToBeVisibleAsync(new() { Timeout = 60000 });

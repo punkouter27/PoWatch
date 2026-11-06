@@ -1,12 +1,10 @@
 @inherits SettingsTab
 
-<TerminalPanel Title="Look and feel" Test="settings-preferences" Flush="true">
-    <Aside>REMEMBERED IN THIS BROWSER</Aside>
+@* The theme itself is the header's sun/moon button; this resets every choice this browser remembers. *@
+<TerminalPanel Title="This browser" Test="settings-preferences" Flush="true">
+    <Aside>REMEMBERED HERE</Aside>
     <ChildContent>
         <div class="settings-list">
-            <button class="term-menu-item" @onclick="ToggleThemeAsync" data-test="theme-toggle">
-                <span>Theme</span><b>@_theme.ToUpperInvariant()</b>
-            </button>
             <button class="term-menu-item" onclick="powatchMenus.openPalette()" data-test="open-palette">
                 <span>Commands and shortcuts</span><b>CTRL K</b>
             </button>
@@ -18,24 +16,10 @@
 </TerminalPanel>
 
 @code {
-    private string _theme = "dark";
-
-    protected override async Task OnInitializedAsync()
-    {
-        var theme = await JS.TryInvokeAsync<string>("powatchTheme.get");
-        if (!string.IsNullOrEmpty(theme)) _theme = theme;
-    }
-
-    private async Task ToggleThemeAsync()
-    {
-        var next = await JS.TryInvokeAsync<string>("powatchTheme.toggle");
-        _theme = string.IsNullOrEmpty(next) ? (_theme == "dark" ? "light" : "dark") : next;
-    }
-
     /// <summary>Back to the starting values for this browser's choices; watch rules and the account's settings are data, not choices, and stay.</summary>
     private async Task ResetAsync()
     {
-        if (_theme != "dark") await ToggleThemeAsync();
+        if (await JS.TryInvokeAsync<string>("powatchTheme.get") == "light") await JS.TryInvokeAsync<string>("powatchTheme.toggle");
         // Sound cues sit under Recording; the level cycles off · low · mid · high.
         for (var i = 0; i < 4 && await JS.TryInvokeAsync<string>("powatchCues.level") is { } level && level != "low"; i++)
             await JS.TryInvokeAsync<string>("powatchCues.cycle");

@@ -94,12 +94,39 @@
             }
         </nav>
         <div class="dash-more" @ref="_more">
-            <TerminalPanel Title="Motion grid" Class="cell-heat" Test="live-motion-grid">
-                <Aside>16×9 · EDGES TODAY</Aside>
+            @* The room's space in one panel: motion right now, or the session's motion or people heat, then
+               where things mostly happen and which edge of the frame they come and go by. *@
+            <TerminalPanel Title="Space" Class="cell-heat" Test="live-motion-grid">
+                <Aside>
+                    <span class="heat-modes" role="group" aria-label="What the grid shows">
+                        @foreach (var (mode, label) in HeatModes)
+                        {
+                            <button type="button" class="heat-mode @(_heatMode == mode ? "heat-mode--on" : null)" aria-pressed="@(_heatMode == mode ? "true" : "false")"
+                                    @onclick="() => _heatMode = mode" data-test="@($"heat-mode-{mode}")">@label</button>
+                        }
+                    </span>
+                </Aside>
                 <ChildContent>
                     <div class="live-heat">
-                        <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
+                        @switch (_heatMode)
+                        {
+                            case "session":
+                                <HeatGrid Values="@(_space?.MotionHeat ?? [])" Label="Motion across the frame this session" CellTitle="@((i, v) => $"{Cell(i)} · {v:P0} of the hottest")" />
+                                break;
+                            case "people":
+                                <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred this session" CellTitle="@((i, v) => $"{Cell(i)} · {v:P0}")" />
+                                break;
+                            default:
+                                <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
+                                break;
+                        }
                     </div>
+                    @if (_space is { } space)
+                    {
+                        <p class="live-spots" data-test="stats-space">
+                            MOTION <b>@(space.HottestCell >= 0 ? Cell(space.HottestCell) : "—")</b> · PEOPLE <b>@(space.FavouriteSpotCell >= 0 ? Cell(space.FavouriteSpotCell) : "—")</b> · DOOR <b>@space.BusiestEdge.ToUpperInvariant()</b>
+                        </p>
+                    }
                     <div class="live-edges">
                         @foreach (var edge in Edges)
                         {
@@ -111,7 +138,6 @@
 
             @* Pipeline numbers are operations, not the room: they live on System. *@
             <PresenceTab Query="@_query" />
-            <SpaceTab Query="@_query" />
             <PatternsTab Query="@_query" />
             <EnvironmentTab Query="@_query" />
         </div>

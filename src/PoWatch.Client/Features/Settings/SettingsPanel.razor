@@ -1,9 +1,9 @@
-@* Every optional choice in three tabs: what is recorded and heard (the models, listening, sound cues),
-   who is known, and everything else about your account (look, alerts, shared links, your data). Browser
-   choices start on the values that suit most rooms and are remembered here; "Show power features" (Look,
-   under Account) shows the extras here and across the app, and anything already switched on stays visible
-   without it. One column: it opens in the gear's drawer, and as the /settings page (?section= opens a
-   tab; the old alerts, sharing and look sections open Account). Each panel loads what it shows when it opens. *@
+@* Every optional choice in four tabs: what is recorded (listening, sound cues, the weather beside each day),
+   who is known, what reaches you or others (watch rules, the weekly email, shared links), and Advanced,
+   where the niche and the dangerous live (the AI models, this browser's reset, data kept, export, System,
+   sign out, delete everything). The theme is the header's own button. One column: it opens in the gear's
+   drawer, and as the /settings page (?section= opens a tab; older section names open where their panels
+   went). Each panel loads what it shows when it opens. *@
 <div class="settings-stack" data-test="settings-page">
     <nav class="term-tabbar settings-tabs" aria-label="Settings sections">
         @foreach (var (key, label) in Sections)
@@ -17,14 +17,24 @@
     {
         case "recording":
             <RecordingSettings />
+            <WeatherSettings />
             break;
         case "people":
             <KnownRegulars />
             break;
-        default:
-            <LookSettings />
+        case "alerts":
             <AlertSettings />
             <SharingSettings />
+            break;
+        default:
+            <TerminalPanel Title="AI models" Test="settings-ai" Flush="true">
+                <Aside>REMEMBERED IN THIS BROWSER</Aside>
+                <ChildContent>
+                    @* Which model describes the room, and which one writes recaps and answers questions. *@
+                    <AiSelectors />
+                </ChildContent>
+            </TerminalPanel>
+            <LookSettings />
             <AccountSettings />
             break;
     }
@@ -33,13 +43,16 @@
 @code {
     private static readonly (string Key, string Label)[] Sections =
     [
-        ("recording", "Recording"), ("people", "People"), ("account", "Account"),
+        ("recording", "Recording"), ("people", "People"), ("alerts", "Alerts"), ("advanced", "Advanced"),
     ];
 
-    /// <summary>The sections that were tabs of their own and now sit under Account, for old links.</summary>
-    private static readonly string[] UnderAccount = ["alerts", "sharing", "look"];
+    /// <summary>Section names from older links, and the tab their panels sit on now.</summary>
+    private static readonly Dictionary<string, string> Moved = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["sharing"] = "alerts", ["account"] = "advanced", ["look"] = "advanced",
+    };
 
-    /// <summary>The tab to open on: recording, people or account (alerts, sharing and look open account).</summary>
+    /// <summary>The tab to open on: recording, people, alerts or advanced.</summary>
     [Parameter] public string? Section { get; set; }
 
     private string _section = "recording";
@@ -47,6 +60,6 @@
     protected override void OnParametersSet()
     {
         if (Section is { } section && Sections.Any(t => t.Key == section)) _section = section;
-        else if (UnderAccount.Contains(Section)) _section = "account";
+        else if (Section is { } old && Moved.TryGetValue(old, out var moved)) _section = moved;
     }
 }

@@ -92,15 +92,18 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("stats-json")).ToBeVisibleAsync();
 
-        // Look, alerts, shared links and the account all sit under Settings' Account tab; there is no mode to switch.
-        await page.OpenSettingsAsync("account");
-        await Assertions.Expect(page.GetByTestId("watch-rules")).ToBeVisibleAsync();
+        // Weather sits with Recording, rules and shared links under Alerts, the rest under Advanced; there is no mode to switch.
+        await page.OpenSettingsAsync("recording");
         await Assertions.Expect(page.GetByTestId("weather-place")).ToBeVisibleAsync();
+        await page.GetByTestId("settings-tab-alerts").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("watch-rules")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("advanced-toggle")).ToHaveCountAsync(0);
 
-        // Reset puts every browser choice back.
+        // Reset puts every browser choice back, the header's theme included.
+        await page.GetByTestId("theme-toggle").ClickAsync();
+        await page.GetByTestId("settings-tab-advanced").ClickAsync();
         await page.GetByTestId("settings-reset").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("theme-toggle")).ToContainTextAsync("DARK");
+        await Assertions.Expect(page.Locator("html")).ToHaveAttributeAsync("data-theme", "dark");
         await page.AssertNoBlazorErrorAsync();
     }
 
@@ -125,7 +128,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         var before = await page.GetAttributeAsync("html", "data-theme");
-        await page.OpenSettingsAsync("account");
         await page.GetByTestId("theme-toggle").ClickAsync();
         await page.WaitForTimeoutAsync(400);
         var after = await page.GetAttributeAsync("html", "data-theme");

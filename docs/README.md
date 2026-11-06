@@ -70,8 +70,9 @@ Start button; a synthetic demo whenever stopped) and, under the picture, its nar
 newest first, a few lines tall and scrolling (`Features/Live/LiveNarration.razor`; while recording it is
 the browser's own list in `LiveSensingState.Narration`, after that what the server kept). Around it: key
 metrics beside your usual day (σ, rhythm, trend, next busy hour) above, who is in frame with every class
-seen below, the motion grid left, motion energy right, and Space, the light curve, the week and the room in
-the corners. Detector boxes and the "now" counts show only while recording, and visits an hour only once
+seen below, Space down the left (the 16×9 grid, switchable between motion NOW and the session's motion or
+people heat, then where motion and people mostly were, the busiest door and the entries and exits by
+edge), motion energy right, and the light curve, the week and the room in the other corners. Detector boxes and the "now" counts show only while recording, and visits an hour only once
 ten minutes have been observed. A desktop holds the whole grid in the viewport (the camera keeps 16:9);
 narrower screens stack it, and a phone turns the panels after "In frame" into a strip you swipe through ·
 `/journal` the Journal, everything that happened: on the left the index (the year, with the weather's
@@ -79,11 +80,11 @@ effect once a place is set; links to the week's and month's stories;
 every day that has sessions, newest first, with its sessions inside it; "Older sessions" pages back
 through the latest hundred), on the right the reader, laid out the same for a day and a session: the
 story first, then the replay with the timeline of every line under it · `/journal/{yyyy-MM-dd}` a day
-(`/journal` opens on today): the recap (JSON/PDF and a share link), the day's numbers in
+(`/journal` opens on today): the recap (an "Export ▾" menu with its PDF and JSON, and a share link), the day's numbers in
 one row, its weather, the week against the week before and the caption words folded under them, the
 replay and timeline, then the day's moments and time-lapse · `/journal/s/{id}` one session, where every
 session link lands: its story with every chapter (newest first), its numbers, links to its Live view,
-its day and its PDF, and the replay of just its minutes with its timeline · `/journal?view=week|month`
+its day and an "Export ▾" with its PDF and JSON, and the replay of just its minutes with its timeline · `/journal?view=week|month`
 (with `&date=` for the period ◀ ▶ moved to) one story of the whole Monday-to-Sunday week or calendar
 month, with the days it was told from · `/settings` the Settings drawer as a page, for links (`?section=`
 opens a tab). Session, view and day live in the URL, so
@@ -101,20 +102,21 @@ In a replay each line is a button that moves the playhead to it, and the playhea
 the line it is on and scrolls only the list to keep it in view (`replay.js`).
 
 **Header.** One row: brand, two section keys (Live · Journal; a bottom tab bar on a phone),
-then a status chip (state and uptime), Start/Stop, a bell and a gear. The gear opens Settings in a side
-drawer over any page, in three tabs: Recording (the camera and story AI models, listening, sound cues),
-People (who PoWatch knows: rename, filter, sort, merge, forget voices) and Account, one column of panels:
-Look (theme, the command palette, reset), Alerts (watch rules, the weekly email), Shared recaps, and the
-account itself (retention window, weather place, System status, CSV export, sign out, delete everything;
-keeping less and deleting ask first). The old `?section=alerts|sharing|look` links open Account. The bell is the one notification tray, in
+then a status chip (state and uptime), Start/Stop, a bell, a dark/light button and a gear. The gear opens
+Settings in a side drawer over any page, in four tabs: Recording (listening, sound cues, the weather place),
+People (who PoWatch knows: rename, filter, sort, merge, forget voices), Alerts (watch rules, the weekly
+email, shared recaps) and Advanced, where the niche and the dangerous live: the AI models, this browser
+(the command palette, reset), and your data and account (retention window, System status, CSV export,
+sign out, delete everything; keeping less and deleting ask first). Old `?section=` names still land:
+`sharing` on Alerts, `account` and `look` on Advanced. The bell is the one notification tray, in
 the same kind of drawer: sensing problems, watch-rule alerts, "name this newcomer" prompts and, once a
 week, last week in review; it opens by itself for a problem or an alert, and the rest only raise its
 count. Escape or ✕ closes a drawer, and so does going to another page. Watch rules ("person between
 22:00 and 06:00") are kept in the browser, checked as things enter the frame, and relayed to every open
 tab over the hub (plus a desktop notification where allowed).
 
-**One mode.** There is no simple/advanced switch: Ask, "Explain today" and JSON on Live, JSON/PDF
-downloads and share links in the Journal, watch rules, the weather place, the weekly email and shared
+**One mode.** There is no simple/advanced switch: Ask, "Explain today" and JSON on Live, the Export
+menus and share links in the Journal, watch rules, the weather place, the weekly email and shared
 links in Settings are always there. "Reset to defaults" puts this browser's choices back (dark, low
 sound, captions on, MiniCPM-V); rules and the account's server settings stay.
 
@@ -123,7 +125,7 @@ filtered) have a "Text ↓" link: the lines as a plain-text file, oldest first, 
 21:53:06  SAW   A person walks across the room."). The text rides in the link as a `data:` URL
 (`Components/TranscriptLink.razor`, `TimelineEntry.Transcript`), so saving needs no script or request.
 
-**AI models** (Settings → Recording). Two dropdowns. Camera AI
+**AI models** (Settings → Advanced). Two dropdowns. Camera AI
 chooses MiniCPM-V, Qwen3-VL 8B, Qwen2.5-VL 7B, or captions off; its status reports whether Ollama
 answered or the in-browser fallback (WebGPU/WASM) ran, loading/failure, or a pending switch. Changes are saved per browser, also update
 Settings, and apply after the current caption finishes, even in a still scene. Ask / Recap AI lists
@@ -153,15 +155,12 @@ five type sizes (`--fs-xs` to `--fs-xl`), and Radzen's `--rz-*` variables pointe
 **Keyboard.** `g` then `l` or `j` jumps to Live or the Journal, Space starts or stops, ← → step the
 Journal's day, Ctrl+K opens a command palette (also: the demo scene, System, full screen) (`wwwroot/js/menus.js`).
 
-**Effects.** The header is frosted glass. A faint warm wash follows the room's measured light while a
-session runs, and stat numbers roll up or down when they change. WebGL canvases give their context back
-when their page goes away.
+**Effects.** The header is frosted glass. WebGL canvases give their context back when their page goes away.
 
 **Sound.** `wwwroot/js/cues.js` synthesises short cues with the Web Audio API (start, stop, something
 entering — panned to the side it entered from — a new regular, an alert, an error). Level
-off/low/mid/high is on Settings and remembered per browser. Each kind of thing has its own entry
-chirp (person, dog, cat, other animal, object), a quiet hum rises with how many are in frame
-(`Components/AmbientBridge.razor`), and Replay ticks softly as the playhead passes a moment.
+off/low/mid/high is on Settings and remembered per browser. That is all of it: one entry blip for
+anything, no hum, no replay ticks.
 
 **Motion grid.** On Live the 16×9 grid is a plain grid of cells; the Journal's replay draws it with a
 WebGL2 shader (`wwwroot/js/heat-gl.js`), falling back to the plain grid without WebGL2. Animations use
@@ -187,8 +186,9 @@ range slider (drag, ← →, Home/End); the playhead drives the motion grid shad
 caption of the moment and, where this browser kept a time-lapse, the nearest camera frame. Play walks
 the observed minutes only.
 
-**Save video** (the Journal, under a day's replay) encodes the time-lapse this browser kept for the day to WebM
-(MediaRecorder) and downloads it; it is disabled, with the reason, when nothing was kept.
+**Time-lapse ↓** (the Journal, under a day's replay) encodes the time-lapse this browser kept for the day to WebM
+(MediaRecorder) and downloads it. The frames live only in the browser that recorded them, so anywhere
+else the button is not shown.
 
 **Interop.** Replay's 16×9 grids reach JS as raw bytes through `[JSImport]` (`Services/ReplayGrids.cs`,
 `js/replay-grids.js`), and detector boxes reach the C# tracker as typed arrays through `[JSExport]`

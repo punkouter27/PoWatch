@@ -12,7 +12,14 @@ public sealed partial class Live
     private static readonly string[] Edges = ["Left", "Top", "Right", "Bottom"];
 
     /// <summary>The phone strip's keys, in the order the panels appear.</summary>
-    private static readonly string[] Pages = ["Grid", "Energy", "Space", "Curve", "Week", "Room"];
+    private static readonly string[] Pages = ["Space", "Energy", "Curve", "Week", "Room"];
+
+    private static readonly (string Mode, string Label)[] HeatModes = [("now", "NOW"), ("session", "SESSION"), ("people", "PEOPLE")];
+
+    private string _heatMode = "now";
+
+    /// <summary>Spreadsheet-style cell name: columns A–P, rows 1–9.</summary>
+    private static string Cell(int index) => $"{(char)('A' + (index % 16))}{(index / 16) + 1}";
 
     private Guid _sessionId;
     private StatsQuery _query = StatsQuery.For("session");

@@ -655,7 +655,14 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     color: var(--term-muted);
 }
 
-.live-edges b, .live-who b { color: var(--term-text); font-weight: 600; }
+.live-edges b, .live-who b, .live-spots b { color: var(--term-text); font-weight: 600; }
+
+.live-spots { margin: 8px 0 0; font: 11px var(--term-mono); color: var(--term-muted); }
+
+.heat-modes { display: inline-flex; gap: 2px; }
+.heat-mode { border: 1px solid transparent; background: none; color: var(--term-muted); font: inherit; letter-spacing: inherit; padding: 0 5px; cursor: pointer; border-radius: 2px; }
+.heat-mode:hover { color: var(--term-text); }
+.heat-mode--on { color: var(--term-text); border-color: var(--term-line); }
 
 .live-who { list-style: none; margin: 0; padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 4px 14px; font: 12px var(--term-mono); color: var(--term-muted); border-bottom: 1px solid var(--term-line); }
 
@@ -771,7 +778,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 @keyframes fx-pop { from { opacity: 0; transform: scale(0.94) translateY(-6px); } to { opacity: 1; transform: none; } }
 @keyframes fx-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@keyframes fx-tick { from { opacity: 0; transform: translateY(45%); } to { opacity: 1; transform: none; } }
 @keyframes fx-shimmer { to { background-position: -200% 0; } }
 
 /* A panel settles into place; a pressed button gives a little. */
@@ -779,9 +785,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .term-button, .term-key, .term-icon-button { transition: transform 0.35s var(--spring), border-color 0.15s, background-color 0.15s; }
 .term-button:active:not([disabled]), .term-key:active, .term-icon-button:active { transform: scale(0.94); transition-duration: 0.05s; }
 .fx-rise { animation: fx-rise 0.5s var(--spring-soft) both; }
-
-/* A headline number that changed rolls up into place (the element is keyed on its value). */
-.fx-tick { display: inline-block; animation: fx-tick 0.4s var(--spring-soft) both; }
 
 /* Loading placeholders: the size of what is coming, with a slow sheen. */
 .term-skeleton {
@@ -818,7 +821,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .term-dial-label { font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-muted); }
 
 @media (prefers-reduced-motion: reduce) {
-    .term-panel, .fx-rise, .fx-tick, .term-skeleton, .term-drawer, .term-palette { animation: none; }
+    .term-panel, .fx-rise, .term-skeleton, .term-drawer, .term-palette { animation: none; }
     .term-button, .term-key, .term-icon-button, .term-dial { transition: none; }
 }
 
@@ -974,9 +977,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .dash-pager { display: none; }
 .live-trend { width: 28%; }
 .dash-grid .term-table td:first-child { white-space: nowrap; }
-.stats-heats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.stats-heats figure { margin: 0; }
-.stats-heats figcaption { margin-top: 4px; font: var(--fs-xs) var(--term-mono); color: var(--term-dim); }
 .dash-grid .stats-cloud, .dash-grid .stats-weird { margin-top: 6px; }
 
 @media (min-width: 720px) {
@@ -995,7 +995,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
         grid-template-rows: minmax(0, 1fr) minmax(0, 1.9fr) minmax(0, 1fr);
         grid-template-areas:
-            "space   metrics curve"
+            "heat    metrics curve"
             "heat    camera  energy"
             "week    inframe env";
         min-height: 0;
@@ -1005,7 +1005,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .dash-grid .cell-inframe { grid-area: inframe; }
     .dash-grid .cell-heat { grid-area: heat; }
     .dash-grid .cell-energy { grid-area: energy; }
-    .dash-grid .cell-space { grid-area: space; }
     .dash-grid .cell-curve { grid-area: curve; }
     .dash-grid .cell-week { grid-area: week; }
     .dash-grid .term-panel.cell-env { grid-area: env; }
@@ -1282,12 +1281,13 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 /* ── Shared small parts ───────────────────────────────────────────────── */
 
 /* Buttons that belong together sit joined, as one control. */
-.term-btn-group { display: inline-flex; }
-.term-btn-group > .term-button { border-radius: 0; }
-.term-btn-group > .term-button + .term-button { margin-left: -1px; }
-.term-btn-group > .term-button:first-child { border-radius: var(--term-radius) 0 0 var(--term-radius); }
-.term-btn-group > .term-button:last-child { border-radius: 0 var(--term-radius) var(--term-radius) 0; }
-.term-btn-group > .term-button:hover, .term-btn-group > .term-button:focus-visible { position: relative; z-index: 1; }
+/* Export ▾: a native <details> that drops a short list of files under its button. */
+.export-menu { position: relative; display: inline-flex; }
+.export-menu > summary { display: inline-flex; align-items: center; list-style: none; cursor: pointer; }
+.export-menu > summary::-webkit-details-marker { display: none; }
+.export-menu[open] > summary { border-color: var(--term-accent); }
+.export-menu-items { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; min-width: 280px; padding: 4px; background: var(--term-panel); border: 1px solid var(--term-line); border-radius: var(--term-radius); box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); }
+
 
 /* A text link inside a table, with a target a finger can hit. */
 .term-link { display: inline-block; padding: 4px 6px; margin: -4px -6px; color: var(--term-accent); text-decoration: none; }
@@ -1303,7 +1303,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     [data-test="health-overall"] > .term-panel-body { min-height: 230px; }
 }
 
-/* ── Ambient: frosted header, the slow background, the room's light, rolling numbers ── */
+/* ── Ambient: the frosted header ── */
 
 /* The header is frosted glass. The blur sits on a layer behind its contents, not on the header itself:
    backdrop-filter there would trap the phone tab bar (fixed) and unfrost the drawers hanging from it. */
@@ -1318,19 +1318,3 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     backdrop-filter: var(--term-glass-blur);
 }
 
-/* The room's light (--room-light, 0 to 1, set by AmbientBridge while a session runs) warms the page a
-   little: a bright room a faint amber wash, a dark one none. */
-.term-shell {
-    box-shadow: inset 0 0 0 100vmax rgb(255 206 140 / calc(var(--room-light, 0) * 0.07));
-    transition: box-shadow 3s ease;
-}
-
-/* A headline number rolls from below when it grew and from above when it fell, on a spring. */
-@keyframes fx-tick-down { from { opacity: 0; transform: translateY(-45%); } to { opacity: 1; transform: none; } }
-.term-stat-value .fx-tick { animation-duration: 0.5s; animation-timing-function: var(--spring); }
-.fx-tick--down { animation-name: fx-tick-down; }
-
-@media (prefers-reduced-motion: reduce) {
-    .fx-tick--down, .term-stat-value .fx-tick { animation: none; }
-    .term-shell { transition: none; }
-}

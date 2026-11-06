@@ -2,8 +2,7 @@
 // (occupancy as amber bars, motion as a line, moments as ticks, captions as dots); the playhead drives
 // the motion grid (heat-gl.js), the readout, the caption of the moment, and, where this device kept a
 // time-lapse, the camera frame nearest that minute. The slider is a native range input, so arrow keys,
-// Home/End and screen readers work without extra code, and menus.js leaves its keys alone. Passing a
-// moment while playing or scrubbing plays a soft tick (cues.js, at the user's sound level). The grids
+// Home/End and screen readers work without extra code, and menus.js leaves its keys alone. The grids
 // arrive as raw bytes through stage() (TimelineReplay → replay-grids.js) before mount; base64 is the fallback.
 // The timeline under it ([data-replay-lines]) follows along: the line the playhead is on is lit and kept in
 // view, and a line (data-replay-jump) moves the playhead to its moment.
@@ -14,7 +13,6 @@
     const CAPTION_HOLD_MS = 15 * 60 * 1000; // a caption describes the scene for a while after it was written
     const FRAME_NEAR_MS = 5 * 60 * 1000;    // a time-lapse frame stands for the minutes around it
     const PLAY_STEP_MS = 70;
-    const TICK_HZ = 1760;
     const mounted = new WeakMap();
     const staged = new Map(); // day → Uint8Array of grids handed over by .NET before mount
 
@@ -180,23 +178,8 @@
             if (row.top < box.top || row.bottom > box.bottom) list.scrollTop += row.top - box.top - box.height / 3;
         }
 
-        // One soft tick when the playhead passes a moment (several passed in one drag still tick once).
-        // Compared by minute: the minutes entered on the way, so the one left behind does not count.
-        function tick(before, after) {
-            if (before === after || moments.length === 0) return;
-            const minute = (at) => Math.floor((at - from) / 60000);
-            const a = minute(before), b = minute(after);
-            const passed = moments.find((m) => {
-                const k = minute(m.at);
-                return b > a ? k > a && k <= b : k < a && k >= b;
-            });
-            if (passed) window.powatchCues?.tone(TICK_HZ, 0.05, ((passed.at - from) / (to - from)) * 2 - 1);
-        }
-
-        function seek(at, fromSlider, sound) {
-            const before = state.at;
+        function seek(at, fromSlider) {
             state.at = Math.min(Math.max(at, from), to - 60000);
-            if (sound) tick(before, state.at);
             if (!fromSlider) scrub.value = String(Math.round((state.at - from) / 60000));
             render();
         }
@@ -217,12 +200,12 @@
             if (playButton) playButton.textContent = '❚❚ Pause';
             state.timer = setInterval(() => {
                 if (++i >= minutes.length) { stop(); return; }
-                seek(minutes[i].at, false, true);
+                seek(minutes[i].at, false);
             }, PLAY_STEP_MS);
         }
 
         // Remembered so unmount can take them off again: the root element outlives a change of day.
-        const onScrub = () => { stop(); seek(from + Number(scrub.value) * 60000, true, true); };
+        const onScrub = () => { stop(); seek(from + Number(scrub.value) * 60000, true); };
         const onJump = (e) => {
             const jump = e.target.closest?.('[data-replay-jump]');
             if (jump) { stop(); seek(Number(jump.dataset.replayJump), false); scrub.focus({ preventScroll: true }); }

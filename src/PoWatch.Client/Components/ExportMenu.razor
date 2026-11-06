@@ -1,0 +1,15 @@
+@* One "Export ▾" for a day or a session: every file it can be saved as, in one place. A native
+   <details> menu, so it needs no script and works from the keyboard; picking a file closes it. *@
+<details class="export-menu" data-test="@Test">
+    <summary class="term-button" title="Save this as a file">Export ▾</summary>
+    <div class="export-menu-items" onclick="this.closest('details').open = false">
+        @ChildContent
+    </div>
+</details>
+
+@code {
+    /// <summary>The files, as <c>&lt;a download&gt;</c> links styled <c>term-menu-item</c>.</summary>
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter] public string? Test { get; set; }
+}

@@ -53,11 +53,11 @@
             <div class="replay-actions">
                 <button class="term-button term-button--primary" data-replay="play" data-test="replay-play">▶ Play</button>
                 <span class="term-stat-hint">@_data.Minutes.Count OBSERVED MINUTES · DRAG, OR ← → A MINUTE · CLICK A LINE TO JUMP</span>
-                <button class="term-button" disabled="@(_saving || VideoBlocker is not null)" title="@(VideoBlocker ?? "Download this browser's time-lapse of the day as a WebM")"
-                        @onclick="SaveVideoAsync" data-test="replay-save-video">@(_saving ? "Saving…" : "Save video")</button>
-                @if (VideoBlocker is not null)
+                @* The time-lapse lives only in the browser that recorded it: elsewhere there is nothing to offer. *@
+                @if (_frames > 0)
                 {
-                    <span class="term-stat-hint" data-test="replay-save-video-reason">@VideoBlocker</span>
+                    <button class="term-button" disabled="@(_saving || !_canRecord)" title="@(_canRecord ? "Download this browser's time-lapse of the day as a WebM" : "This browser cannot record video.")"
+                            @onclick="SaveVideoAsync" data-test="replay-save-video">@(_saving ? "Saving…" : "Time-lapse ↓")</button>
                 }
             </div>
         }
@@ -131,12 +131,6 @@
     private bool _saving;
 
     private string DayKey => Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-
-    /// <summary>Why "Save video" is off, or null when it can run: the frames live only in the browser that took them.</summary>
-    private string? VideoBlocker =>
-        _frames == 0 ? "This browser kept no time-lapse frames for this day."
-        : !_canRecord ? "This browser cannot record video."
-        : null;
 
     protected override async Task OnParametersSetAsync()
     {
