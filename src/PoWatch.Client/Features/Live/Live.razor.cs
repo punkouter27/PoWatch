@@ -9,11 +9,6 @@ namespace PoWatch.Client.Features.Live;
 /// <summary>The Live page's state and behaviour; the markup is in Live.razor.</summary>
 public sealed partial class Live
 {
-    private static readonly string[] Edges = ["Left", "Top", "Right", "Bottom"];
-
-    /// <summary>The phone strip's keys, in the order the panels appear.</summary>
-    private static readonly string[] Pages = ["Space", "Room"];
-
     /// <summary>Spreadsheet-style cell name: columns A–P, rows 1–9.</summary>
     private static string Cell(int index) => $"{(char)('A' + (index % 16))}{(index / 16) + 1}";
 
@@ -24,7 +19,7 @@ public sealed partial class Live
     private bool _asking;
 
     private ElementReference _slot;
-    private ElementReference _more;
+    private bool _peopleHeat;
     private IReadOnlyList<double> _occupancyTrend = [];
     private IReadOnlyList<double> _visitsTrend = [];
     private DotNetObjectReference<Live>? _self;
@@ -52,7 +47,10 @@ public sealed partial class Live
 
     private string WindowLabel => _sessionId == Guid.Empty
         ? "No session yet: press Start"
-        : $"{(Sensing.IsRunning && Sensing.Live.Session?.Id == _sessionId ? "Recording" : "Last")} session {SessionDto.Tag(_sessionId)}, minute by minute · {TimeZoneInfo.Local.Id}";
+        : $"{(Sensing.IsRunning && Sensing.Live.Session?.Id == _sessionId ? "Recording" : "Last")} session {SessionDto.Tag(_sessionId)} · {Place}";
+
+    /// <summary>"America/New_York" as "New York": the clock the times are in.</summary>
+    private static readonly string Place = TimeZoneInfo.Local.Id.Split('/')[^1].Replace('_', ' ');
 
     private LiveSensingState L => Sensing.Live;
 
@@ -233,8 +231,6 @@ public sealed partial class Live
     }
 
     private Task DockFeedAsync() => Sensing.DockFeedAsync(_slot);
-
-    private Task ShowPanelAsync(int index) => JS.TryInvokeVoidAsync("powatchMenus.reveal", _more, index);
 
     private static string Pct(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 

@@ -1,5 +1,5 @@
 @* Under Live's camera: what the session saw, said and heard, and who came and went, as one feed of lines,
-   newest first. While recording it is the browser's own narration (LiveSensingState); for a session that
+   newest first, under a minimap of the whole session. While recording it is the browser's own narration (LiveSensingState); for a session that
    has stopped it is what the server kept of it (the replay's events). *@
 @using System.Globalization
 @inject SensingSession Sensing
@@ -23,10 +23,11 @@
     }
     else
     {
-        <ol class="moment-list" aria-live="polite" data-test="narration-lines">
+        <SessionMinimap Lines="@lines" List="@_list" Start="@(Started ?? lines[^1].AtUtc)" End="@(Recording ? DateTimeOffset.UtcNow : _endedUtc ?? lines[0].AtUtc)" Live="@Recording" OnPick="@LightAsync" />
+        <ol class="moment-list" aria-live="polite" data-test="narration-lines" @ref="_list">
             @foreach (var entry in lines)
             {
-                <MomentLine @key="entry" Entry="@entry" />
+                <MomentLine @key="entry" Entry="@entry" Lit="@(ReferenceEquals(entry, _lit))" />
             }
         </ol>
     }
@@ -38,6 +39,9 @@
 
     private Guid _loaded;
     private DateTimeOffset? _startedUtc;
+    private DateTimeOffset? _endedUtc;
+    private ElementReference _list;
+    private TimelineEntry? _lit;
     private List<TimelineEntry> _kept = [];
     private bool _wasRecording;
     private DateTimeOffset _lastRender;
@@ -75,6 +79,7 @@
         {
             // Stopped: this browser heard all of it, so its lines stand until the page reloads.
             _kept = [.. L.Narration.Reverse()];
+            _endedUtc = DateTimeOffset.UtcNow;
         }
         else if (recording == _wasRecording && DateTimeOffset.UtcNow - _lastRender < TimeSpan.FromMilliseconds(250))
         {
@@ -82,6 +87,14 @@
         }
         (_wasRecording, _lastRender) = (recording, DateTimeOffset.UtcNow);
         InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>A minimap pin picked this line: light it for a moment and a half.</summary>
+    private async Task LightAsync(TimelineEntry entry)
+    {
+        _lit = entry;
+        await Task.Delay(1600);
+        if (ReferenceEquals(_lit, entry)) _lit = null;
     }
 
     public void Dispose() => Sensing.Changed -= OnSensingChanged;
@@ -93,7 +106,7 @@
         (_loaded, _kept) = (SessionId, []);
         var id = SessionId;
         if (await Api.GetSessionAsync(id) is not { } session) return;
-        _startedUtc = session.StartedUtc;
+        (_startedUtc, _endedUtc) = (session.StartedUtc, session.EndedUtc);
         // A session's lines are its days' events inside its own start and end.
         var end = session.EndedUtc ?? DateTimeOffset.UtcNow;
         var days = new List<DateOnly>();

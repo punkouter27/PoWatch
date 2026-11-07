@@ -90,7 +90,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeVisibleAsync();
-        await Assertions.Expect(page.GetByTestId("stats-json")).ToBeVisibleAsync();
 
         // Weather sits with Recording, rules and shared links under Alerts, the rest under Advanced; there is no mode to switch.
         await page.OpenSettingsAsync("recording");

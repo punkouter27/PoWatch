@@ -1,0 +1,83 @@
+@using System.Globalization
+@inject IJSRuntime JS
+
+@* The whole session as one thin bar above its narration: how busy each stretch was (the shading, from the
+   number of lines), with a pin for each arrival, each thing said and each starred moment. A pin scrolls
+   the lines to its own, and the narration lights it (OnPick). Lines arrive newest first, as the narration lists them. *@
+@if (_span > TimeSpan.Zero)
+{
+    <div class="minimap" data-test="session-minimap" role="group" aria-label="The session at a glance">
+        <div class="minimap-track">
+            @for (var i = 0; i < Buckets; i++)
+            {
+                <span class="minimap-heat" style="left: @Pct(i * 100.0 / Buckets)%; width: @Pct(100.0 / Buckets)%; opacity: @Pct(_density[i])"></span>
+            }
+            @foreach (var pin in _pins)
+            {
+                <button type="button" class="minimap-pin" data-kind="@pin.Entry.Kind" style="left: @Pct(pin.Left)%;"
+                        title="@Time(pin.Entry.AtUtc) @pin.Entry.Tag @pin.Entry.Sentence" aria-label="@Time(pin.Entry.AtUtc) @pin.Entry.Tag @pin.Entry.Sentence"
+                        @onclick="() => ShowAsync(pin.Entry, pin.Index)" data-test="minimap-pin"></button>
+            }
+        </div>
+        <div class="minimap-axis" aria-hidden="true"><span>@Time(Start)</span><span>@(Live ? "NOW" : Time(End))</span></div>
+    </div>
+}
+
+@code {
+    private const int Buckets = 80;
+    private static readonly HashSet<string> Pinned = ["enter", "speech", "moment"];
+
+    /// <summary>The narration's lines, newest first.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<TimelineEntry> Lines { get; set; } = [];
+
+    /// <summary>The list those lines are rendered in (the pins scroll it).</summary>
+    [Parameter, EditorRequired] public ElementReference List { get; set; }
+
+    [Parameter] public DateTimeOffset Start { get; set; }
+
+    [Parameter] public DateTimeOffset End { get; set; }
+
+    /// <summary>Still recording: the bar ends at "NOW".</summary>
+    [Parameter] public bool Live { get; set; }
+
+    private readonly double[] _density = new double[Buckets];
+    private readonly List<(TimelineEntry Entry, int Index, double Left)> _pins = [];
+    private TimeSpan _span;
+
+    protected override void OnParametersSet()
+    {
+        _span = End - Start;
+        Array.Clear(_density);
+        _pins.Clear();
+        if (_span <= TimeSpan.Zero) return;
+
+        var counts = new int[Buckets];
+        var pinned = new HashSet<(int, string)>();
+        for (var i = 0; i < Lines.Count; i++)
+        {
+            var entry = Lines[i];
+            var at = Math.Clamp((entry.AtUtc - Start) / _span, 0, 1);
+            var bucket = Math.Min(Buckets - 1, (int)(at * Buckets));
+            counts[bucket]++;
+            // One pin of a kind per stretch (the newest), so a chatty minute does not bury the bar.
+            if (Pinned.Contains(entry.Kind) && pinned.Add((bucket, entry.Kind)))
+                _pins.Add((entry, i, at * 100));
+        }
+        var max = Math.Max(1, counts.Max());
+        for (var i = 0; i < Buckets; i++)
+            _density[i] = counts[i] == 0 ? 0 : 0.1 + (0.5 * counts[i] / max);
+    }
+
+    /// <summary>Told which line a pin picked, so the narration can light it.</summary>
+    [Parameter] public EventCallback<TimelineEntry> OnPick { get; set; }
+
+    private async Task ShowAsync(TimelineEntry entry, int index)
+    {
+        await OnPick.InvokeAsync(entry);
+        await JS.TryInvokeVoidAsync("powatchMenus.showLine", List, index);
+    }
+
+    private static string Time(DateTimeOffset at) => at.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+
+    private static string Pct(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+}

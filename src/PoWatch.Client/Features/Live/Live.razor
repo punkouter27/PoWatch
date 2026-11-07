@@ -10,11 +10,11 @@
 <PageTitle>PoWatch</PageTitle>
 
 @* Everything on one screen, always about one session: the one recording now, else the latest (or the
-   one a Journal link names, ?session=). One bar (which session, the question box and
-   the download), the models strip (what sees, hears and writes, each a dropdown), a "session saved" line after a Stop, then five panels around the camera: Space down the
-   left, key metrics above, who is in frame and the room on the right. Under the camera runs its narration:
-   everything seen, said and heard, and who came and went. On a phone the panels after "In frame" become a
-   strip you swipe through. Patterns over days (today's curve, hour × weekday) live in the Journal. *@
+   one a Journal link names, ?session=). One bar (which session and the question box), the models strip
+   (what sees, hears and writes, each a dropdown), a "session saved" line after a Stop, then four panels:
+   Space down the left (one heat grid, motion now or people today), key metrics above the camera, and who
+   is in frame down the right. Under the camera runs its narration, with a minimap of the session above
+   the lines. Patterns over days live in the Journal, and so does the JSON of every number. *@
 <div class="dash">
     <div class="stats-toolbar" data-test="stats-toolbar">
         <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
@@ -29,12 +29,6 @@
                 <input id="ask" @bind="_question" @bind:event="oninput" maxlength="300" autocomplete="off" placeholder="Ask: when is it usually busiest?" disabled="@_asking" />
                 <button type="submit" class="term-button" disabled="@(_asking || string.IsNullOrWhiteSpace(_question))">@(_asking ? "…" : "Ask")</button>
             </form>
-            @* The grid shows the headlines; this file has every number behind them (once there is a session to have numbers). *@
-            @if (!_query.IsEmpty)
-            {
-                <a class="term-button" href="@PoWatchApiClient.AllStatsUrl(_query)" download="PoWatch-session.json"
-                   title="Every number for this session, as one JSON file" aria-label="Download every number for this session (JSON)" data-test="stats-json">JSON ↓</a>
-            }
         </div>
     </div>
 
@@ -92,47 +86,35 @@
 
         <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend"
                     OnExplain="@EventCallback.Factory.Create(this, ExplainAsync)" Asking="@_asking" />
-        <InFrame Objects="@_objects" />
+        <InFrame Objects="@_objects" Query="@_query" />
 
-        @* On a phone the rest is a strip you swipe through, with keys to jump; elsewhere it melts into the grid. *@
-        <nav class="dash-pager" aria-label="Stat panels">
-            @for (var i = 0; i < Pages.Length; i++)
-            {
-                var index = i;
-                <button type="button" class="term-button" @onclick="() => ShowPanelAsync(index)">@Pages[i]</button>
-            }
-        </nav>
-        <div class="dash-more" @ref="_more">
-            @* The room's space in one panel: where motion is right now, where people and animals spent the
-               session, where things mostly happen and which edge of the frame they come and go by. *@
-            <TerminalPanel Title="Space" Class="cell-heat" Test="live-motion-grid">
-                <Aside>16×9</Aside>
-                <ChildContent>
-                    <p class="live-heat-label">MOTION NOW</p>
-                    <div class="live-heat">
-                        <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
-                    </div>
-                    <p class="live-heat-label">PEOPLE THIS SESSION</p>
-                    <div class="live-heat">
-                        <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred this session" CellTitle="@((i, v) => $"{Cell(i)} · {v:P0}")" />
-                    </div>
-                    @if (_space is { } space)
+        @* The room's space in one grid: where motion is right now, or where people and animals were centred
+           today; then the hottest spots and the edge of the frame things mostly come and go by. *@
+        <TerminalPanel Title="Space" Class="cell-heat" Test="live-motion-grid">
+            <Aside>
+                <span class="space-switch" role="group" aria-label="Which heat to show">
+                    <button type="button" class="@(_peopleHeat ? null : "on")" aria-pressed="@(_peopleHeat ? "false" : "true")" @onclick="() => _peopleHeat = false" data-test="space-motion">MOTION NOW</button>
+                    <button type="button" class="@(_peopleHeat ? "on" : null)" aria-pressed="@(_peopleHeat ? "true" : "false")" @onclick="() => _peopleHeat = true" data-test="space-people">PEOPLE TODAY</button>
+                </span>
+            </Aside>
+            <ChildContent>
+                <div class="live-heat">
+                    @if (_peopleHeat)
                     {
-                        <p class="live-spots" data-test="stats-space">
-                            MOTION <b>@(space.HottestCell >= 0 ? Cell(space.HottestCell) : "—")</b> · PEOPLE <b>@(space.FavouriteSpotCell >= 0 ? Cell(space.FavouriteSpotCell) : "—")</b> · DOOR <b>@space.BusiestEdge.ToUpperInvariant()</b>
-                        </p>
+                        <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred today" CellTitle="@((i, v) => $"{Cell(i)} · {v:P0}")" />
                     }
-                    <div class="live-edges">
-                        @foreach (var edge in Edges)
-                        {
-                            <span>@edge <b>@(_space?.Entries.GetValueOrDefault(edge) ?? 0)↓ @(_space?.Exits.GetValueOrDefault(edge) ?? 0)↑</b></span>
-                        }
-                    </div>
-                </ChildContent>
-            </TerminalPanel>
-
-            @* Pipeline numbers are operations, not the room: they live on System. *@
-            <EnvironmentTab Query="@_query" />
-        </div>
+                    else
+                    {
+                        <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
+                    }
+                </div>
+                @if (_space is { } space)
+                {
+                    <p class="live-spots" data-test="stats-space">
+                        MOTION <b>@(space.HottestCell >= 0 ? Cell(space.HottestCell) : "—")</b> · PEOPLE <b>@(space.FavouriteSpotCell >= 0 ? Cell(space.FavouriteSpotCell) : "—")</b> · DOOR <b>@space.BusiestEdge.ToUpperInvariant()</b>
+                    </p>
+                }
+            </ChildContent>
+        </TerminalPanel>
     </div>
 </div>

@@ -54,7 +54,7 @@ camera ──► browser (all sensing on-device)                        server
 | A · Presence & space | occupancy, visits, dwell percentiles, peak at once, empty/still streaks, busiest minute, heatmaps, entry/exit edges | Live |
 | B · Objects & regulars | classes seen, rarest, regulars leaderboard (recognised by look, never by face; by voice in the browser that learned it) | Live, Settings ("Who PoWatch knows"), the stories |
 | C · Patterns & anomalies | hour × weekday, rhythm score, "today vs usual" z-scores, trend, busy-hour forecast | Live (the numbers), the Journal index (the shapes) |
-| D · Environment & captions | light curve, lights on/off, daylight estimate, palette, word cloud, weirdest caption, recaps | Live, the Journal |
+| D · Environment & captions | light curve, lights on/off, daylight estimate, palette, word cloud, weirdest caption, recaps | Live (odd moment), the Journal |
 | E · Pipeline | frames per layer, FPS, latency, detector confidence, uptime, storage | /system |
 
 ## Pages
@@ -65,18 +65,21 @@ says so and shows your latest). Leaving or reloading the page ends a recording; 
 minutes shows it as saved, unless that was dismissed. After any Stop, Live shows one "Session saved" line
 under its bar, in the page's own flow (never over anything, and only on Live): the session's visits,
 occupancy and peak, "Open in Journal →", its PDF and ✕; showing it also writes the session's last chapter
-and story. Starting a new session clears it. One bar names the session, with an "Ask" box and, once there
-is a session, "JSON ↓" for every number behind it. Under it five panels with the camera in the middle (one
+and story. Starting a new session clears it. One bar names the session ("Recording session #2444 · New York") with an "Ask" box; the JSON of every
+number is in the Journal's Export menus. Under it the MODELS strip, then four panels with the camera in the middle (one
 Start button; a synthetic demo whenever stopped) and, under the picture, its narration: every caption
 (SAW), line of speech (SAID), recognised sound (HEARD), coming and going (IN/OUT) and notable moment,
-newest first, a few lines tall and scrolling (`Features/Live/LiveNarration.razor`; while recording it is
+newest first, a few lines tall and scrolling, under a minimap of the whole session (`Components/SessionMinimap.razor`:
+shading for how busy each stretch was, a pin per arrival, thing said and ★ that scrolls to and lights its line)
+(`Features/Live/LiveNarration.razor`; while recording it is
 the browser's own list in `LiveSensingState.Narration`, after that what the server kept). Around it: key
-metrics beside your usual day (σ, rhythm, trend, next busy hour) above, Space down the left (two 16×9
-grids, motion now over where people were this session, then where motion and people mostly were, the
-busiest door and the entries and exits by edge), and on the right who is in frame with every class seen,
-over the room (light curve, palette, caption words). Detector boxes and the "now" counts show only while recording, and visits an hour only once
-ten minutes have been observed. A desktop holds the whole grid in the viewport (the camera keeps 16:9);
-narrower screens stack it, and a phone turns the panels after "In frame" into a strip you swipe through.
+metrics beside your usual day (occupancy, visits an hour, motion, each with σ and a trend) above, Space down
+the left (one 16×9 grid with a MOTION NOW / PEOPLE TODAY switch, then where motion and people mostly were
+and the busiest door), and In frame down the right: who is tracked and for how long, now · peak · visits,
+everything seen this session as one line (what is in frame now in bold) and the session's ODD MOMENT (the
+caption least like the rest). Detector boxes and the head counts show only while recording, and visits an
+hour only once ten minutes have been observed. A desktop holds the whole grid in the viewport (the camera
+keeps 16:9); narrower screens stack it in one column.
 Patterns over days are the Journal's, not Live's ·
 `/journal` the Journal, everything that happened: on the left the index (the year, with the weather's
 effect once a place is set; links to the week's and month's stories;
@@ -119,7 +122,7 @@ count. Escape or ✕ closes a drawer, and so does going to another page. Watch r
 22:00 and 06:00") are kept in the browser, checked as things enter the frame, and relayed to every open
 tab over the hub (plus a desktop notification where allowed).
 
-**One mode.** There is no simple/advanced switch: Ask, "Explain today" and JSON on Live, the Export
+**One mode.** There is no simple/advanced switch: Ask and "Explain today" on Live, the Export
 menus and share links in the Journal, watch rules, the weather place, the weekly email and shared
 links in Settings are always there. "Reset to defaults" puts this browser's choices back (dark, low
 sound, captions on, MiniCPM-V); rules and the account's server settings stay.
@@ -157,7 +160,7 @@ header row.
 **Safety nets.** Every panel (`TerminalPanel`) has its own error boundary, so a failing
 panel shows a small retry box while the rest of the page keeps working; the page-level boundary in
 `MainLayout` stays as the last resort. Empty days and an empty story feed offer "Try the
-demo" (`?start=demo`). The yyMMdd build date sits in the bottom-right corner (`BuildStamp`, from an
+demo" (`?start=demo`). The yyMMdd build date sits at the top of System (`BuildStamp`, from an
 `AssemblyMetadata` item in the client csproj). System is three tabs (Connections, Engine, Pipeline), and
 tables marked `term-table--cards` turn into one card per row on a phone.
 
@@ -223,7 +226,7 @@ Sessions, Shares, Stats, Stories, Weather. What every feature shares sits at the
 | `POST /api/sessions`, `POST /api/sessions/{id}/stop`, `GET /api/sessions[?from=&to=]` | session lifecycle; `from`/`to` list every session overlapping a range |
 | `POST /api/sessions/{id}/batches` | tick + event ingest (idempotent by `batchKey`) |
 | `GET /api/stats/{presence\|space\|objects\|patterns\|environment\|pipeline}?range=` | stat families |
-| `GET /api/stats/all?range=` | every family in one JSON document, plus the raw ticks and events for session, today or one day (Live's "JSON ↓", the Journal's day "JSON ↓") |
+| `GET /api/stats/all?range=` | every family in one JSON document, plus the raw ticks and events for session, today or one day (the Journal's day and session Export menus) |
 | `GET /api/recaps/session/{id}.pdf`, `GET /api/recaps/day/{date}[.pdf]?tz=[&ai=false]` | recaps and PDFs; `ai=false` answers from the template at once |
 | `GET /api/sessions/{id}/transcript` | every line the on-device speech model heard in the session |
 | `GET /api/stories/{week\|month}?date=&tz=` | the story of the week or month holding a day, told from its days |

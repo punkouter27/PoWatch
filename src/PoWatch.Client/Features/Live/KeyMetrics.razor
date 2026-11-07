@@ -1,4 +1,5 @@
-@* Live's headline numbers for the range beside your usual day, and how far today sits from it (σ). *@
+@* Live's headline numbers for the range beside your usual day, and how far today sits from it (σ).
+   Head counts (now, peak, visits) are In frame's. *@
 @using System.Globalization
 @inject SensingSession Sensing
 
@@ -14,51 +15,24 @@
                     <td class="r">@DisplayText.Percent(Anomaly("occupancy")?.Mean)</td>
                     <td><Sparkline Values="@OccupancyTrend" Max="1" Label="Occupancy over the range" /></td>
                 </tr>
-                <tr>
-                    <td>VISITS/HR</td>
-                    <td class="r live-metric" title="@(RateTooEarly ? "Shown once ten minutes have been observed" : null)">@(RateTooEarly ? "—" : DisplayText.Number(Presence?.VisitsPerHour, "0.0")) <ZChip Z="@(RateTooEarly ? null : Anomaly("visits/hour")?.Z)" /></td>
-                    <td class="r">@DisplayText.Number(Anomaly("visits/hour")?.Mean, "0.0")</td>
-                    <td><Sparkline Values="@VisitsTrend" Cyan="true" Label="Visits over the range" /></td>
-                </tr>
+                @* Visits an hour from a few minutes says nothing: the row waits for ten. *@
+                @if (!RateTooEarly)
+                {
+                    <tr>
+                        <td>VISITS/HR</td>
+                        <td class="r live-metric">@DisplayText.Number(Presence?.VisitsPerHour, "0.0") <ZChip Z="@Anomaly("visits/hour")?.Z" /></td>
+                        <td class="r">@DisplayText.Number(Anomaly("visits/hour")?.Mean, "0.0")</td>
+                        <td><Sparkline Values="@VisitsTrend" Cyan="true" Label="Visits over the range" /></td>
+                    </tr>
+                }
                 <tr>
                     <td title="Motion right now; usual is your daily mean">MOTION</td>
                     <td class="r live-metric"><span data-test="metric-motion">@L.Motion.ToString("0.000", CultureInfo.InvariantCulture)</span> <ZChip Z="@Anomaly("motion")?.Z" /></td>
                     <td class="r">@DisplayText.Number(Anomaly("motion")?.Mean, "0.000")</td>
                     <td><Sparkline Values="@L.MotionHistory" Label="Motion, last minute" /></td>
                 </tr>
-                <tr>
-                    <td title="Most people and animals in frame at once">PEAK</td>
-                    <td class="r">@(Presence?.PeakConcurrency.ToString(CultureInfo.InvariantCulture) ?? "—")</td>
-                    <td></td>
-                    <td class="term-stat-hint" title="The longest stretch with nobody in frame">empty @(Presence is null ? "—" : DisplayText.Duration(Presence.LongestEmptySeconds))</td>
-                </tr>
-                <tr>
-                    <td title="People · animals in frame right now">NOW</td>
-                    <td class="r" data-test="metric-people" title="people · animals">@if (Sensing.IsRunning)
-                        {
-                            <span>@L.PeopleNow · @L.AnimalsNow</span>
-                        }
-                        else
-                        {
-                            <span>—</span>
-                        }</td>
-                    <td></td>
-                    <td class="term-stat-hint" title="This session: most at once, and visits">@if (Sensing.IsRunning)
-                        {
-                            <span>peak @L.PeakConcurrency · <span data-test="metric-visits">@L.Visits</span> visits</span>
-                        }
-                        else
-                        {
-                            <span>not recording</span>
-                        }</td>
-                </tr>
             </tbody>
         </table>
-        <p class="term-stat-hint" title="How regular the days are · occupancy trend per day · the next usually busy hour">
-            RHYTHM @DisplayText.Number(Patterns?.RhythmScore, "0.00") ·
-            @DisplayText.Number(Patterns is null ? null : Patterns.OccupancyTrendPerDay * 100, "+0.00;-0.00")PP/DAY ·
-            BUSY @(Patterns?.NextBusyHour is { } h ? $"{h:00}:00" : "—")
-        </p>
         @if (OnExplain.HasDelegate && Patterns?.Anomalies.Any(a => a.Flagged) == true)
         {
             @* The σ chips say how unusual today is; the model says what stands out, from the same tools Ask uses. *@
@@ -68,7 +42,7 @@
 </TerminalPanel>
 
 @code {
-    /// <summary>Visits an hour from a few minutes (342/h after 55 s) says nothing; it waits for ten.</summary>
+    /// <summary>Visits an hour from a few minutes (342/h after 55 s) says nothing; the row waits for ten.</summary>
     private bool RateTooEarly => Presence is null || Presence.SecondsObserved < 600;
 
     [Parameter, EditorRequired] public string Range { get; set; } = "today";

@@ -169,13 +169,13 @@
         document.addEventListener('keydown', onKey);
     }
 
-    /** Slides a phone strip (Live's stat panels) to its nth panel. */
-    function reveal(strip, index) {
-        const panel = strip?.querySelectorAll('.term-panel')[index];
-        if (!panel) return;
+    /** Scrolls a list (Live's narration) to its nth line (the minimap's pins). */
+    function showLine(list, index) {
+        const line = list?.children[index];
+        if (!line) return;
         const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        strip.scrollBy({ left: panel.getBoundingClientRect().left - strip.getBoundingClientRect().left, behavior: smooth ? 'smooth' : 'auto' });
+        list.scrollTo({ top: line.offsetTop, behavior: smooth ? 'smooth' : 'auto' });
     }
 
-    window.powatchMenus = { setup, openPalette, reveal };
+    window.powatchMenus = { setup, openPalette, showLine };
 })();

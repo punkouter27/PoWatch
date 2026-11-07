@@ -1,0 +1,12 @@
+@inherits StatsTabBase<EnvironmentStatsDto>
+
+@* The range's most surprising caption (the one least like the rest), as one line: the only part of the
+   room's stats worth a place on Live. *@
+@if (Data?.WeirdestCaption is { } weird)
+{
+    <p class="stats-weird" data-test="weirdest-caption" title="The caption least like the others in this session"><b>ODD MOMENT</b> @Local(Data.WeirdestAtUtc, "HH:mm:ss") — “@weird”</p>
+}
+
+@code {
+    protected override Task<EnvironmentStatsDto?> LoadAsync(StatsQuery query) => Api.GetEnvironmentAsync(query);
+}

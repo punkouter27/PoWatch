@@ -1,8 +1,8 @@
 @using System.Reflection
-@* The day this build was made (yyMMdd), so a screenshot or a bug report says which build it came from. *@
+@* The day this build was made (yyMMdd), shown on System so a bug report can say which build it came from. *@
 @if (Stamp.Length > 0)
 {
-    <span class="build-stamp" title="Build date (yyMMdd)" data-test="build-stamp">@Stamp</span>
+    <span class="build-stamp" title="Build date (yyMMdd)" data-test="build-stamp">BUILD @Stamp</span>
 }
 
 @code {

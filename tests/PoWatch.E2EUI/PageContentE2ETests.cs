@@ -66,13 +66,19 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.GoToAsync("/?start=demo", "LIVE");
         await Assertions.Expect(page.GetByTestId("header-stop")).ToBeVisibleAsync(new() { Timeout = 30_000 });
         await Assertions.Expect(page.GetByTestId("stats-window")).ToContainTextAsync("Recording session", new() { Timeout = 30_000 });
-        await Assertions.Expect(page.GetByTestId("stats-occupancy")).Not.ToContainTextAsync("0.0%", new() { Timeout = 45_000 });
-        // Live holds the session's families (space, classes in "In frame", the room); patterns over days are
-        // in the Journal; pipeline counters are on System.
-        foreach (var content in new[] { "stats-space", "live-census", "stats-environment" })
+        await Assertions.Expect(page.GetByTestId("stats-occupancy")).Not.ToHaveTextAsync("0.0%", new() { Timeout = 45_000 });
+        // Live holds the session's families (space, everything seen in "In frame", the minimap over the
+        // narration); patterns over days are in the Journal; pipeline counters are on System.
+        foreach (var content in new[] { "stats-space", "live-census", "session-minimap" })
         {
             await Assertions.Expect(page.GetByTestId(content)).ToBeVisibleAsync(new() { Timeout = 30_000 });
         }
+        // Space shows one heat at a time; the switch flips it. A minimap pin lights its narration line.
+        await page.GetByTestId("space-people").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("space-people")).ToHaveAttributeAsync("aria-pressed", "true");
+        await page.GetByTestId("minimap-pin").First.ClickAsync();
+        // The light lasts a moment and the lines re-render four times a second: watch for it every frame.
+        await page.WaitForFunctionAsync("() => document.querySelector('[data-test=narration-lines] .is-now')", null, new() { PollingInterval = 16, Timeout = 5_000 });
 
         await page.GetByTestId("header-stop").ClickAsync();
         // Leaving Live leaves the "session saved" line behind: nothing covers the Journal's controls.

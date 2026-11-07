@@ -211,14 +211,6 @@ main:focus { outline: none; }
     gap: 6px;
 }
 
-.term-brand-mark {
-    background: var(--term-accent);
-    color: var(--term-accent-ink);
-    font-family: var(--term-mono);
-    font-size: 11px;
-    padding: 1px 5px;
-    border-radius: 2px;
-}
 
 .term-status {
     flex: none;
@@ -473,8 +465,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     background: var(--term-accent);
 }
 
-.term-swatches { display: flex; height: 18px; border-radius: 2px; overflow: hidden; }
-.term-swatches > span { flex: 1; }
 
 .term-heat--pick .term-heat-cell { cursor: pointer; }
 .term-heat--pick .term-heat-cell:hover { outline: 1px solid var(--term-muted); z-index: 1; }
@@ -515,7 +505,6 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
         overflow: visible;
     }
     .term-key { justify-content: center; min-height: 40px; padding: 0; }
-    .term-brand-mark { display: none; }
     .term-body { padding: 8px 8px calc(8px + var(--term-bottom-bar)); }
     .term-drawer { width: 100vw; }
 }
@@ -620,7 +609,15 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .live-lines-head .term-stat-hint { margin-left: auto; font-weight: 400; }
 .live-lines-head .transcript-link { min-height: 22px; padding: 0 8px; font-size: var(--fs-xs); letter-spacing: 0.04em; }
 .moment-filters .transcript-link { margin-left: auto; }
-.live-lines .moment-list { max-height: 5.4em; overflow-y: auto; }
+.live-lines .moment-list { max-height: 5.4em; overflow-y: auto; position: relative; }
+/* The session minimap: activity shading along the bar, a pin per arrival (IN), thing said (SAID) and ★. */
+.minimap { padding: 2px 10px 4px; }
+.minimap-track { position: relative; height: 14px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: 2px; }
+.minimap-heat { position: absolute; top: 0; bottom: 0; background: var(--term-cyan); pointer-events: none; }
+.minimap-pin { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1px; padding: 0; border: 0; border-radius: 1px; background: var(--term-muted); cursor: pointer; }
+.minimap-pin[data-kind="speech"], .minimap-pin[data-kind="moment"] { background: var(--term-accent); }
+.minimap-pin:hover, .minimap-pin:focus-visible { width: 5px; margin-left: -2px; outline: none; background: var(--term-text); }
+.minimap-axis { display: flex; justify-content: space-between; font: 10px var(--term-mono); color: var(--term-dim); }
 .live-lines .moment { padding-top: 3px; padding-bottom: 3px; }
 .live-lines .term-empty { margin: 0; padding: 6px 10px 8px; }
 
@@ -651,23 +648,21 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .moment img { display: block; grid-column: 1 / -1; width: min(100%, 320px); margin: 4px 0 2px; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--term-line); border-radius: 2px; }
 .moment.is-now { background: color-mix(in srgb, var(--term-accent) 14%, transparent); box-shadow: inset 2px 0 0 var(--term-accent); }
 
-.live-edges {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px;
-    margin-top: 8px;
-    font: 11px var(--term-mono);
-    color: var(--term-muted);
-}
-
-.live-edges b, .live-who b, .live-spots b { color: var(--term-text); font-weight: 600; }
+.live-who b, .live-spots b, .live-census b { color: var(--term-text); font-weight: 600; }
 
 .live-spots { margin: 8px 0 0; font: 11px var(--term-mono); color: var(--term-muted); }
 
 .live-heat-label { margin: 0 0 4px; font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; color: var(--term-dim); }
-.live-heat + .live-heat-label { margin-top: 10px; }
+/* Space's switch between the two heats, in the panel's title bar. */
+.space-switch { display: inline-flex; border: 1px solid var(--term-line); border-radius: var(--term-radius); overflow: hidden; }
+.space-switch button { border: 0; background: none; color: var(--term-dim); font: 600 10px var(--term-mono); letter-spacing: 0.08em; padding: 2px 8px; cursor: pointer; }
+.space-switch button.on { background: var(--term-accent); color: var(--term-accent-ink); }
+.space-switch button:focus-visible { outline: 1px solid var(--term-accent); outline-offset: -1px; }
+.live-census { margin: 0; padding: 8px 10px; font: 12px var(--term-mono); color: var(--term-muted); line-height: 1.7; }
+.live-census .live-heat-label { display: inline; margin-right: 8px; }
+.dash-grid .stats-weird { margin: 0; padding: 8px 10px; border-top: 1px solid var(--term-line); }
 
-.live-who { list-style: none; margin: 0; padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 4px 14px; font: 12px var(--term-mono); color: var(--term-muted); border-bottom: 1px solid var(--term-line); }
+.live-who { list-style: none; margin: 0; padding: 6px 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 14px; font: 12px var(--term-mono); color: var(--term-muted); border-bottom: 1px solid var(--term-line); }
 
 .term-span-4 { grid-column: 1 / -1; }
 
@@ -969,44 +964,39 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 /* The live panels and the stat panels share one grid: each family's own .term-grid dissolves into it. */
 .dash-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); }
-.dash-grid > .term-grid, .dash-more > .term-grid, .dash-more { display: contents; }
+.dash-grid > .term-grid { display: contents; }
 .dash-grid .term-panel { grid-column: auto; }
 .dash-grid .rz-chart { height: 200px; }
 .dash-grid .term-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.dash-pager { display: none; }
 .live-trend { width: 28%; }
 .dash-grid .term-table td:first-child { white-space: nowrap; }
-.dash-grid .stats-cloud, .dash-grid .stats-weird { margin-top: 6px; }
 
 @media (min-width: 720px) {
     .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dash-grid .live-camera, .dash-grid .term-panel.dash-wide { grid-column: span 2; }
+    .dash-grid .live-camera { grid-column: span 2; }
 }
 
-/* A desktop shows everything at once as a 3×3 under the bar, the camera in the middle with the larger
-   middle row and column. What is happening now touches it (key metrics above, the motion grid left,
-   motion energy right, "In frame" below); the longer views take the corners. Charts flex to fit; the
-   feed and the motion grid keep 16:9 (the boxes are placed in frame percentages). */
+/* A desktop shows everything at once under the bar: three columns, the camera in the middle with the
+   wider column and all the height key metrics (above it, as tall as its rows) leave, Space down the left and In frame down the right.
+   The feed and the heat grid keep 16:9 (the boxes are placed in frame percentages). */
 @media (min-width: 1280px) and (min-height: 700px) {
     .dash { height: 100%; display: flex; flex-direction: column; }
     .dash > .dash-grid { flex: 1; }
     .dash-grid {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
-        grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
         grid-template-areas:
             "heat    metrics inframe"
-            "heat    camera  env";
+            "heat    camera  inframe";
         min-height: 0;
     }
     .dash-grid .live-camera { grid-area: camera; }
     .dash-grid .cell-metrics { grid-area: metrics; }
     .dash-grid .cell-inframe { grid-area: inframe; }
     .dash-grid .cell-heat { grid-area: heat; }
-    .dash-grid .term-panel.cell-env { grid-area: env; }
     .dash-grid .stats-pending { min-height: 0; height: 100%; }
-    /* Short screens keep the camera's share; the cells around it scroll instead (key metrics, and the room under its light curve). */
-    .dash-grid .cell-env > .term-panel-body, .dash-grid .cell-metrics > .term-panel-body { overflow-y: auto; }
-    .dash-grid .cell-env .rz-chart { flex: 1 0 110px; }
+    /* Short screens keep the camera's share; the cells around it scroll instead. */
+    .dash-grid .cell-inframe > .term-panel-body, .dash-grid .cell-metrics > .term-panel-body { overflow-y: auto; }
     .dash-grid .term-skeleton { height: auto !important; }
     .dash-grid .term-stats .term-stat-hint { display: none; }
     .dash-grid .term-panel-body:has(> .rz-chart), .dash-grid .term-panel-body:has(> .live-heat), .live-camera > .term-panel-body { display: flex; flex-direction: column; overflow: hidden; }
@@ -1017,25 +1007,10 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .live-lines { flex: none; }
 }
 
-/* A phone keeps the camera, the numbers and who is in frame in the column, and turns the rest into one
-   swipeable strip (scroll-snapped, a panel per screen width) with keys to jump along it. */
+/* A phone keeps everything in one column; the session label gives way to the question box. */
 @media (max-width: 719.98px) {
     .stats-window { display: none; }
     .stats-ask-row { flex-basis: 100%; max-width: none; }
-    .dash-pager { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-    .dash-pager .term-button { flex: none; min-height: 32px; padding: 0 10px; }
-    .dash-more {
-        display: grid;
-        grid-auto-flow: column;
-        grid-auto-columns: 100%;
-        gap: var(--term-gap);
-        align-items: start;
-        overflow-x: auto;
-        overscroll-behavior-x: contain;
-        scroll-snap-type: x mandatory;
-        scrollbar-width: none;
-    }
-    .dash-more .term-panel, .dash-more > .term-empty { scroll-snap-align: start; }
 }
 
 /* ── The glass (dark theme): every panel on every page ─────────────────── */
@@ -1246,19 +1221,8 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 /* A panel whose content threw: a small retry box in place of its content, the rest of the page untouched. */
 .panel-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; color: var(--term-red); font: var(--fs-sm) var(--term-mono); }
 
-/* yyMMdd of this build, bottom-right, out of the way of anything clickable. */
-@media (max-width: 719.98px) { .build-stamp { display: none; } }
-.build-stamp {
-    position: fixed;
-    z-index: 5;
-    right: 6px;
-    bottom: calc(2px + var(--term-bottom-bar));
-    color: var(--term-dim);
-    opacity: 0.6;
-    font: var(--fs-xs) var(--term-mono);
-    letter-spacing: 0.08em;
-    pointer-events: none;
-}
+/* yyMMdd of this build, on System. */
+.build-stamp { display: block; margin: 0 0 6px; text-align: right; color: var(--term-dim); font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; }
 
 .try-demo { margin-left: 8px; min-height: 28px; }
 

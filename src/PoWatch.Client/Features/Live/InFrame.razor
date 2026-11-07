@@ -1,16 +1,24 @@
-@* Who is tracked right now, then every class seen in the range (what is in frame first). *@
+@* Who is tracked right now and how long they have been, the session's head counts, then every other
+   thing seen as one line (what is in frame now first, in bold), and the session's odd moment. *@
 @inject SensingSession Sensing
 
 @{ var census = CensusRows(); }
 <TerminalPanel Title="In frame" Class="cell-inframe" Test="live-tracks" Flush="true">
-    <Aside>@L.Tracks.Count NOW · @census.Count CLASSES</Aside>
+    <Aside>@if (Sensing.IsRunning)
+        {
+            <span>@L.PeopleNow NOW · PEAK @L.PeakConcurrency · <span data-test="metric-visits">@L.Visits</span> VISITS</span>
+        }
+        else
+        {
+            <span>@census.Count THINGS SEEN</span>
+        }</Aside>
     <ChildContent>
         @if (L.Tracks.Count > 0)
         {
             <ul class="live-who" aria-label="Tracked right now">
                 @foreach (var track in L.Tracks.Take(8))
                 {
-                    <li>#@track.TrackId <b>@(L.RegularFor(track.TrackId)?.DisplayName ?? track.Label)</b> @DisplayText.Duration((DateTimeOffset.UtcNow - track.FirstSeenUtc).TotalSeconds)</li>
+                    <li><b>@(L.RegularFor(track.TrackId)?.DisplayName ?? track.Label)</b> <span>@DisplayText.Duration((DateTimeOffset.UtcNow - track.FirstSeenUtc).TotalSeconds)</span></li>
                 }
             </ul>
         }
@@ -20,26 +28,36 @@
         }
         else
         {
-            <table class="term-table" data-test="live-census">
-                <thead><tr><th>Class</th><th class="r">Now</th><th class="r">Peak</th><th class="r">Share</th></tr></thead>
-                <tbody>
-                    @foreach (var row in census)
+            <p class="live-census" data-test="live-census" title="Everything seen this session; what is in frame now is bold">
+                <span class="live-heat-label">SEEN</span>
+                @for (var i = 0; i < census.Count; i++)
+                {
+                    var row = census[i];
+                    @if (i > 0)
                     {
-                        <tr><td>@row.Name</td><td class="r">@L.ClassesNow.GetValueOrDefault(row.Name)</td><td class="r">@row.Peak</td><td class="r">@DisplayText.Percent(row.Share)</td></tr>
+                        <span aria-hidden="true"> · </span>
                     }
-                </tbody>
-            </table>
-            @if (Objects?.Rarest is { } rare)
-            {
-                <p class="term-stat-hint">RAREST @rare.ToUpperInvariant()</p>
-            }
+                    @if (L.ClassesNow.GetValueOrDefault(row.Name) > 0)
+                    {
+                        <b title="@L.ClassesNow.GetValueOrDefault(row.Name) now, @row.Peak at most">@row.Name</b>
+                    }
+                    else
+                    {
+                        <span title="@row.Peak at most">@row.Name</span>
+                    }
+                }
+            </p>
         }
+        <OddMoment Query="@Query" />
     </ChildContent>
 </TerminalPanel>
 
 @code {
     /// <summary>Classes seen in the range; kept until the next answer, so a failed refresh keeps the table.</summary>
     [Parameter] public ObjectStatsDto? Objects { get; set; }
+
+    /// <summary>The range the odd moment is read for (the session Live shows).</summary>
+    [Parameter, EditorRequired] public StatsQuery Query { get; set; } = default!;
 
     private ObjectStatsDto? _indexed;
     private Dictionary<string, ClassStatDto> _knownClasses = new(StringComparer.OrdinalIgnoreCase);
