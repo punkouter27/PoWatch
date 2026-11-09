@@ -14,7 +14,7 @@ docker compose up -d                                   # Azurite; storage is req
 dotnet build PoWatch.slnx                              # warnings are errors
 dotnet run --project src/PoWatch.Api --launch-profile http   # http://localhost (port 80); steps to the next free port if taken
 dotnet format PoWatch.slnx --verify-no-changes         # the CI formatting gate
-./SCRIPTS/check-hygiene.ps1                            # layout, naming, package versions, vocabulary
+./SCRIPTS/check-hygiene.ps1                            # layout, naming, package versions, vocabulary, dead CSS + components
 ./SCRIPTS/check-test-caps.ps1                          # after a build: 100 unit / 50 integration / 25 API E2E / 25 UI E2E
 ./SCRIPTS/caption-eval.ps1 -Count 10                   # score the caption models (Node; first run downloads ~1 GB)
 ```

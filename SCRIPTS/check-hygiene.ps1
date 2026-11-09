@@ -68,4 +68,23 @@ if ($orphans) {
     throw "Unused CSS classes found ($(@($orphans).Count))."
 }
 
-Write-Host 'Directory structure, naming, package versions, shell assets, vocabulary, and CSS classes passed.'
+# A component nobody renders is dead weight a reviewer will not notice. Every .razor that is not a
+# routable page (@page) and not a framework file (_Imports) must be named by another .razor or .cs —
+# as markup (<Name …>), as a type (typeof(Name)), or as a layout (@layout Name) — or it goes.
+$componentPool = @(Get-ChildItem -LiteralPath $clientRoot -File -Recurse |
+    Where-Object { $_.Extension -in '.razor', '.cs' -and $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.BaseName -cnotmatch '^_' })
+$deadComponents = foreach ($component in $componentPool | Where-Object Extension -eq '.razor') {
+    $text = Get-Content -LiteralPath $component.FullName -Raw
+    if ($text -match '(?m)^\s*@page\b') { continue }
+    $name = [regex]::Escape($component.BaseName)
+    $pattern = "<$name(?=[\s/>])|typeof\(\s*$name\s*\)|@layout\s+(?:[\w.]+\.)?$name\b"
+    $used = @($componentPool | Where-Object { $_.FullName -ne $component.FullName } |
+        Where-Object { Select-String -LiteralPath $_.FullName -Pattern $pattern -Quiet })
+    if ($used.Count -eq 0) { [IO.Path]::GetRelativePath($clientRoot, $component.FullName) }
+}
+if ($deadComponents) {
+    $deadComponents | ForEach-Object { Write-Host $_ }
+    throw "Unused components found ($(@($deadComponents).Count))."
+}
+
+Write-Host 'Directory structure, naming, package versions, shell assets, vocabulary, CSS classes, and components passed.'

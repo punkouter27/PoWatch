@@ -371,8 +371,9 @@ multi-threaded.
   `core.hooksPath`) runs the format check on the staged C# files (`POWATCH_HOOK_FULL=1` for the whole
   solution) and `check-hygiene.ps1`.
 - Test caps (`SCRIPTS/check-test-caps.ps1`): 100 unit · 50 integration · 25 API E2E · 25 UI E2E.
-- `SCRIPTS/check-hygiene.ps1`: layout, naming, central package versions, shell assets, and no
-  caregiver-era vocabulary.
+- `SCRIPTS/check-hygiene.ps1`: layout, naming, central package versions, shell assets, no
+  caregiver-era vocabulary, no unused CSS classes, and no unused components (every `.razor` that is
+  not a `@page` must be rendered somewhere as `<Name>`, `typeof(Name)` or `@layout Name`).
 - CI runs all four suites; UI E2E installs Playwright's Chromium and runs with `E2E_LOCAL=1`.
   Each UI test disposes its page (and isolated browser context), including each viewport-loop
   iteration. Failed sign-in/startup reports browser exceptions, console errors and failed resource
