@@ -13,7 +13,7 @@ Status: ✅ shipped · ⚠️ stale when checked against the code on 2026-11-09.
 | 1 ⭐ | Web Push alerts (VAPID) | Watch rules reach a **closed** tab, not just open ones (`POST /api/alerts` relays to open tabs today). Reuses the ntfy pattern from CI. | M |
 | 2 ⭐ | ROI zones drawn on the camera | Draw "door", "desk", "couch"; per-zone dwell and visits. Presence is whole-frame today. Unlocks most of stat family A without a new ingest format. | L |
 | 3 ✅ | "Today vs usual" on Live | **Shipped:** KEY METRICS is a SESSION vs USUAL table (value, usual mean, σ chip) plus "✦ Explain today", which narrates the flagged anomalies through the fact-guarded Ask path. | S |
-| 4 | Per-class presence timeline | Class totals are stored as histograms; a sparkline per class in *In frame* answers "when was the dog here". | S |
+| 4 ✅ | Per-class presence timeline | Done — `LiveSensingState` keeps 120 detector passes per presence class and In frame draws the busiest four as sparklines, so a class that leaves falls to zero instead of the line stopping. | S |
 | 5 ✅ | Range export | Done — `/api/export.csv?from=&to=` (yyyy-MM-dd) narrows the same year of rows, and the command palette exports the lot. A signed link for someone else is still open. | S |
 | 6 | Rolling share `/s/{token}?latest=week` | Shares exist but are frozen to one period. A rolling link makes it a real phone bookmark. | M |
 | 7 ✅ | Camera device picker | Done — Settings → Recording lists the video inputs; the choice is stored per browser and used by the next Start (an already-open stream is not swapped, which would restart sensing). A remembered camera that is gone falls back to the front camera. | S |
@@ -47,7 +47,7 @@ to light and the cost is real on phones. This is the subset that improves this a
 | 22 | WebGPU motion compute | The L0 pixel layer reads back frames at 4 Hz on the CPU; a compute pass is the single biggest Live CPU saving. Fall back to canvas2d. | L |
 | 23 | Temporal motion-trail shader | `heat-gl.js` draws per-minute grids; accumulate prior grids with decay. | M |
 | 24 ✅ | Ambient motion gradient | Done — two very slow radial drifts behind Live as plain CSS (`dash-glow`, 26 s), gone under reduced motion. No shader needed for something this subtle. | S |
-| 25 | Impact-synth cues | Pitch/decay the blip from motion energy and class instead of fixed samples. All Web Audio. | M |
+| 25 ✅ | Impact-synth cues | Done — `powatchCues.play(name, pan, depth, energy)` scales the gain by the room's motion (0.75× quiet, 1.25× busy), so an entrance lands harder in a busy scene. Pitching by class is still open. | S |
 | 26 ✅ | Regular-arrival particle burst | Done — `js/fx.js` (`powatchFx.burst(pan)`): 18 particles from the side a known regular entered, `prefers-reduced-motion` skips it, the RAF loop stops when the last particle dies. | S |
 | 27 ✅ | Stillness crossfade | Done — 20 s without a caption dims the feed (`.term-feed.is-still`, 1.2 s transition) so the narration stays readable; it never hides the picture, and it restores the moment something new is seen. | S |
 | 28 ✅ | Specular sheen on `TerminalPanel` | Done — a gradient sweep on `.term-panel-head` under `@media (hover: hover) and (pointer: fine)`, off under reduced motion. | S |

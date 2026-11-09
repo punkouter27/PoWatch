@@ -32,6 +32,13 @@ public sealed class LiveSensingState
     public IReadOnlyDictionary<string, int> ClassesSeen => _classesSeen;
     private readonly Dictionary<string, int> _classesSeen = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>How many of each presence class were in frame on each recent detector pass.</summary>
+    public const int ClassHistoryLength = 120;
+    private readonly Dictionary<string, List<int>> _classHistory = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The counts for one class over the last <see cref="ClassHistoryLength"/> passes (empty if unseen).</summary>
+    public IReadOnlyList<int> ClassHistory(string name) => _classHistory.TryGetValue(name, out var counts) ? counts : [];
+
     public double Motion { get; private set; }
     public IReadOnlyList<double> MotionHistory => _motion;
 
@@ -104,6 +111,17 @@ public sealed class LiveSensingState
         PeopleNow = frame.CountsByLabel.GetValueOrDefault("person");
         AnimalsNow = frame.CountsByLabel.Where(kv => kv.Key != "person" && CentroidTracker.IsPresence(kv.Key)).Sum(kv => kv.Value);
         PeakConcurrency = Math.Max(PeakConcurrency, PeopleNow + AnimalsNow);
+
+        // One point per pass for every presence class ever seen, so a class that leaves goes to zero
+        // instead of the line stopping at its last sighting.
+        foreach (var name in _classesSeen.Keys.Concat(ClassesNow.Keys)
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .Where(CentroidTracker.IsPresence))
+        {
+            if (!_classHistory.TryGetValue(name, out var counts)) _classHistory[name] = counts = [];
+            counts.Add(ClassesNow.GetValueOrDefault(name));
+            if (counts.Count > ClassHistoryLength) counts.RemoveAt(0);
+        }
 
         foreach (var entered in frame.Entered)
         {

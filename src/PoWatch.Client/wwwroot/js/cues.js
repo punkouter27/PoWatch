@@ -30,10 +30,13 @@
 
     let ctx = null;
 
-    /** Plays a cue; `pan` runs from -1 (left edge of the frame) to 1 (right edge), `depth` 0–1 is how far back. */
-    function play(name, pan, depth) {
+    /**
+     * Plays a cue; `pan` runs from -1 (left edge of the frame) to 1 (right edge), `depth` 0–1 is how far back.
+     * `energy` 0–1 is how much is going on (motion): a busy scene lands a little harder and louder.
+     */
+    function play(name, pan, depth, energy) {
         const notes = CUES[name];
-        if (notes) sound(notes, pan, depth);
+        if (notes) sound(notes, pan, depth, energy);
     }
 
     /**
@@ -66,9 +69,11 @@
         return panner;
     }
 
-    function sound(notes, pan, depth) {
+    function sound(notes, pan, depth, energy) {
         const volume = LEVELS[level];
         if (!volume) return;
+        // Impact synthesis: the same cue lands harder when the room is busy. 0.75× quiet room, 1.25× busy.
+        const impact = 0.75 + 0.5 * Math.max(0, Math.min(1, Number(energy) || 0.5));
         try {
             ctx ??= new AudioContext();
             if (ctx.state === 'suspended') ctx.resume();
@@ -84,7 +89,7 @@
                 if (glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, from + lasts);
                 // A fast attack and an exponential decay: a pluck, not a beep.
                 gain.gain.setValueAtTime(0.0001, from);
-                gain.gain.exponentialRampToValueAtTime(0.18 * volume * (loudness ?? 1), from + 0.012);
+                gain.gain.exponentialRampToValueAtTime(0.18 * volume * impact * (loudness ?? 1), from + 0.012);
                 gain.gain.exponentialRampToValueAtTime(0.0001, from + lasts);
                 osc.connect(gain).connect(out);
                 osc.start(from);

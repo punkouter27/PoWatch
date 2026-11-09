@@ -152,7 +152,8 @@ public sealed partial class SensingSession
     {
         if (!CentroidTracker.IsPresence(track.Label)) return;
         var pan = track.Edge switch { "Left" => -0.8, "Right" => 0.8, _ => 0 };
-        Cue("enter", pan);
+        // The room's motion is the impact: an entrance in a busy scene lands harder than one in a quiet one.
+        Cue("enter", pan, energy: Math.Min(1, Live.Motion * 4));
         // A regular is worth seeing, not just hearing: one small burst where they came in.
         if (Live.RegularFor(track.TrackId) is not null) _ = js.TryInvokeVoidAsync("powatchFx.burst", pan);
 
@@ -169,7 +170,8 @@ public sealed partial class SensingSession
         }
     }
 
-    private void Cue(string name, double pan = 0) => _ = js.TryInvokeVoidAsync("powatchCues.play", name, pan);
+    private void Cue(string name, double pan = 0, double depth = 0, double? energy = null) =>
+        _ = js.TryInvokeVoidAsync("powatchCues.play", name, pan, depth, energy ?? 0.5);
 
     /// <summary>
     /// Records a highlight as a Notable moment. With a camera, a snapshot of the frame is uploaded

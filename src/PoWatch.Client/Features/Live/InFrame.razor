@@ -49,6 +49,19 @@
             </p>
         }
         <OddMoment Query="@Query" />
+        @* When each thing was around, not just whether it ever was: one line per presence class. *@
+        @if (Sensing.IsRunning && Sparks() is { Count: > 0 } sparks)
+        {
+            <div class="live-class-sparks" data-test="class-sparks" aria-label="Each thing over this session">
+                @foreach (var (name, values) in sparks)
+                {
+                    <span class="live-class-spark">
+                        <Sparkline Values="@values" Max="@Math.Max(1, values.Max())" Label="@($"{name} over this session")" />
+                        <span>@name</span>
+                    </span>
+                }
+            </div>
+        }
     </ChildContent>
 </TerminalPanel>
 
@@ -80,5 +93,15 @@
             .Select(name => _knownClasses.GetValueOrDefault(name) ?? new ClassStatDto { Name = name, Peak = L.ClassesNow.GetValueOrDefault(name) })
             .OrderByDescending(c => L.ClassesNow.GetValueOrDefault(c.Name))
             .ThenByDescending(c => c.TicksPresent)
+            .ToList();
+
+    /// <summary>The busiest four presence classes with at least two samples, as sparkline series.</summary>
+    private List<(string Name, IReadOnlyList<double> Values)> Sparks() =>
+        L.ClassesSeen.Keys
+            .Select(name => (Name: name, Counts: L.ClassHistory(name)))
+            .Where(s => s.Counts.Count > 1)
+            .OrderByDescending(s => s.Counts.Max())
+            .Take(4)
+            .Select(s => (s.Name, (IReadOnlyList<double>)s.Counts.Select(c => (double)c).ToList()))
             .ToList();
 }
