@@ -83,3 +83,14 @@ to light and the cost is real on phones. This is the subset that improves this a
 | 48 | Detector class/threshold tuning | Sliders in Advanced with a live preview against the current frame. | M |
 | 49 | Template-first 5-line session story | `RecapTemplate` writes the numbers; a short bullet summary is the highest-signal LLM addition. | M |
 | 50 | Per-user AI budget | Daily calls/tokens cap with silent Template fallback. Protects against a runaway Auto loop. | S |
+
+## Known flaky (not the code)
+
+- `PoWatch.Integration.FeatureEndpointTests.A_stopped_session_gets_its_chapters_joined_into_one_story_written_once`
+  failed once on 2026-11-09 with `Nothing was observed in this window.` and passed on rerun — a
+  time-window boundary in `ObserveAsync`.
+- `PoWatch.E2EUI.ViewportFitE2ETests` failed twice on 2026-11-09 (once `app-navbar` never appeared,
+  once the fake-camera session) with floods of `TypeError: Failed to fetch` and
+  `ERR_ABORTED` on `/api/diagnostics/client-error`, then passed on the second rerun. That pattern is
+  the shared Playwright host not answering, not a layout or rendering assertion.
+
