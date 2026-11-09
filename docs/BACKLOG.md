@@ -12,11 +12,11 @@ Status: ✅ shipped · ⚠️ stale when checked against the code on 2026-11-09.
 |---|---|---|---|
 | 1 ⭐ | Web Push alerts (VAPID) | Watch rules reach a **closed** tab, not just open ones (`POST /api/alerts` relays to open tabs today). Reuses the ntfy pattern from CI. | M |
 | 2 ⭐ | ROI zones drawn on the camera | Draw "door", "desk", "couch"; per-zone dwell and visits. Presence is whole-frame today. Unlocks most of stat family A without a new ingest format. | L |
-| 3 ⭐ | "Today vs usual" card on Live | **Partly shipped:** KEY METRICS already carries a SESSION vs USUAL column (σ + trend). Left to do: promote the top 3 deltas above the fold with a jump-to-Journal link. | S |
+| 3 ✅ | "Today vs usual" on Live | **Shipped:** KEY METRICS is a SESSION vs USUAL table (value, usual mean, σ chip) plus "✦ Explain today", which narrates the flagged anomalies through the fact-guarded Ask path. | S |
 | 4 | Per-class presence timeline | Class totals are stored as histograms; a sparkline per class in *In frame* answers "when was the dog here". | S |
 | 5 ✅ | Range export | Done — `/api/export.csv?from=&to=` (yyyy-MM-dd) narrows the same year of rows, and the command palette exports the lot. A signed link for someone else is still open. | S |
 | 6 | Rolling share `/s/{token}?latest=week` | Shares exist but are frozen to one period. A rolling link makes it a real phone bookmark. | M |
-| 7 | Camera device picker | `enumerateDevices` + swap mid-session (facing/user vs environment). Multi-camera is a much bigger lift. | S |
+| 7 ✅ | Camera device picker | Done — Settings → Recording lists the video inputs; the choice is stored per browser and used by the next Start (an already-open stream is not swapped, which would restart sensing). A remembered camera that is gone falls back to the front camera. | S |
 | 8 | MP4 time-lapse export (WebCodecs) | `timelapse.js` holds frames but only MediaRecorder/WebM ships. H.264 plays everywhere, ~5× smaller. | M |
 | 9 ✅ | Outbox health chip | Done — header shows **N queued** (amber, press to send now) and **N lost** (red) only when non-zero; System keeps the full counts. | S |
 | 10 | Voice-triggered Ask | Whisper already runs on-device. Needs a wake phrase plus reuse of `AskService`. | M |
@@ -77,9 +77,9 @@ to light and the cost is real on phones. This is the subset that improves this a
 | 42 ⭐ | `AiFallback` → measured router | Fixed order today (local → Gemini → Azure → Template). Store p50 latency and failure rate per model, order by health, allow "pin to local". | M |
 | 43 ✅ | Semantic "find that moment" | **Already shipped:** typing 3+ characters in the command palette searches the caption index by meaning and opens the moment in the Journal (`menus.js` → `powatchCaptionIndex.search`). | — |
 | 44 | More Ask tools | Four tools today. Add replay-grid, regulars lookup, weather. | M |
-| 45 | Anomaly narration | Fact-guarded text when the "today vs usual" card fires (`RecapPrompt.KeepsToFacts`). | S |
+| 45 ✅ | Anomaly narration | **Already shipped:** "✦ Explain today" appears whenever a σ chip is flagged and answers through `AskService`, whose replies are built from the same tools and never invent numbers. | S |
 | 46 | Suggested watch rules | Draft 2 rules from the user's history on Settings → Alerts. | M |
-| 47 | Local model manager | Copyable `ollama pull <name>` on the "NOT IN OLLAMA" state, model size, warm-up preload on record start. | S |
+| 47 ✅ | Local model manager | Done — when Ollama answers without the chosen caption model, the strip shows a **PULL** button that copies the exact `ollama pull <model>` command. Preload on record start is still open. | S |
 | 48 | Detector class/threshold tuning | Sliders in Advanced with a live preview against the current frame. | M |
 | 49 | Template-first 5-line session story | `RecapTemplate` writes the numbers; a short bullet summary is the highest-signal LLM addition. | M |
 | 50 | Per-user AI budget | Daily calls/tokens cap with silent Template fallback. Protects against a runaway Auto loop. | S |

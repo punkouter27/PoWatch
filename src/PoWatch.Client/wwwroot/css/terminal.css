@@ -294,6 +294,42 @@ main:focus { outline: none; }
 .ai-model select:disabled { cursor: wait; opacity: 0.6; }
 .ai-model-status { color: var(--term-muted); font: var(--fs-xs) var(--term-mono); text-decoration: none; white-space: nowrap; }
 .ai-model-status--warn { color: var(--term-amber, var(--term-red)); }
+.ai-model-pull {
+    font: 600 var(--fs-xs) var(--term-mono);
+    letter-spacing: 0.08em;
+    padding: 2px 6px;
+    border-radius: var(--term-radius);
+    border: 1px solid var(--term-amber);
+    background: none;
+    color: var(--term-amber);
+    cursor: pointer;
+}
+.ai-model-pull:hover { background: color-mix(in srgb, var(--term-amber) 16%, transparent); }
+
+/* A labelled control in Settings (the camera choice): the row the menus cannot be. */
+.settings-camera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--term-line);
+    font: var(--fs-sm) var(--term-mono);
+    color: var(--term-text);
+}
+
+.settings-camera label { min-width: 0; }
+.settings-camera label i { display: block; color: var(--term-muted); font-style: normal; font-size: var(--fs-xs); }
+.settings-camera select {
+    max-width: 55%;
+    min-height: 30px;
+    border: 1px solid var(--term-line);
+    border-radius: var(--term-radius);
+    padding: 2px 6px;
+    color: var(--term-text);
+    background: var(--term-surface);
+    font: var(--fs-sm) var(--term-mono);
+}
 .ai-models-error { padding: 4px 8px; color: var(--term-red); border: 1px solid var(--term-red); border-radius: var(--term-radius); }
 @media (max-width: 720px) {
     .ai-model { flex-wrap: wrap; width: 100%; }

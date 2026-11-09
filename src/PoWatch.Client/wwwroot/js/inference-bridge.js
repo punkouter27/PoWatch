@@ -8,15 +8,38 @@
   let _lastFramePixels = null;
   let _lastCaptionModel = null;
 
+  // Which camera to open, remembered per browser (powatchCamera in the block below). Empty means the
+  // front camera, which is what a laptop has.
+  const CAMERA_KEY = 'powatch:camera';
+  function chosenCamera() {
+    try { return localStorage.getItem(CAMERA_KEY) || ''; } catch { return ''; }
+  }
+
+  function videoConstraints() {
+    const size = { width: { ideal: 1280 }, height: { ideal: 720 } };
+    const id = chosenCamera();
+    return id ? { ...size, deviceId: { exact: id } } : { ...size, facingMode: 'user' };
+  }
+
+  async function openCamera() {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints() });
+    } catch (e) {
+      // A remembered camera that is gone (unplugged, another dock) must not leave you with no camera.
+      if (e?.name === 'OverconstrainedError' && chosenCamera()) {
+        try { localStorage.removeItem(CAMERA_KEY); } catch { /* private mode */ }
+        return await navigator.mediaDevices.getUserMedia({ audio: false, video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' } });
+      }
+      throw e;
+    }
+  }
+
   async function ensureWebcamAccess() {
     if (!navigator?.mediaDevices?.getUserMedia) {
       return 'This browser has no camera access. Try another browser, or use Demo scene.';
     }
     try {
-      activeStream ??= await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-      });
+      activeStream ??= await openCamera();
       return 'OK';
     } catch (e) {
       // Nothing falls back to a preview: say what went wrong and what to do about it.
@@ -141,4 +164,32 @@
       activeStream = null;
     },
   };
+})();
+
+// Which camera starts a session: Settings lists the devices, the choice is remembered per browser, and
+// the next Start uses it. A stream that is already open is not swapped mid-session (that would restart
+// the whole sensing pipeline), so pick before pressing Start.
+(() => {
+  'use strict';
+  const KEY = 'powatch:camera';
+
+  /** "id<TAB>label" per line: the client splits text instead of handing a device list through JSON. */
+  async function list() {
+    try {
+      if (!navigator?.mediaDevices?.enumerateDevices) return '';
+      const all = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+      return all.map((d, i) => `${d.deviceId}\t${d.label || `Camera ${i + 1}`}`).join('\n');
+    } catch { return ''; }
+  }
+
+  function selected() {
+    try { return localStorage.getItem(KEY) || ''; } catch { return ''; }
+  }
+
+  function select(id) {
+    try { id ? localStorage.setItem(KEY, id) : localStorage.removeItem(KEY); } catch { /* private mode */ }
+    return selected();
+  }
+
+  window.powatchCamera = { list, selected, select };
 })();

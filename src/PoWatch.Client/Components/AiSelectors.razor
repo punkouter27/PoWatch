@@ -19,6 +19,12 @@
             }
         </select>
         <a id="ai-caption-status" class="ai-model-status @(CaptionWarn ? "ai-model-status--warn" : null)" href="system" title="@CaptionHint" data-test="ai-caption-status"><span role="status">@CaptionStatus</span></a>
+        @* Ollama answered but lacks this model: hand over the exact command instead of making you guess. *@
+        @if (PullCommand is { } pull)
+        {
+            <button type="button" class="ai-model-pull" @onclick="CopyPullAsync" data-test="ai-pull"
+                    title="@(pull) — press to copy">@(_copied ? "COPIED" : "PULL")</button>
+        }
     </div>
     <div class="ai-model">
         <label for="ai-hearing" title="Words (Whisper), sounds (AST) and voices (WavLM), all heard on this machine; never the audio itself.">HEARS</label>
@@ -65,6 +71,7 @@
     private bool _loadFailed;
     private int _captionRevision;
     private int _chatRevision;
+    private bool _copied;
     private string? _error;
     private readonly CancellationTokenSource _stop = new();
     private Task _poll = Task.CompletedTask;
@@ -87,6 +94,21 @@
     private string Fallback => _inference?.OllamaMissing is { Length: > 0 } ? "NOT IN OLLAMA" : "NO OLLAMA";
 
     private string BrowserModel => _inference?.ModelId?.Split('/')[^1].Replace("-base-ft", "", StringComparison.OrdinalIgnoreCase).ToUpperInvariant() ?? "BROWSER MODEL";
+
+    /// <summary>The exact command that makes Ollama able to run the chosen caption model, when it cannot.</summary>
+    private string? PullCommand => _inference?.OllamaMissing is { Length: > 0 } missing ? $"ollama pull {missing}" : null;
+
+    /// <summary>Copies the pull command. There is nothing to install from here, so the clipboard is the handover.</summary>
+    private async Task CopyPullAsync()
+    {
+        if (PullCommand is not { } command) return;
+        await JS.TryInvokeVoidAsync("navigator.clipboard.writeText", command);
+        _copied = true;
+        StateHasChanged();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        _copied = false;
+        StateHasChanged();
+    }
 
     /// <summary>The chosen model is not what runs: worth a second look.</summary>
     private bool CaptionWarn => Sensing.Captions && Sensing.IsRunning && !Sensing.Live.Demo

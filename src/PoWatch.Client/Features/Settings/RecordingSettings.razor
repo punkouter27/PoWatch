@@ -10,14 +10,43 @@
             <button class="term-menu-item" @onclick="CycleSoundAsync" data-test="sound-toggle">
                 <span>Sound cues <i>off · low · mid · high</i></span><b>@_sound.ToUpperInvariant()</b>
             </button>
+            @* Which camera opens: a remembered choice, read when Start is pressed. *@
+            <div class="settings-camera">
+                <label for="camera-choice">Camera <i>opened when a session starts, remembered in this browser</i></label>
+                <select id="camera-choice" value="@_camera" @onchange="SelectCameraAsync" data-test="camera-select">
+                    <option value="">Front camera (default)</option>
+                    @foreach (var (id, label) in _cameras)
+                    {
+                        <option value="@id">@label</option>
+                    }
+                </select>
+            </div>
         </div>
     </ChildContent>
 </TerminalPanel>
 
 @code {
     private string _sound = "low";
+    private string _camera = string.Empty;
+    private (string Id, string Label)[] _cameras = [];
 
-    protected override async Task OnInitializedAsync() => _sound = await JS.TryInvokeAsync<string>("powatchCues.level") ?? _sound;
+    protected override async Task OnInitializedAsync()
+    {
+        _sound = await JS.TryInvokeAsync<string>("powatchCues.level") ?? _sound;
+        _camera = await JS.TryInvokeAsync<string>("powatchCamera.selected") ?? string.Empty;
+        _cameras = Parse(await JS.TryInvokeAsync<string>("powatchCamera.list"));
+    }
+
+    /// <summary>"id&lt;TAB&gt;label" per line, as powatchCamera.list writes it.</summary>
+    private static (string Id, string Label)[] Parse(string? raw) =>
+        (raw ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Split('\t'))
+            .Where(parts => parts.Length == 2)
+            .Select(parts => (Id: parts[0], Label: parts[1]))
+            .ToArray();
+
+    private async Task SelectCameraAsync(ChangeEventArgs e) =>
+        _camera = await JS.TryInvokeAsync<string>("powatchCamera.select", e.Value?.ToString() ?? string.Empty) ?? string.Empty;
 
     private async Task CycleSoundAsync() => _sound = await JS.TryInvokeAsync<string>("powatchCues.cycle") ?? _sound;
 }
