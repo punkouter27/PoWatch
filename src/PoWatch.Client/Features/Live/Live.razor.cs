@@ -35,6 +35,11 @@ public sealed partial class Live
     private DateTimeOffset _lastRender;
     private DateTimeOffset _lastPush;
 
+    /// <summary>How long a scene can go without a new caption before the feed is dimmed as still.</summary>
+    private static readonly TimeSpan StillAfter = TimeSpan.FromSeconds(20);
+
+    private bool _feedStill;
+
     [SupplyParameterFromQuery(Name = "start")] public string? StartMode { get; set; }
 
     /// <summary>A session to open straight away (the Journal links each of its sessions here).</summary>
@@ -157,6 +162,14 @@ public sealed partial class Live
         var now = DateTimeOffset.UtcNow;
         if (now - _lastRender < TimeSpan.FromMilliseconds(250)) return;
         _lastRender = now;
+        // Nothing new has been seen for a while: dim the feed so the captions stay readable. The video
+        // lives in the layout, so the class goes on it through the dock's own script.
+        var still = Sensing.IsRunning && L.LastCaptionUtc is { } captionAt && now - captionAt > StillAfter;
+        if (still != _feedStill)
+        {
+            _feedStill = still;
+            _ = JS.TryInvokeVoidAsync("powatchFeed.still", still);
+        }
         InvokeAsync(StateHasChanged);
     }
 

@@ -625,6 +625,23 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     background: #05070a;
     visibility: hidden;
     pointer-events: none;
+    transition: filter 1.2s ease;
+}
+
+/* Nothing new has been seen for a while (feed-dock.js): dim the picture so the captions stay readable,
+   and never hide it — you must still be able to see that the camera is live. */
+.term-feed.is-still { filter: saturate(0.4) brightness(0.86); }
+
+/* Particle burst (fx.js): above the feed and below the header, never in the way of a click. */
+.fx-burst {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .term-feed { transition: none; }
 }
 
 .live-feed {
@@ -740,7 +757,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .space-switch button { border: 0; background: none; color: var(--term-dim); font: 600 10px var(--term-mono); letter-spacing: 0.08em; padding: 2px 8px; cursor: pointer; }
 .space-switch button.on { background: var(--term-accent); color: var(--term-accent-ink); }
 .space-switch button:focus-visible { outline: 1px solid var(--term-accent); outline-offset: -1px; }
-.live-census { margin: 0; padding: 8px 10px; font: 12px var(--term-mono); color: var(--term-muted); line-height: 1.7; }
+.live-census { margin: 0; padding: 8px 10px; font: 12px var(--term-mono); color: var(--term-muted); line-height: 1.7; min-height: 2.4em; }
 .live-census .live-heat-label { display: inline; margin-right: 8px; }
 .dash-grid .stats-weird { margin: 0; padding: 8px 10px; border-top: 1px solid var(--term-line); }
 
@@ -1009,6 +1026,29 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 /* ── Live: the bar and the 3×3 grid ───────────────────────────────────── */
 
 .dash { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); }
+
+/* Ambient light behind Live: two very slow drifts that make an idle page feel alive without motion the
+   eye has to follow. Decorative only, gone under reduced motion. */
+.dash {
+    background-image:
+        radial-gradient(45% 40% at 20% 15%, color-mix(in srgb, var(--term-accent) 7%, transparent), transparent 70%),
+        radial-gradient(40% 38% at 82% 78%, color-mix(in srgb, var(--term-cyan) 6%, transparent), transparent 72%);
+    background-size: 160% 160%;
+    background-repeat: no-repeat;
+    animation: dash-glow 26s ease-in-out infinite alternate;
+}
+
+@keyframes dash-glow {
+    from { background-position: 0% 0%; }
+    to { background-position: 18% 12%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dash { animation: none; }
+}
+
+/* Each panel keeps its height while the numbers arrive, so nothing below it jumps. */
+.cell-metrics > .term-panel-body { min-height: 128px; }
 
 /* One bar: range · question + download · what the range covers (on the right, wide screens only). */
 .stats-toolbar { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }

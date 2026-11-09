@@ -65,5 +65,10 @@
 
   function unwatchReturn() { _returnRef = null; }
 
-  window.powatchFeed = { dock, undock, watchReturn, unwatchReturn };
+  // A scene that has stopped changing dims a little, so the words beside it stay easy to read.
+  function still(on) {
+    if (_video) _video.classList.toggle('is-still', !!on);
+  }
+
+  window.powatchFeed = { dock, undock, watchReturn, unwatchReturn, still };
 })();

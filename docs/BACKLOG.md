@@ -46,10 +46,10 @@ to light and the cost is real on phones. This is the subset that improves this a
 | 21 ✅ | HRTF positional entry blips | Done — `PannerNode` (source a little in front and to the side it entered from) with a `StereoPanner` fallback. | S |
 | 22 | WebGPU motion compute | The L0 pixel layer reads back frames at 4 Hz on the CPU; a compute pass is the single biggest Live CPU saving. Fall back to canvas2d. | L |
 | 23 | Temporal motion-trail shader | `heat-gl.js` draws per-minute grids; accumulate prior grids with decay. | M |
-| 24 | Ambient motion gradient | One fullscreen shader behind Live driven by the current grid bytes. Nearly free. | S |
+| 24 ✅ | Ambient motion gradient | Done — two very slow radial drifts behind Live as plain CSS (`dash-glow`, 26 s), gone under reduced motion. No shader needed for something this subtle. | S |
 | 25 | Impact-synth cues | Pitch/decay the blip from motion energy and class instead of fixed samples. All Web Audio. | M |
-| 26 | Regular-arrival particle burst | 200 ms canvas overlay on first sighting of a known regular. Respect reduced motion. | S |
-| 27 | Stillness crossfade | Desaturate/blur the preview when no caption has changed for N seconds. | S |
+| 26 ✅ | Regular-arrival particle burst | Done — `js/fx.js` (`powatchFx.burst(pan)`): 18 particles from the side a known regular entered, `prefers-reduced-motion` skips it, the RAF loop stops when the last particle dies. | S |
+| 27 ✅ | Stillness crossfade | Done — 20 s without a caption dims the feed (`.term-feed.is-still`, 1.2 s transition) so the narration stays readable; it never hides the picture, and it restores the moment something new is seen. | S |
 | 28 ✅ | Specular sheen on `TerminalPanel` | Done — a gradient sweep on `.term-panel-head` under `@media (hover: hover) and (pointer: fine)`, off under reduced motion. | S |
 | 29 | Sound-level ring | `SoundMean`/`SoundMax` are in every tick; a thin ring pulses at 1 Hz. | S |
 | 30 ✅ | WebGPU/WebGL2 capability gate | Done — `theme-controller.js` sets `data-gpu="webgpu\|webgl2\|webgl\|none"` on `<html>` once at boot, before any paint. | S |
@@ -62,7 +62,7 @@ to light and the cost is real on phones. This is the subset that improves this a
 | 32 ✅ | Localized retry | Done — keyed `ErrorBoundary` per Settings tab, `panel-error` style, Retry button. | S |
 | 33 ⚠️ | ~~Collapse Settings tabs~~ | **Stale:** Settings already has 4 tabs (Recording / People / Alerts / Advanced). Number kept so nothing shifts. | — |
 | 34 ✅ | Command palette → real actions | Done — added Journal: today, Journal: this week and Export every observed day as CSV alongside start/stop, demo, tray, settings, System and full screen. Model switching stays in the MODELS strip where you can see the result. | S |
-| 35 | Reserve heights to kill CLS | `Skeleton.razor` exists but Live metrics and the Journal reader still shift when data lands. | S |
+| 35 ✅ | Reserve heights to kill CLS | Done — KEY METRICS reserves 128 px and the SEEN line reserves two lines, so nothing below them jumps when data lands. | S |
 | 36 | One toolbar per page | Live stacks AI strip + Ask + Export + session bar. Merge into one header with a drawer. | M |
 | 37 | Responsive audit at 768 / 900 / 1100 | The Live grid and Journal index squeeze between card and desktop layouts. | S |
 | 38 | Radzen for hand-rolled bits | Radzen 10.4.9 already ships: replace `Drawer`, `ExportMenu`, `AiSelectors`, confirm dialogs. | M |

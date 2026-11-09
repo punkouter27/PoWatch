@@ -151,7 +151,10 @@ public sealed partial class SensingSession
     private void Announce(TrackEntered track)
     {
         if (!CentroidTracker.IsPresence(track.Label)) return;
-        Cue("enter", pan: track.Edge switch { "Left" => -0.8, "Right" => 0.8, _ => 0 });
+        var pan = track.Edge switch { "Left" => -0.8, "Right" => 0.8, _ => 0 };
+        Cue("enter", pan);
+        // A regular is worth seeing, not just hearing: one small burst where they came in.
+        if (Live.RegularFor(track.TrackId) is not null) _ = js.TryInvokeVoidAsync("powatchFx.burst", pan);
 
         var now = time.GetLocalNow();
         foreach (var rule in Rules.Where(r => r.Matches(track.Label, now)))
