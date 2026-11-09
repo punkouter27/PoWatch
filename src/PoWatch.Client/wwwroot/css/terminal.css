@@ -790,33 +790,9 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 /* A stat panel whose numbers have not arrived yet. */
 .stats-pending { min-height: 120px; border-radius: var(--term-radius); }
 
-/* The dial: --p is a registered integer, so the conic fill and the counter both animate to it. */
-@property --p { syntax: '<integer>'; inherits: true; initial-value: 0; }
-
-.term-dial {
-    flex: none;
-    position: relative;
-    width: 92px;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    display: grid;
-    place-content: center;
-    justify-items: center;
-    background: conic-gradient(var(--term-accent) calc(var(--p) * 1%), var(--term-line) 0);
-    transition: --p 0.9s var(--spring-soft);
-}
-
-@starting-style { .term-dial { --p: 0; } }
-
-.term-dial::before { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: var(--term-surface); }
-.term-dial-value, .term-dial-label { position: relative; }
-.term-dial-value { font: 600 20px var(--term-mono); font-variant-numeric: tabular-nums; counter-reset: p var(--p); }
-.term-dial-value::after { content: counter(p) '%'; }
-.term-dial-label { font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-muted); }
-
 @media (prefers-reduced-motion: reduce) {
     .term-panel, .fx-rise, .term-skeleton, .term-drawer, .term-palette { animation: none; }
-    .term-button, .term-key, .term-icon-button, .term-dial { transition: none; }
+    .term-button, .term-key, .term-icon-button { transition: none; }
 }
 
 /* ── Drawers (the bell, Settings) and the notification tray ───────────── */
@@ -1223,6 +1199,23 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 /* yyMMdd of this build, on System. */
 .build-stamp { display: block; margin: 0 0 6px; text-align: right; color: var(--term-dim); font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; }
+
+/* The same stamp pinned to the viewport's bottom-right on every page: a bug report can always name the
+   build. Never takes a click and stays under drawers, alerts and toasts. */
+.build-stamp--corner {
+    position: fixed;
+    right: 10px;
+    bottom: 6px;
+    z-index: 30;
+    margin: 0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-align: left;
+    background: color-mix(in srgb, var(--term-bg) 72%, transparent);
+    pointer-events: none;
+}
+
+@media print { .build-stamp--corner { display: none; } }
 
 .try-demo { margin-left: 8px; min-height: 28px; }
 

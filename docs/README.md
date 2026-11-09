@@ -159,9 +159,11 @@ header row.
 
 **Safety nets.** Every panel (`TerminalPanel`) has its own error boundary, so a failing
 panel shows a small retry box while the rest of the page keeps working; the page-level boundary in
-`MainLayout` stays as the last resort. Empty days and an empty story feed offer "Try the
-demo" (`?start=demo`). The yyMMdd build date sits at the top of System (`BuildStamp`, from an
-`AssemblyMetadata` item in the client csproj). System is three tabs (Connections, Engine, Pipeline), and
+`MainLayout` stays as the last resort. Settings wraps each tab the same way, so one bad panel never
+takes the tab bar with it. Empty days and an empty story feed offer "Try the
+demo" (`?start=demo`). The yyMMdd build date sits at the top of System and pinned to the bottom-right
+corner of every page (`BuildStamp`, rendered by `MainLayout` from an `AssemblyMetadata` item in the
+client csproj). System is three tabs (Connections, Engine, Pipeline), and
 tables marked `term-table--cards` turn into one card per row on a phone.
 
 **Look.** One palette on every page (deep-blue glass in the dark theme, plain panels in the light one),
@@ -173,7 +175,9 @@ Journal's day, Ctrl+K opens a command palette (also: the demo scene, System, ful
 **Effects.** The header is frosted glass. WebGL canvases give their context back when their page goes away.
 
 **Sound.** `wwwroot/js/cues.js` synthesises short cues with the Web Audio API (start, stop, something
-entering — panned to the side it entered from — a new regular, an alert, an error). Level
+entering — HRTF-placed a little in front and to the side it entered from, so headphones hear a
+direction; a stereo panner stands in when the browser has no `PannerNode` — a new regular, an alert, an
+error). Level
 off/low/mid/high is on Settings and remembered per browser. That is all of it: one entry blip for
 anything, no hum, no replay ticks.
 

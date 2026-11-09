@@ -18,6 +18,8 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("STANDBY");
         await Assertions.Expect(page.GetByTestId("settings-menu")).ToBeVisibleAsync();
+        // The build date follows you to every page, so a bug report can name the build it came from.
+        await Assertions.Expect(page.GetByTestId("build-stamp-corner")).ToBeVisibleAsync();
 
         await page.GetByTestId("nav-journal").ClickAsync();
         await page.ExpectSectionAsync("JOURNAL");

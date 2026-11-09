@@ -13,24 +13,36 @@
         }
     </nav>
 
-    @switch (_section)
-    {
-        case "recording":
-            <RecordingSettings />
-            <WeatherSettings />
-            break;
-        case "people":
-            <KnownRegulars />
-            break;
-        case "alerts":
-            <AlertSettings />
-            <SharingSettings />
-            break;
-        default:
-            <LookSettings />
-            <AccountSettings />
-            break;
-    }
+    @* A panel that throws shows a retry box in place of itself; the tab bar and the rest of Settings
+       keep working. Keyed on the tab, so moving to another tab clears the failed one. *@
+    <ErrorBoundary @ref="_boundary" @key="_section">
+        <ChildContent>
+            @switch (_section)
+            {
+                case "recording":
+                    <RecordingSettings />
+                    <WeatherSettings />
+                    break;
+                case "people":
+                    <KnownRegulars />
+                    break;
+                case "alerts":
+                    <AlertSettings />
+                    <SharingSettings />
+                    break;
+                default:
+                    <LookSettings />
+                    <AccountSettings />
+                    break;
+            }
+        </ChildContent>
+        <ErrorContent>
+            <div class="panel-error" role="alert" data-test="settings-error">
+                <span>This settings panel hit an error.</span>
+                <button type="button" class="term-button" @onclick="() => _boundary?.Recover()">Retry</button>
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
 </div>
 
 @code {
@@ -50,6 +62,7 @@
 
     private string _section = "recording";
     private string? _applied;
+    private ErrorBoundary? _boundary;
 
     // Only a new Section moves the tab: the drawer re-renders with the same one while you click around.
     protected override void OnParametersSet()

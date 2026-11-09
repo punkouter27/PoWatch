@@ -1,6 +1,8 @@
 // Sound cues and desktop notifications. Every sound is synthesised with the Web Audio API (no audio
-// files): short oscillator notes with a gain envelope, panned left or right to where in the frame the
-// thing happened. The level (off, low, mid, high) is remembered in this browser.
+// files): short oscillator notes with a gain envelope, placed left or right of the listener (and a
+// little in front) where in the frame the thing happened. HRTF binaural panning is used where the
+// browser has it, plain stereo everywhere else. The level (off, low, mid, high) is remembered in this
+// browser.
 (function () {
     'use strict';
 
@@ -28,20 +30,49 @@
 
     let ctx = null;
 
-    /** Plays a cue; `pan` runs from -1 (left edge of the frame) to 1 (right edge). */
-    function play(name, pan) {
+    /** Plays a cue; `pan` runs from -1 (left edge of the frame) to 1 (right edge), `depth` 0–1 is how far back. */
+    function play(name, pan, depth) {
         const notes = CUES[name];
-        if (notes) sound(notes, pan);
+        if (notes) sound(notes, pan, depth);
     }
 
-    function sound(notes, pan) {
+    /**
+     * Where the sound comes from: HRTF places a source a little in front of the listener at `pan`
+     * across and `depth` back, so headphones get a real direction (and the cue sits outside the head
+     * instead of in the middle of it). Without createPanner, a stereo panner is the fallback.
+     */
+    function spatial(ctx, pan, depth) {
+        const x = Math.max(-1, Math.min(1, Number(pan) || 0));
+        if (typeof ctx.createPanner !== 'function') {
+            const stereo = ctx.createStereoPanner();
+            stereo.pan.value = x;
+            return stereo;
+        }
+        const panner = ctx.createPanner();
+        panner.panningModel = 'HRTF';
+        panner.distanceModel = 'inverse';
+        panner.refDistance = 1;
+        // Gentle, so the far side of the frame is quieter, not silent.
+        panner.rolloffFactor = 0.12;
+        panner.maxDistance = 8;
+        const z = -1 - Math.max(0, Math.min(1, Number(depth) || 0));
+        if (panner.positionX) {
+            panner.positionX.value = x;
+            panner.positionY.value = 0;
+            panner.positionZ.value = z;
+        } else {
+            panner.setPosition(x, 0, z);
+        }
+        return panner;
+    }
+
+    function sound(notes, pan, depth) {
         const volume = LEVELS[level];
         if (!volume) return;
         try {
             ctx ??= new AudioContext();
             if (ctx.state === 'suspended') ctx.resume();
-            const out = ctx.createStereoPanner();
-            out.pan.value = Math.max(-1, Math.min(1, Number(pan) || 0));
+            const out = spatial(ctx, pan, depth);
             out.connect(ctx.destination);
 
             for (const [frequency, at, lasts, wave, glideTo, loudness] of notes) {

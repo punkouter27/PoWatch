@@ -1,11 +1,16 @@
 @using System.Reflection
-@* The day this build was made (yyMMdd), shown on System so a bug report can say which build it came from. *@
+@* The day this build was made (yyMMdd) so a bug report can say which build it came from: in the flow of
+   System, and pinned to the corner of every page with Corner (rendered once by MainLayout). *@
 @if (Stamp.Length > 0)
 {
-    <span class="build-stamp" title="Build date (yyMMdd)" data-test="build-stamp">BUILD @Stamp</span>
+    <span class="build-stamp @(Corner ? "build-stamp--corner" : null)" title="Build date (yyMMdd)"
+          data-test="@(Corner ? "build-stamp-corner" : "build-stamp")">BUILD @Stamp</span>
 }
 
 @code {
+    /// <summary>Pinned to the viewport's bottom-right instead of sitting in the page's own flow.</summary>
+    [Parameter] public bool Corner { get; set; }
+
     private static readonly string Stamp = typeof(BuildStamp).Assembly
         .GetCustomAttributes<AssemblyMetadataAttribute>()
         .FirstOrDefault(a => a.Key == "BuildDate")?.Value ?? string.Empty;
