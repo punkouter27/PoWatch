@@ -226,6 +226,22 @@ main:focus { outline: none; }
 .term-status--live { border-color: var(--term-green); color: var(--term-green); }
 .term-status--demo { border-color: var(--term-cyan); color: var(--term-cyan); }
 
+/* Unsent-batch chips in the header: amber while work is waiting, red once ticks were dropped. */
+.term-outbox {
+    flex: none;
+    font-family: var(--term-mono);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    border: 1px solid var(--term-amber);
+    background: none;
+    color: var(--term-amber);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.term-outbox--lost { border-color: var(--term-red); color: var(--term-red); cursor: help; }
+
 /* The models strip on Live: a label, then what sees, hears and writes, each a small dropdown and a status. */
 .ai-models { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 6px 10px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-panel-2); }
 .ai-models-title { color: var(--term-accent); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.12em; }

@@ -188,7 +188,9 @@ spring easings and all stop under `prefers-reduced-motion`.
 **Offline.** The published app registers a service worker that caches the app shell (not the ~20 MB
 vision runtime), so PoWatch opens without a network; batches wait in the outbox as before. Offline,
 the shell stays open for whoever was last signed in on that browser; the server still decides what
-the cookie may read.
+the cookie may read. The header carries two chips only when they matter: **N queued** (amber, press to
+send the waiting batches now) and **N lost** (red, ticks dropped because the outbox was full). System's
+Pipeline tab keeps the full counts.
 
 **Session recovery.** Accepted ingest batches refresh each running session's last-activity time.
 When a user next lists or reads sessions, sessions without activity for ten minutes are closed at

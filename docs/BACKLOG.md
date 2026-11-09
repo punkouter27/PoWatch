@@ -12,13 +12,13 @@ Status: ✅ shipped · ⚠️ stale when checked against the code on 2026-11-09.
 |---|---|---|---|
 | 1 ⭐ | Web Push alerts (VAPID) | Watch rules reach a **closed** tab, not just open ones (`POST /api/alerts` relays to open tabs today). Reuses the ntfy pattern from CI. | M |
 | 2 ⭐ | ROI zones drawn on the camera | Draw "door", "desk", "couch"; per-zone dwell and visits. Presence is whole-frame today. Unlocks most of stat family A without a new ingest format. | L |
-| 3 ⭐ | "Today vs usual" card on Live | `AnomalyMath` computes the z-scores server-side but they are buried. Show the top 3 deltas with a jump-to-Journal link. | S |
+| 3 ⭐ | "Today vs usual" card on Live | **Partly shipped:** KEY METRICS already carries a SESSION vs USUAL column (σ + trend). Left to do: promote the top 3 deltas above the fold with a jump-to-Journal link. | S |
 | 4 | Per-class presence timeline | Class totals are stored as histograms; a sparkline per class in *In frame* answers "when was the dog here". | S |
 | 5 | Range export + signed link | `/api/export.csv` is one row per day. Add `?from=&to=` plus a short-lived SAS URL. | S |
 | 6 | Rolling share `/s/{token}?latest=week` | Shares exist but are frozen to one period. A rolling link makes it a real phone bookmark. | M |
 | 7 | Camera device picker | `enumerateDevices` + swap mid-session (facing/user vs environment). Multi-camera is a much bigger lift. | S |
 | 8 | MP4 time-lapse export (WebCodecs) | `timelapse.js` holds frames but only MediaRecorder/WebM ships. H.264 plays everywhere, ~5× smaller. | M |
-| 9 | Outbox health chip | Queued batches, oldest age, manual flush. Turns "why is my history missing" into one glance. | S |
+| 9 ✅ | Outbox health chip | Done — header shows **N queued** (amber, press to send now) and **N lost** (red) only when non-zero; System keeps the full counts. | S |
 | 10 | Voice-triggered Ask | Whisper already runs on-device. Needs a wake phrase plus reuse of `AskService`. | M |
 
 ## Code cleanup (11–20)
@@ -29,7 +29,7 @@ Status: ✅ shipped · ⚠️ stale when checked against the code on 2026-11-09.
 | 12 ✅ | Dead-component gate in `check-hygiene.ps1` | Done — every non-`@page` `.razor` must be named as `<Name>`, `typeof(Name)` or `@layout Name`. Proven with a probe component. | S |
 | 13 | UI test headroom (19/25) | One more UI feature trips `check-test-caps.ps1`. Merge near-duplicate flows first. | S |
 | 14 | Slice alignment | `Api/Features` has `Auth`, `Diagnostics`, `Profile` with no `Application/Features` counterpart. Extract or document. | M |
-| 15 | Dead config sweep | Diff `appsettings*.json` keys against `IOptions<>` binds; remove what nothing reads. | S |
+| 15 | ~~Dead config sweep~~ | **No-op, verified 2026-11-09:** every key in `appsettings*.json` is read (`PoWatch:Ports`, `DevCorsAllowedOrigins`, `KeyVault:Uri`, `ApiBaseUrl`, all sections bound or fetched). | — |
 | 16 | ~~Unused package audit~~ | **No-op, verified 2026-11-09:** all 22 `PackageReference`s have a live call site. | — |
 | 17 | Trim/AOT gate in CI | Client is trim-clean but nothing fails if a warning appears. Add `dotnet publish -p:PublishTrimmed`. | S |
 | 18 | Native AOT probe on the API | Throwaway `PublishAot` run; findings either way are worth having. | L |

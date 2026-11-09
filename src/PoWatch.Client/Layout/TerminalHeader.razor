@@ -35,6 +35,23 @@
 
     <Tray />
 
+    @* Unsent batches are invisible everywhere else: this is the one place that says the outbox has
+       work, with a way to push it now (a chip, not a dialog — the queued ticks are not an error). *@
+    @if (Sensing.Live.PendingBatches > 0)
+    {
+        <button type="button" class="term-outbox" @onclick="FlushOutboxAsync" data-test="outbox-chip"
+                title="10-second batches waiting in this browser's outbox. They resend automatically; press to send now.">
+            @Sensing.Live.PendingBatches queued
+        </button>
+    }
+    @if (Sensing.Live.LostTicks > 0)
+    {
+        <span class="term-outbox term-outbox--lost" data-test="outbox-lost"
+              title="Ticks dropped because the outbox was full (storage full or a very long offline stretch)">
+            @Sensing.Live.LostTicks lost
+        </span>
+    }
+
     @* Dark or light, remembered in this browser (theme-controller.js); one press, no trip into Settings. *@
     <button type="button" class="term-icon-button" onclick="powatchTheme.toggle()"
             aria-label="Switch between dark and light" title="Dark / light" data-test="theme-toggle">
@@ -71,6 +88,9 @@
     private string Uptime => Sensing.Live.StartedUtc is { } started
         ? (DateTimeOffset.UtcNow - started).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
         : "--:--:--";
+
+    /// <summary>Send whatever is waiting instead of waiting for the next automatic pass.</summary>
+    private Task FlushOutboxAsync() => Sensing.SendOutboxAsync();
 
     protected override void OnInitialized()
     {
