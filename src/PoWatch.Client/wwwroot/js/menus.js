@@ -18,6 +18,9 @@
         { label: 'Notifications', hint: '', run: () => click('tray-toggle') },
         { label: 'Settings: recording, people, alerts, AI models, your data', hint: '', run: () => click('settings-menu') },
         { label: 'System status', hint: '', run: () => Blazor.navigateTo('system') },
+        { label: 'Journal: today', hint: '', run: () => Blazor.navigateTo('journal') },
+        { label: 'Journal: this week', hint: '', run: () => Blazor.navigateTo('journal?view=week') },
+        { label: 'Export every observed day as CSV', hint: 'cookies stay on this request', run: () => { window.location.assign('api/export.csv'); } },
         { label: 'Full screen', hint: '', run: () => document.documentElement.requestFullscreen?.() },
     ];
 

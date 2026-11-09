@@ -56,6 +56,10 @@ jobs:
           restore-keys: nuget-${{ runner.os }}-
       - run: dotnet restore ${{ env.SOLUTION_PATH }}
       - run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore -c Release
+      # The client is trim-analyzed, so a trimmed publish must stay warning-free: a new DTO reached by
+      # reflection only shows up here (or as a runtime failure in someone's browser).
+      - name: Trim gate (client publish)
+        run: dotnet publish src/PoWatch.Client/PoWatch.Client.csproj -c Release --no-restore -p:PublishTrimmed=true
       # Formatting, test caps and all four suites (unit: pure logic; integration, API E2E and UI E2E:
       # Azurite via Testcontainers; UI E2E drives Playwright's Chromium against the app). An emergency
       # deploy skips all of it with this one condition.

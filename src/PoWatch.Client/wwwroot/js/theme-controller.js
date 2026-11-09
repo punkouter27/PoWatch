@@ -14,6 +14,21 @@
         // Old browser, very strict CSP, or no localStorage — leave default (dark).
     }
 
+    // Whether this browser can take the GPU paths (WebGPU for heavy work, WebGL2 for the shaders) is
+    // decided once, here, and exposed as data-gpu on <html>: styles and scripts branch on one attribute
+    // instead of probing every call, and a weak device never has to fail a shader to find out.
+    try {
+        var gpu = navigator.gpu ? 'webgpu' : (function () {
+            try {
+                var probe = document.createElement('canvas');
+                return probe.getContext('webgl2') ? 'webgl2' : (probe.getContext('webgl') ? 'webgl' : 'none');
+            } catch (_) { return 'none'; }
+        })();
+        document.documentElement.setAttribute('data-gpu', gpu);
+    } catch (_) {
+        document.documentElement.setAttribute('data-gpu', 'none');
+    }
+
     // Expose a tiny API for the theme toggle button to call.
     window.powatchTheme = {
         get: function () {

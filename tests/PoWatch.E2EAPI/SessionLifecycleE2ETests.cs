@@ -28,6 +28,8 @@ public sealed class SessionLifecycleE2ETests(ApiE2EFactory factory) : IClassFixt
         }
 
         Assert.StartsWith("date,occupancy,visits,motion\n2", await mine.GetStringAsync("/api/export.csv?tz=UTC"), StringComparison.Ordinal);
+        // from/to narrow the same year of rows, so one month can leave in a single request.
+        Assert.Equal("date,occupancy,visits,motion\n", await mine.GetStringAsync("/api/export.csv?tz=UTC&from=2999-01-01"));
 
         Assert.Equal(HttpStatusCode.NoContent, (await mine.DeleteAsync("/api/data")).StatusCode);
 

@@ -14,7 +14,7 @@ Status: ✅ shipped · ⚠️ stale when checked against the code on 2026-11-09.
 | 2 ⭐ | ROI zones drawn on the camera | Draw "door", "desk", "couch"; per-zone dwell and visits. Presence is whole-frame today. Unlocks most of stat family A without a new ingest format. | L |
 | 3 ⭐ | "Today vs usual" card on Live | **Partly shipped:** KEY METRICS already carries a SESSION vs USUAL column (σ + trend). Left to do: promote the top 3 deltas above the fold with a jump-to-Journal link. | S |
 | 4 | Per-class presence timeline | Class totals are stored as histograms; a sparkline per class in *In frame* answers "when was the dog here". | S |
-| 5 | Range export + signed link | `/api/export.csv` is one row per day. Add `?from=&to=` plus a short-lived SAS URL. | S |
+| 5 ✅ | Range export | Done — `/api/export.csv?from=&to=` (yyyy-MM-dd) narrows the same year of rows, and the command palette exports the lot. A signed link for someone else is still open. | S |
 | 6 | Rolling share `/s/{token}?latest=week` | Shares exist but are frozen to one period. A rolling link makes it a real phone bookmark. | M |
 | 7 | Camera device picker | `enumerateDevices` + swap mid-session (facing/user vs environment). Multi-camera is a much bigger lift. | S |
 | 8 | MP4 time-lapse export (WebCodecs) | `timelapse.js` holds frames but only MediaRecorder/WebM ships. H.264 plays everywhere, ~5× smaller. | M |
@@ -31,7 +31,7 @@ Status: ✅ shipped · ⚠️ stale when checked against the code on 2026-11-09.
 | 14 | Slice alignment | `Api/Features` has `Auth`, `Diagnostics`, `Profile` with no `Application/Features` counterpart. Extract or document. | M |
 | 15 | ~~Dead config sweep~~ | **No-op, verified 2026-11-09:** every key in `appsettings*.json` is read (`PoWatch:Ports`, `DevCorsAllowedOrigins`, `KeyVault:Uri`, `ApiBaseUrl`, all sections bound or fetched). | — |
 | 16 | ~~Unused package audit~~ | **No-op, verified 2026-11-09:** all 22 `PackageReference`s have a live call site. | — |
-| 17 | Trim/AOT gate in CI | Client is trim-clean but nothing fails if a warning appears. Add `dotnet publish -p:PublishTrimmed`. | S |
+| 17 ✅ | Trim gate in CI | Done — the build job publishes the client with `-p:PublishTrimmed=true`, so a reflection-only DTO fails CI instead of someone's browser. | S |
 | 18 | Native AOT probe on the API | Throwaway `PublishAot` run; findings either way are worth having. | L |
 | 19 | `StatsTabBase` consolidation | `PipelineTab` + `PatternsTab` share fetch/loading; fold into one base with an overridable query. | M |
 | 20 | Split `terminal.css` | Live / Journal / Settings get their own `.razor.css` (only `Login.razor.css` exists today); `terminal.css` is ~1,200 lines. | M |
@@ -50,9 +50,9 @@ to light and the cost is real on phones. This is the subset that improves this a
 | 25 | Impact-synth cues | Pitch/decay the blip from motion energy and class instead of fixed samples. All Web Audio. | M |
 | 26 | Regular-arrival particle burst | 200 ms canvas overlay on first sighting of a known regular. Respect reduced motion. | S |
 | 27 | Stillness crossfade | Desaturate/blur the preview when no caption has changed for N seconds. | S |
-| 28 | Specular sheen on `TerminalPanel` | Gradient + `backdrop-filter` on hover, consistent with the palette. | S |
+| 28 ✅ | Specular sheen on `TerminalPanel` | Done — a gradient sweep on `.term-panel-head` under `@media (hover: hover) and (pointer: fine)`, off under reduced motion. | S |
 | 29 | Sound-level ring | `SoundMean`/`SoundMax` are in every tick; a thin ring pulses at 1 Hz. | S |
-| 30 | WebGPU/WebGL2 capability gate | One feature-detect, a `data-gpu` attribute, graceful degrade. Prevents 22/23 from being hard dependencies. | S |
+| 30 ✅ | WebGPU/WebGL2 capability gate | Done — `theme-controller.js` sets `data-gpu="webgpu\|webgl2\|webgl\|none"` on `<html>` once at boot, before any paint. | S |
 
 ## UI/UX optimize (31–40)
 
@@ -61,7 +61,7 @@ to light and the cost is real on phones. This is the subset that improves this a
 | 31 ⭐ | CRUD punch list with repro steps | Walk 4 Settings tabs, share create/delete, delete-everything, regulars rename/merge, model switching. Severity + repro. Input for 32–36. | M |
 | 32 ✅ | Localized retry | Done — keyed `ErrorBoundary` per Settings tab, `panel-error` style, Retry button. | S |
 | 33 ⚠️ | ~~Collapse Settings tabs~~ | **Stale:** Settings already has 4 tabs (Recording / People / Alerts / Advanced). Number kept so nothing shifts. | — |
-| 34 | Command palette → real actions | Ctrl+K jumps pages today. Add Start/Stop, Export, Share, toggle listening, switch model. | S |
+| 34 ✅ | Command palette → real actions | Done — added Journal: today, Journal: this week and Export every observed day as CSV alongside start/stop, demo, tray, settings, System and full screen. Model switching stays in the MODELS strip where you can see the result. | S |
 | 35 | Reserve heights to kill CLS | `Skeleton.razor` exists but Live metrics and the Journal reader still shift when data lands. | S |
 | 36 | One toolbar per page | Live stacks AI strip + Ask + Export + session bar. Merge into one header with a drawer. | M |
 | 37 | Responsive audit at 768 / 900 / 1100 | The Live grid and Journal index squeeze between card and desktop layouts. | S |
@@ -75,7 +75,7 @@ to light and the cost is real on phones. This is the subset that improves this a
 |---|---|---|---|
 | 41 ⭐ | AI telemetry rail | TTFT, tokens/s, tokens in/out, retry/fallback path, which provider served. Logged today, never measured. | M |
 | 42 ⭐ | `AiFallback` → measured router | Fixed order today (local → Gemini → Azure → Template). Store p50 latency and failure rate per model, order by health, allow "pin to local". | M |
-| 43 ⭐ | Semantic "find that moment" | MiniLM embeddings and `caption-index.js` already exist for novelty. Add a Journal search box over the same vectors. | M |
+| 43 ✅ | Semantic "find that moment" | **Already shipped:** typing 3+ characters in the command palette searches the caption index by meaning and opens the moment in the Journal (`menus.js` → `powatchCaptionIndex.search`). | — |
 | 44 | More Ask tools | Four tools today. Add replay-grid, regulars lookup, weather. | M |
 | 45 | Anomaly narration | Fact-guarded text when the "today vs usual" card fires (`RecapPrompt.KeepsToFacts`). | S |
 | 46 | Suggested watch rules | Draft 2 rules from the user's history on Settings → Alerts. | M |

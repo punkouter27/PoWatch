@@ -242,6 +242,36 @@ main:focus { outline: none; }
 
 .term-outbox--lost { border-color: var(--term-red); color: var(--term-red); cursor: help; }
 
+/* A moving specular highlight on panel headers: the glass catches the light as the pointer crosses it.
+   Pure gradient + transition, so it costs nothing and disappears entirely without a fine pointer. */
+@media (hover: hover) and (pointer: fine) {
+    .term-panel-head {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .term-panel-head::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateX(-40%);
+        background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--term-accent) 14%, transparent) 50%, transparent 70%);
+        transition: opacity 0.4s var(--spring-soft), transform 0.7s var(--spring-soft);
+    }
+
+    .term-panel:hover .term-panel-head::after {
+        opacity: 1;
+        transform: translateX(40%);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .term-panel-head::after { transition: none; transform: none; }
+        .term-panel:hover .term-panel-head::after { opacity: 0.5; }
+    }
+}
+
 /* The models strip on Live: a label, then what sees, hears and writes, each a small dropdown and a status. */
 .ai-models { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 6px 10px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-panel-2); }
 .ai-models-title { color: var(--term-accent); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.12em; }
