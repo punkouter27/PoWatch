@@ -1,0 +1,20 @@
+@* Who PoWatch knows and has seen this session: the regulars recognised by look, and whether they are in
+   the frame right now. *@
+@inject SensingSession Sensing
+
+<TerminalPanel Title="Regulars" Class="cell-regulars" Test="live-regulars" Flush="true">
+    <Aside>@(L.Regulars.Count == 0 ? "NONE YET" : $"{L.Regulars.Count} KNOWN")</Aside>
+    <ChildContent>
+        <WhoList Rows="@Rows()" Label="Regulars seen this session" Test="regulars-list" Empty="Nobody known has been seen this session." />
+    </ChildContent>
+</TerminalPanel>
+
+@code {
+    private LiveSensingState L => Sensing.Live;
+
+    private List<WhoList.Row> Rows() =>
+        L.Regulars.Select(r => new WhoList.Row(r.DisplayName, Here(r.Id) ? "HERE NOW" : "SEEN")).ToList();
+
+    private bool Here(string regularId) =>
+        L.Tracks.Any(t => L.RegularFor(t.TrackId)?.Id == regularId);
+}

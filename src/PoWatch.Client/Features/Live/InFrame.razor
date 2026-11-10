@@ -1,5 +1,5 @@
 @* Who is tracked right now and how long they have been, the session's head counts, then every other
-   thing seen as one line (what is in frame now first, in bold), and the session's odd moment. *@
+   thing seen as one line (what is in frame now first, in bold). *@
 @inject SensingSession Sensing
 
 @{ var census = CensusRows(); }
@@ -15,12 +15,7 @@
     <ChildContent>
         @if (L.Tracks.Count > 0)
         {
-            <ul class="live-who" aria-label="Tracked right now">
-                @foreach (var track in L.Tracks.Take(8))
-                {
-                    <li><b>@(L.RegularFor(track.TrackId)?.DisplayName ?? track.Label)</b> <span>@DisplayText.Duration((DateTimeOffset.UtcNow - track.FirstSeenUtc).TotalSeconds)</span></li>
-                }
-            </ul>
+            <WhoList Rows="@WhoIsHere()" Label="Tracked right now" />
         }
         @if (census.Count == 0)
         {
@@ -48,7 +43,6 @@
                 }
             </p>
         }
-        <OddMoment Query="@Query" />
         @* When each thing was around, not just whether it ever was: one line per presence class. *@
         @if (Sensing.IsRunning && Sparks() is { Count: > 0 } sparks)
         {
@@ -69,13 +63,18 @@
     /// <summary>Classes seen in the range; kept until the next answer, so a failed refresh keeps the table.</summary>
     [Parameter] public ObjectStatsDto? Objects { get; set; }
 
-    /// <summary>The range the odd moment is read for (the session Live shows).</summary>
-    [Parameter, EditorRequired] public StatsQuery Query { get; set; } = default!;
-
     private ObjectStatsDto? _indexed;
     private Dictionary<string, ClassStatDto> _knownClasses = new(StringComparer.OrdinalIgnoreCase);
 
     private LiveSensingState L => Sensing.Live;
+
+    /// <summary>Who is tracked right now and how long they have been.</summary>
+    private List<WhoList.Row> WhoIsHere() =>
+        L.Tracks.Take(8)
+            .Select(t => new WhoList.Row(
+                L.RegularFor(t.TrackId)?.DisplayName ?? t.Label,
+                DisplayText.Duration((DateTimeOffset.UtcNow - t.FirstSeenUtc).TotalSeconds)))
+            .ToList();
 
     protected override void OnParametersSet()
     {

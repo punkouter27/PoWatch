@@ -9,7 +9,6 @@
 <div class="live-lines" data-test="live-narration">
     @{ var lines = Lines().ToList(); }
     <div class="live-lines-head">
-        <span>NARRATION</span>
         <span class="term-stat-hint">@Status</span>
         <TranscriptLink Entries="@lines" Title="@TranscriptTitle" FileName="@TranscriptFile" />
     </div>

@@ -11,10 +11,10 @@
 
 @* Everything on one screen, always about one session: the one recording now, else the latest (or the
    one a Journal link names, ?session=). One bar (which session and the question box), the models strip
-   (what sees, hears and writes, each a dropdown), a "session saved" line after a Stop, then four panels:
-   Space down the left (one heat grid, motion now or people today), key metrics above the camera, and who
-   is in frame down the right. Under the camera runs its narration, with a minimap of the session above
-   the lines. Patterns over days live in the Journal, and so does the JSON of every number. *@
+   (what sees, hears and writes, each a dropdown), a "session saved" line after a Stop, then nine cells
+   around the camera: key metrics, who is in frame and the room's heat above and beside it; narration,
+   the pipeline's rates and the environment below it; the odd moment and the regulars along the bottom.
+   Patterns over days live in the Journal, and so does the JSON of every number. *@
 <div class="dash">
     <div class="stats-toolbar" data-test="stats-toolbar">
         <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
@@ -79,14 +79,20 @@
                         }
                     </div>
                 </div>
-                @* What the camera and the microphone are turning into words, newest first. *@
-                <LiveNarration SessionId="@_sessionId" />
             </ChildContent>
         </TerminalPanel>
 
         <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend"
                     OnExplain="@EventCallback.Factory.Create(this, ExplainAsync)" Asking="@_asking" />
-        <InFrame Objects="@_objects" Query="@_query" />
+        <InFrame Objects="@_objects" />
+
+        @* What the camera and the microphone are turning into words, newest first, with the session's map. *@
+        <TerminalPanel Title="Narration" Class="cell-narration" Test="live-narration-panel" Flush="true">
+            <Aside>NEWEST FIRST</Aside>
+            <ChildContent>
+                <LiveNarration SessionId="@_sessionId" />
+            </ChildContent>
+        </TerminalPanel>
 
         @* The room's space in one grid: where motion is right now, or where people and animals were centred
            today; then the hottest spots and the edge of the frame things mostly come and go by. *@
@@ -116,5 +122,18 @@
                 }
             </ChildContent>
         </TerminalPanel>
+
+        <LivePipeline />
+        <LiveEnvironment />
+
+        @* The one caption least like the rest, and the regulars PoWatch knows. *@
+        <TerminalPanel Title="Moment" Class="cell-moment" Test="live-moment" Flush="true">
+            <Aside>LEAST LIKE THE REST</Aside>
+            <ChildContent>
+                <OddMoment Query="@_query" />
+            </ChildContent>
+        </TerminalPanel>
+
+        <LiveRegulars />
     </div>
 </div>

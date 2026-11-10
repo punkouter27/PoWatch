@@ -1,0 +1,30 @@
+@* A name in bold and one muted note beside it — how long they have been here, or whether they are in the
+   frame now. In frame and Regulars read as the same list, so they are the same component. *@
+@if (Rows.Count > 0)
+{
+    <ul class="live-who" aria-label="@Label" data-test="@Test">
+        @foreach (var row in Rows)
+        {
+            <li><b>@row.Name</b> <span>@row.Note</span></li>
+        }
+    </ul>
+}
+else if (Empty is not null)
+{
+    <p class="term-empty" data-test="@($"{Test}-empty")">@Empty</p>
+}
+
+@code {
+    /// <summary>One line: a name and what to say about them.</summary>
+    public sealed record Row(string Name, string Note);
+
+    [Parameter, EditorRequired] public IReadOnlyList<Row> Rows { get; set; } = [];
+
+    /// <summary>What the list is, for screen readers.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = default!;
+
+    [Parameter] public string? Test { get; set; }
+
+    /// <summary>Shown in place of the list when there is nobody to name; null renders nothing.</summary>
+    [Parameter] public string? Empty { get; set; }
+}

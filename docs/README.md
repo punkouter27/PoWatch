@@ -66,18 +66,21 @@ minutes shows it as saved, unless that was dismissed. After any Stop, Live shows
 under its bar, in the page's own flow (never over anything, and only on Live): the session's visits,
 occupancy and peak, "Open in Journal →", its PDF and ✕; showing it also writes the session's last chapter
 and story. Starting a new session clears it. One bar names the session ("Recording session #2444 · New York") with an "Ask" box; the JSON of every
-number is in the Journal's Export menus. Under it the MODELS strip, then four panels with the camera in the middle (one
-Start button; a synthetic demo whenever stopped) and, under the picture, its narration: every caption
+number is in the Journal's Export menus. Under it the MODELS strip, then a nine-cell grid with the camera in the middle (one
+Start button; a synthetic demo whenever stopped) and, beside the picture, its narration: every caption
 (SAW), line of speech (SAID), recognised sound (HEARD), coming and going (IN/OUT) and notable moment,
 newest first, a few lines tall and scrolling, under a minimap of the whole session (`Components/SessionMinimap.razor`:
 shading for how busy each stretch was, a pin per arrival, thing said and ★ that scrolls to and lights its line)
 (`Features/Live/LiveNarration.razor`; while recording it is
-the browser's own list in `LiveSensingState.Narration`, after that what the server kept). Around it: key
-metrics beside your usual day (occupancy, visits an hour, motion, each with σ and a trend) above, Space down
-the left (one 16×9 grid with a MOTION NOW / PEOPLE TODAY switch, then where motion and people mostly were
-and the busiest door), and In frame down the right: who is tracked and for how long, now · peak · visits,
-everything seen this session as one line (what is in frame now in bold) and the session's ODD MOMENT (the
-caption least like the rest). Detector boxes and the head counts show only while recording, and visits an
+the browser's own list in `LiveSensingState.Narration`, after that what the server kept). Two cells on each
+side and a row underneath: key metrics beside your usual day (occupancy, visits an hour, motion, each with
+σ and a trend) top left, In frame top middle (who is tracked and for how long, now · peak · visits, then
+everything seen this session as one line, what is in frame now in bold), Space top right (one 16×9 grid
+with a MOTION NOW / PEOPLE TODAY switch, then where motion and people mostly were and the busiest door);
+Pipeline to the right of the camera (the pixel layer's Hz, detector latency, batches sent · queued · lost);
+then Environment (how much light, the last thing heard), ODD MOMENT (the caption least like the rest) and
+the session's REGULARS, with whether they are in the frame now, along the bottom.
+Detector boxes and the head counts show only while recording, and visits an
 hour only once ten minutes have been observed. A desktop holds the whole grid in the viewport (the camera
 keeps 16:9); narrower screens stack it in one column.
 Patterns over days are the Journal's, not Live's ·

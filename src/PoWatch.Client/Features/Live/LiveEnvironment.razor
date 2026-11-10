@@ -1,0 +1,33 @@
+@* The room itself: how much light there is and the last thing heard — what the picture alone does not
+   tell you. Motion is Key metrics' row (same number, with its trend), so it is not repeated here. *@
+@using System.Globalization
+@inject SensingSession Sensing
+
+<TerminalPanel Title="Environment" Class="cell-env" Test="live-environment" Flush="true">
+    <Aside>@Lights</Aside>
+    <ChildContent>
+        <div class="term-stats">
+            <StatCell Label="LIGHT" Value="@Light" Hint="@Lights" Test="metric-light" />
+            <StatCell Label="HEARD" Value="@Sound" Hint="@SoundHint" Test="metric-sound" />
+        </div>
+    </ChildContent>
+</TerminalPanel>
+
+@code {
+    private LiveSensingState L => Sensing.Live;
+
+    private string Light => L.Light is { } light ? light.ToString("P0", CultureInfo.InvariantCulture) : "—";
+
+    /// <summary>Rough daylight guess from mean brightness: enough to say whether the lights are on.</summary>
+    private string Lights => L.Light switch
+    {
+        null => "NO READING",
+        > 0.35 => "LIGHTS ON",
+        > 0.12 => "DIM",
+        _ => "DARK",
+    };
+
+    private string Sound => string.IsNullOrEmpty(L.LastSound) ? "—" : L.LastSound!;
+
+    private string SoundHint => Sensing.Listening ? (L.AudioStatus ?? "listening").ToUpperInvariant() : "NOT LISTENING";
+}

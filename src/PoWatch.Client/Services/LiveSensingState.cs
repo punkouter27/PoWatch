@@ -153,6 +153,10 @@ public sealed class LiveSensingState
 
     public RegularDto? RegularFor(string trackId) => _regularByTrack.GetValueOrDefault(trackId);
 
+    /// <summary>The regulars recognised this session, one per person, in the order they were first named.</summary>
+    public IReadOnlyList<RegularDto> Regulars =>
+        _regularByTrack.Values.DistinctBy(r => r.Id).ToList();
+
     /// <summary>The name of a regular seen this session, by id; null when they have not been.</summary>
     public string? RegularNamed(string regularId) => _regularByTrack.Values.FirstOrDefault(r => r.Id == regularId)?.DisplayName;
 
