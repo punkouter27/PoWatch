@@ -13,7 +13,9 @@
 // bare number, and every later session in this worker fails the same way. Such an attempt is reported
 // as POISONED with where to resume; detector-bridge.js then starts a fresh worker that skips it.
 
-import { bitmapToRawImage, loadTransformers } from '../transformers-env.js';
+import { bitmapToRawImage, loadTransformers, modelStatus } from '../transformers-env.js';
+
+const status = modelStatus();
 
 const MODELS = [
   { id: 'onnx-community/rfdetr_nano-ONNX', dtypes: { webgpu: ['fp16', 'fp32'], wasm: ['q8', 'fp32'] } },
@@ -54,13 +56,21 @@ async function load(forceDevice, from = 0, prior = []) {
     const use = (candidate, model, device, dtype) => {
       detector = candidate;
       loaded = { modelId: model.id, device, dtype, loadMs: Math.round(performance.now() - started), rejected: errors };
+      // On the CPU, say why: the page tells the user once (AiSelectors.razor), since it is several times slower.
+      const reason = device === 'webgpu' ? null
+        : forceDevice === 'wasm' ? 'the GPU reset twice in this session'
+          : !(typeof navigator !== 'undefined' && navigator.gpu) ? 'this browser offers no WebGPU'
+            : 'WebGPU did not pass its check on this machine';
+      status.report({ phase: 'ready', model: model.id, device, dtype, loadMs: loaded.loadMs, reason, error: reason && errors.length ? errors.join(' | ') : null });
       return loaded;
     };
     for (let i = from; i < candidates.length; i++) {
       const { model, device, dtype } = candidates[i];
       const name = `${model.id}@${device}/${dtype}`;
       try {
-        const candidate = await transformers.pipeline('object-detection', model.id, { device, dtype });
+        const candidate = await transformers.pipeline('object-detection', model.id, { device, dtype, progress_callback: status.progress(model.id, device, dtype) });
+        // The calibration frame is the first run, which is when WebGPU compiles its shaders.
+        status.report({ phase: 'warming', model: model.id, device, dtype });
         const verdict = await calibrate(candidate);
         if (verdict === 'sane') {
           if (unchecked) await unchecked.candidate.dispose?.();
@@ -79,7 +89,9 @@ async function load(forceDevice, from = 0, prior = []) {
       }
     }
     if (unchecked) return use(unchecked.candidate, unchecked.model, unchecked.device, unchecked.dtype);
-    throw new Error(`No detector could be loaded. ${errors.join(' | ')}`);
+    const failure = `No detector could be loaded. ${errors.join(' | ')}`;
+    status.report({ phase: 'failed', model: MODELS[0].id, error: failure });
+    throw new Error(failure);
   })();
 
   try {

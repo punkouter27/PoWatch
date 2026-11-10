@@ -276,7 +276,7 @@ main:focus { outline: none; }
 .ai-models { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 6px 10px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-panel-2); }
 .ai-models-title { color: var(--term-accent); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.12em; }
 .ai-model { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.ai-model label { color: var(--term-dim); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; cursor: help; }
+.ai-model label, .ai-model-label { color: var(--term-dim); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; cursor: help; }
 .ai-model select {
     min-width: 0;
     max-width: 260px;
@@ -294,6 +294,41 @@ main:focus { outline: none; }
 .ai-model select:disabled { cursor: wait; opacity: 0.6; }
 .ai-model-status { color: var(--term-muted); font: var(--fs-xs) var(--term-mono); text-decoration: none; white-space: nowrap; }
 .ai-model-status--warn { color: var(--term-amber, var(--term-red)); }
+
+/* A browser model's load (ModelLoad.razor): dot, text, and a bar while weights download. The dot pulses
+   while loading, holds green on WebGPU and amber on the CPU, and the chip glows once when it comes up. */
+.model-load {
+    --model-tone: var(--term-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 6px;
+    border: 1px solid transparent;
+    border-radius: var(--term-radius);
+    color: var(--model-tone);
+    font: var(--fs-xs) var(--term-mono);
+    white-space: nowrap;
+}
+.model-load--loading { --model-tone: var(--term-accent); border-color: color-mix(in srgb, var(--term-accent) 40%, transparent); }
+.model-load--gpu { --model-tone: var(--term-green); }
+.model-load--cpu { --model-tone: var(--term-amber); }
+.model-load--bad { --model-tone: var(--term-red); border-color: color-mix(in srgb, var(--term-red) 50%, transparent); }
+.model-load-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--model-tone); }
+.model-load--idle .model-load-dot { background: none; border: 1px solid var(--model-tone); }
+.model-load--loading .model-load-dot { animation: model-pulse 1s ease-in-out infinite; }
+.model-load-bar { position: relative; width: 64px; height: 4px; flex: none; border-radius: 2px; overflow: hidden; background: color-mix(in srgb, var(--term-accent) 18%, transparent); }
+.model-load-bar > span { position: absolute; inset: 0 auto 0 0; background: var(--term-accent); transition: width 0.4s ease-out; }
+.model-load--fresh { animation: model-fresh 1.6s ease-out 1; }
+@keyframes model-pulse { 50% { opacity: 0.25; transform: scale(0.7); } }
+@keyframes model-fresh {
+    from { border-color: var(--model-tone); box-shadow: 0 0 0 0 color-mix(in srgb, var(--model-tone) 70%, transparent); background: color-mix(in srgb, var(--model-tone) 22%, transparent); }
+    to { border-color: transparent; box-shadow: 0 0 0 8px transparent; background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .model-load--loading .model-load-dot, .model-load--fresh { animation: none; }
+    .model-load--fresh { border-color: var(--model-tone); }
+    .model-load-bar > span { transition: none; }
+}
 .ai-model-pull {
     font: 600 var(--fs-xs) var(--term-mono);
     letter-spacing: 0.08em;
@@ -335,6 +370,7 @@ main:focus { outline: none; }
     .ai-model { flex-wrap: wrap; width: 100%; }
     .ai-model label { min-width: 52px; }
     .ai-model select { flex: 1; max-width: none; min-height: 44px; }
+    .ai-model-status, .model-load { white-space: normal; flex-wrap: wrap; min-width: 0; }
 }
 /* The status chip starts the right-hand group: Start/Stop, bell, gear. */
 .term-header .term-status { margin-left: auto; }
@@ -1400,6 +1436,8 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     font: var(--fs-sm) var(--term-mono);
     box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
 }
+/* Not a failure, just worth knowing (a model on the CPU, AiSelectors.razor). */
+.term-toast--info { border-color: var(--term-amber); }
 
 /* Export ▾: a native <details> that drops a short list of files under its button. */
 .export-menu { position: relative; display: inline-flex; }

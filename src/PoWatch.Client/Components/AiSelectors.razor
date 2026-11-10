@@ -3,11 +3,23 @@
 @inject PoWatchApiClient Api
 @inject IJSRuntime JS
 
-@* The models at work, in one strip on Live above the panels: what turns the camera into words, what
-   turns the microphone into words, and what writes the stories and answers Ask. Each is a dropdown, and
-   its status says what is really running (Ollama on this PC, or the browser's own model standing in). *@
+@* The models at work, in one strip on Live above the panels: what finds things in frame, what turns the
+   camera into words, what turns the microphone into words, and what writes the stories and answers Ask.
+   Each status says what is really running (Ollama on this PC, or the browser's own model standing in),
+   and a browser model shows its load as it happens (ModelLoad): download, first run, then WebGPU or CPU. *@
 <div class="ai-models" data-test="ai-models" role="group" aria-label="AI models">
     <span class="ai-models-title" aria-hidden="true">MODELS</span>
+    <div class="ai-model">
+        <span class="ai-model-label" title="Finds people, pets and things in each frame, about once a second, on this machine.">DETECTS</span>
+        @if (Sensing.IsRunning && !Sensing.Live.Demo)
+        {
+            <ModelLoad Status="@Load("detector")" Prefix="@DetectorName" Test="ai-detector-status" />
+        }
+        else
+        {
+            <span class="ai-model-status" data-test="ai-detector-status">@(Sensing.Live.Demo && Sensing.IsRunning ? "DEMO · AI IDLE" : "STARTS WITH THE CAMERA")</span>
+        }
+    </div>
     <div class="ai-model">
         <label for="ai-caption-model" title="Describes what the camera sees. Captions off saves the GPU.">SEES</label>
         <select id="ai-caption-model" @key="_captionRevision" value="@(Sensing.Captions ? Sensing.CaptionModel : "off")"
@@ -18,7 +30,16 @@
                 <option value="@model.Key">@model.Label</option>
             }
         </select>
-        <a id="ai-caption-status" class="ai-model-status @(CaptionWarn ? "ai-model-status--warn" : null)" href="system" title="@CaptionHint" data-test="ai-caption-status"><span role="status">@CaptionStatus</span></a>
+        <a id="ai-caption-status" class="ai-model-status @(CaptionWarn ? "ai-model-status--warn" : null)" href="system" title="@CaptionHint" data-test="ai-caption-status">
+            @if (BrowserCaptionLoad is { } load)
+            {
+                <ModelLoad Status="@load" Prefix="@($"{Fallback} · {BrowserModel}")" Test="ai-caption-load" />
+            }
+            else
+            {
+                <span role="status">@CaptionStatus</span>
+            }
+        </a>
         @* Ollama answered but lacks this model: hand over the exact command instead of making you guess. *@
         @if (PullCommand is { } pull)
         {
@@ -32,7 +53,14 @@
             <option value="on">WHISPER · AST · WAVLM</option>
             <option value="off">Listening off</option>
         </select>
-        <span class="ai-model-status">@(Sensing.Listening ? "THIS BROWSER" : "OFF")</span>
+        @if (Sensing.Listening && Sensing.IsRunning && !Sensing.Live.Demo && Load("hearing") is { } hearing)
+        {
+            <ModelLoad Status="@hearing" Prefix="@(hearing.Model == "voice" ? "VOICES" : "WORDS · SOUNDS")" CpuByDesign="true" Test="ai-hearing-status" />
+        }
+        else
+        {
+            <span class="ai-model-status" data-test="ai-hearing-status">@(Sensing.Listening ? "THIS BROWSER" : "OFF")</span>
+        }
     </div>
     <div class="ai-model">
         <label for="ai-chat-model" title="Writes recaps and stories, answers questions. Auto picks local Ollama when it answers, else a cloud model; a failing model hands over to the next configured one.">WRITES</label>
@@ -63,10 +91,20 @@
         <button class="term-button" @onclick="LoadModelsAsync">Retry AI</button>
     }
 </div>
+@* A GPU model that ended up on the CPU says so once per page, with why: otherwise it only looks slow. *@
+@if (_cpuNotice is not null)
+{
+    <div class="term-toast term-toast--info" role="status" data-test="model-cpu-notice">@_cpuNotice</div>
+}
 
 @code {
     private AiModelsDto? _models;
     private InferenceStatusPayload? _inference;
+    private List<ModelLoadPayload> _loads = [];
+    private string? _cpuNotice;
+    private DateTimeOffset _cpuNoticeUntil;
+    private static readonly HashSet<string> s_cpuNoticed = [];
+    private static readonly TimeSpan CpuNoticeFor = TimeSpan.FromSeconds(10);
     private bool _saving;
     private bool _loadFailed;
     private int _captionRevision;
@@ -89,6 +127,45 @@
             "error" => "MODEL FAILED",
             _ => "WAITING FOR CAPTION"
         };
+
+    private ModelLoadPayload? Load(string name) => _loads.Find(l => l.Name == name);
+
+    private string DetectorName => Load("detector")?.Model switch
+    {
+        { } m when m.Contains("rfdetr", StringComparison.OrdinalIgnoreCase) => "RF-DETR NANO",
+        { } m when m.Contains("rtdetr", StringComparison.OrdinalIgnoreCase) => "RT-DETR V2",
+        _ => "DETECTOR",
+    };
+
+    /// <summary>The in-browser caption model's load, when it is the one captioning (no Ollama answered).</summary>
+    private ModelLoadPayload? BrowserCaptionLoad => Sensing.Captions && Sensing.IsRunning && !Sensing.Live.Demo
+        && _inference is { } i && i.Device != "ollama" && i.LoadState != "idle"
+        ? Load("caption")
+        : null;
+
+    /// <summary>
+    /// Raises the CPU notice for the first GPU model this page sees land on the CPU. Static, so leaving
+    /// Live and coming back does not repeat it; a reload does.
+    /// </summary>
+    private bool NoticeCpuFallback()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var changed = false;
+        if (_cpuNotice is not null && now >= _cpuNoticeUntil)
+        {
+            _cpuNotice = null;
+            changed = true;
+        }
+        foreach (var load in _loads)
+        {
+            if (load is not { Phase: "ready", Device: "wasm", Reason: { Length: > 0 } reason } || !s_cpuNoticed.Add(load.Name)) continue;
+            var what = load.Name == "detector" ? "The object detector" : "The caption model";
+            _cpuNotice = $"{what} is running on the CPU, not the GPU, because {reason}. It still works, just several times slower.";
+            _cpuNoticeUntil = now + CpuNoticeFor;
+            changed = true;
+        }
+        return changed;
+    }
 
     /// <summary>Why the browser's model runs: Ollama is not there, or it has not pulled the chosen model.</summary>
     private string Fallback => _inference?.OllamaMissing is { Length: > 0 } ? "NOT IN OLLAMA" : "NO OLLAMA";
@@ -176,16 +253,38 @@
 
     private async Task PollAsync(CancellationToken ct)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+        // Every second, so a download's bar moves; the caption worker is asked every third tick, as before.
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        var tick = 0;
         try
         {
             do
             {
-                if (Sensing.IsRunning && !Sensing.Live.Demo && Sensing.Captions)
+                if (!Sensing.IsRunning || Sensing.Live.Demo)
+                {
+                    // Stopped: a notice about the session's models goes with it.
+                    if (_cpuNotice is not null)
+                    {
+                        _cpuNotice = null;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                    continue;
+                }
+                var changed = false;
+                if (await JS.TryInvokeAsync<List<ModelLoadPayload>>("powatchModels.snapshot") is { } loads && !loads.SequenceEqual(_loads))
+                {
+                    _loads = loads;
+                    changed = true;
+                }
+                if (Sensing.Captions && tick++ % 3 == 0)
                 {
                     _inference = await JS.TryInvokeAsync<InferenceStatusPayload>("powatchInference.getInferenceDiagnostics");
-                    await InvokeAsync(StateHasChanged);
+                    changed = true;
                 }
+                // The just-loaded glow (ModelLoad) ends on a render after its few seconds.
+                var glowing = _loads.Any(l => l.Phase == "ready" && DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - l.At < 6000);
+                changed |= NoticeCpuFallback();
+                if (changed || glowing) await InvokeAsync(StateHasChanged);
             } while (await timer.WaitForNextTickAsync(ct));
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }

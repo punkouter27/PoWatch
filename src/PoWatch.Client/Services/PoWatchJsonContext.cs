@@ -51,6 +51,7 @@ namespace PoWatch.Client.Services;
 [JsonSerializable(typeof(AiModelsDto))]
 [JsonSerializable(typeof(SelectAiModelDto))]
 [JsonSerializable(typeof(InferenceStatusPayload))]
+[JsonSerializable(typeof(List<ModelLoadPayload>))]
 [JsonSerializable(typeof(RuleDraftRequestDto))]
 [JsonSerializable(typeof(RuleDraftDto))]
 [JsonSerializable(typeof(AlertDto))]

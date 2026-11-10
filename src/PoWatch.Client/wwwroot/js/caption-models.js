@@ -43,8 +43,9 @@ export function loadProcessor(transformers, spec) {
   return transformers.AutoProcessor.from_pretrained(spec.id);
 }
 
-export function loadModel(transformers, spec, device, dtype) {
-  return transformers.Florence2ForConditionalGeneration.from_pretrained(spec.id, { device, dtype });
+/** `onProgress` is transformers.js's progress_callback (inference-worker.js reports it to the page); optional. */
+export function loadModel(transformers, spec, device, dtype, onProgress) {
+  return transformers.Florence2ForConditionalGeneration.from_pretrained(spec.id, { device, dtype, progress_callback: onProgress });
 }
 
 /** Model inputs for one frame. Florence takes its task token, not the chat prompt. */

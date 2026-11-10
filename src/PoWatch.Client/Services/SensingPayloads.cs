@@ -34,6 +34,14 @@ public sealed class VlmResultPayload
 /// <summary>The caption worker's actual model and backend, separate from the pending selection.</summary>
 public sealed record InferenceStatusPayload(string? ModelKey, string LoadState, string? Device, string? LoadError, string? ModelId = null, string? OllamaMissing = null);
 
+/// <summary>
+/// One browser model's load as its worker last reported it (powatchModels in worker-rpc.js). Phase is
+/// downloading (Loaded/Total bytes), warming (built, first run under way), ready, failed, or lost (GPU reset).
+/// At is when it was reported, in Unix milliseconds. Reason says why a model meant for WebGPU ended up on the CPU.
+/// </summary>
+public sealed record ModelLoadPayload(string Name, string Phase, string? Model = null, string? Device = null, string? Dtype = null,
+    double Loaded = 0, double Total = 0, double? LoadMs = null, string? Error = null, double At = 0, string? Reason = null);
+
 /// <summary>One batch waiting in the outbox (outbox.js), as its JSON text.</summary>
 public sealed class OutboxEntryPayload
 {

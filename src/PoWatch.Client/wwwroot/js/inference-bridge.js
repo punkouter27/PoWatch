@@ -1,7 +1,7 @@
 // Page side of the L2 caption model: owns the webcam stream and the preview element, captures frames
 // on the main thread (the worker cannot touch the DOM) and hands them to inference-worker.js.
 (() => {
-  const call = window.powatchWorkerRpc('/js/inference-worker.js?v=20261109-gpulost');
+  const call = window.powatchWorkerRpc('/js/inference-worker.js?v=20261109-loadstatus', 'caption');
 
   let activeStream = null;
   let activePreviewElement = null;

@@ -50,9 +50,25 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
                 });
                 powatchDetector.load = async () => ({ modelId: 'test', device: 'wasm' });
                 powatchDetector.start = () => {};
+                const detector = { name: 'detector', model: 'onnx-community/rfdetr_nano-ONNX', device: 'webgpu', dtype: 'fp16' };
+                window.detectorLoad = { ...detector, phase: 'downloading', loaded: 50 * 1048576, total: 100 * 1048576, at: Date.now() };
+                window.detectorReady = () => { detectorLoad = { ...detector, phase: 'ready', loadMs: 4200, at: Date.now() }; };
+                window.detectorOnCpu = () => { detectorLoad = { ...detector, device: 'wasm', dtype: 'q8', phase: 'ready', reason: 'this browser offers no WebGPU', at: Date.now() }; };
+                const hearing = { name: 'hearing', model: 'speech', device: 'wasm', dtype: 'q8', phase: 'ready', at: Date.now() };
+                powatchModels.snapshot = () => [detectorLoad, hearing];
             }
             """);
         await page.GetByTestId("start-camera").ClickAsync();
+        // The detector's load shows as it goes: a download with its bytes, then where it runs.
+        var detectorStatus = page.GetByTestId("ai-detector-status");
+        await Assertions.Expect(detectorStatus).ToContainTextAsync("RF-DETR NANO · LOADING 50% · 50/100 MB");
+        await page.EvaluateAsync("() => detectorReady()");
+        await Assertions.Expect(detectorStatus).ToContainTextAsync("READY · WEBGPU FP16");
+        await Assertions.Expect(detectorStatus).ToHaveAttributeAsync("data-phase", "ready");
+        // Hearing runs on the CPU by design; a GPU model that lands there says so once, with why.
+        await Assertions.Expect(page.GetByTestId("ai-hearing-status")).ToContainTextAsync("WORDS · SOUNDS · READY · CPU Q8");
+        await page.EvaluateAsync("() => detectorOnCpu()");
+        await Assertions.Expect(page.GetByTestId("model-cpu-notice")).ToContainTextAsync("object detector is running on the CPU, not the GPU, because this browser offers no WebGPU");
         await page.WaitForFunctionAsync("() => captionCalls.includes('qwen2.5vl:7b')");
         await Assertions.Expect(page.GetByTestId("ai-caption-status")).ToContainTextAsync("OLLAMA");
         await captions.SelectOptionAsync("minicpm-v");

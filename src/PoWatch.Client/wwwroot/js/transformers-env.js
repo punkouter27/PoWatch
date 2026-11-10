@@ -55,6 +55,35 @@ self.addEventListener('unhandledrejection', (event) => {
   self.postMessage({ type: 'GPU_LOST', message });
 });
 
+/**
+ * Tells the page how a model load is going (worker-rpc.js keeps the latest per worker for the Live
+ * models strip). `progress()` starts one attempt and returns the progress_callback transformers.js takes:
+ * the bytes of every weight file so far, a few times a second. `report()` sends a phase of its own:
+ * 'warming' (built, first run under way), 'ready', 'failed'.
+ */
+export function modelStatus() {
+  const post = (status) => self.postMessage({ type: 'MODEL_STATUS', status });
+  return {
+    progress(model, device, dtype) {
+      const files = new Map();
+      let last = 0;
+      post({ phase: 'downloading', model, device, dtype, loaded: 0, total: 0 });
+      return (event) => {
+        if (event.status === 'progress' && event.total) files.set(event.file, { loaded: event.loaded, total: event.total });
+        else if (event.status === 'done' && files.has(event.file)) files.get(event.file).loaded = files.get(event.file).total;
+        else return;
+        const now = performance.now();
+        if (now - last < 250 && event.status !== 'done') return;
+        last = now;
+        let loaded = 0, total = 0;
+        for (const file of files.values()) { loaded += file.loaded; total += file.total; }
+        post({ phase: 'downloading', model, device, dtype, loaded, total });
+      };
+    },
+    report: post,
+  };
+}
+
 /** Imports the vendored library once and points its ONNX Runtime at our own wasm. */
 export async function loadTransformers() {
   const transformers = await import(TRANSFORMERS_URL);

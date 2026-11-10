@@ -14,7 +14,7 @@
   const CLOCK_URL = new URL('./sample-clock.js', document.currentScript?.src ?? location.href);
   const CAPTURE_WIDTH = 640;
 
-  const call = window.powatchWorkerRpc(WORKER_URL);
+  const call = window.powatchWorkerRpc(WORKER_URL, 'detector');
   let _clock = null;
   let _busy = false;
   let _device = null;

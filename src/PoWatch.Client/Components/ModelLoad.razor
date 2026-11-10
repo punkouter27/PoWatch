@@ -1,0 +1,84 @@
+@using System.Globalization
+
+@* One browser model's load, as a chip in the Live models strip: a bar while its weights download, a
+   pulse while the backend builds it and runs it the first time, then where it runs. WebGPU reads green;
+   the CPU fallback amber, since it is several times slower. A model that just came up glows once. *@
+<span class="model-load @Tone @(JustReady ? "model-load--fresh" : null)" data-test="@Test" data-phase="@(Status?.Phase ?? "waiting")" title="@Hint">
+    <span class="model-load-dot" aria-hidden="true"></span>
+    <span class="model-load-text" aria-hidden="true">@(Prefix is { Length: > 0 } ? $"{Prefix} · " : null)@Text</span>
+    @if (Percent is { } pct)
+    {
+        <span class="model-load-bar" aria-hidden="true"><span style="width: @pct.ToString(CultureInfo.InvariantCulture)%"></span></span>
+    }
+    @* The visible text ticks every second while downloading; a screen reader hears the phase change only. *@
+    <span class="visually-hidden" role="status">@Prefix @Announcement</span>
+</span>
+
+@code {
+    /// <summary>The worker's last report, or null before it sent one.</summary>
+    [Parameter, EditorRequired] public ModelLoadPayload? Status { get; set; }
+
+    /// <summary>What the model is, ahead of its state ("RF-DETR NANO").</summary>
+    [Parameter] public string? Prefix { get; set; }
+
+    [Parameter] public string? Test { get; set; }
+
+    /// <summary>The model is meant for the CPU (hearing), so ready there reads green, not as a fallback.</summary>
+    [Parameter] public bool CpuByDesign { get; set; }
+
+    private static readonly TimeSpan FreshFor = TimeSpan.FromSeconds(4);
+
+    private string Backend => Status?.Device switch { "webgpu" => "WEBGPU", "wasm" => "CPU", { } other => other.ToUpperInvariant(), null => "" };
+
+    /// <summary>The precision, unless it is the per-part mix (it says nothing at a glance).</summary>
+    private string Precision => Status?.Dtype is { Length: > 0 } d && d != "mixed" ? $" {d.ToUpperInvariant()}" : "";
+
+    /// <summary>Whole percent while bytes are still arriving; null once they are all in (or none are known).</summary>
+    private int? Percent => Status is { Phase: "downloading", Total: > 0 } s && s.Loaded < s.Total
+        ? (int)Math.Floor(100 * s.Loaded / s.Total)
+        : null;
+
+    private string Text => Status?.Phase switch
+    {
+        null => "WAITING TO LOAD",
+        "downloading" when Percent is { } pct => $"LOADING {pct}% · {Mb(Status.Loaded)}/{Mb(Status.Total)} MB",
+        "downloading" or "warming" => $"STARTING ON {Backend}...",
+        "ready" => $"READY · {Backend}{Precision}",
+        "lost" => "GPU RESET · RELOADING",
+        "failed" => "FAILED",
+        _ => Status.Phase.ToUpperInvariant(),
+    };
+
+    private string Announcement => Status?.Phase switch
+    {
+        "downloading" or "warming" => $"loading on {Backend}",
+        "ready" => $"ready on {Backend}",
+        "lost" => "GPU reset, reloading",
+        "failed" => "failed to load",
+        _ => "waiting to load",
+    };
+
+    private string Tone => Status?.Phase switch
+    {
+        "downloading" or "warming" => "model-load--loading",
+        "ready" => Status.Device == "webgpu" || CpuByDesign ? "model-load--gpu" : "model-load--cpu",
+        "lost" => "model-load--cpu",
+        "failed" => "model-load--bad",
+        _ => "model-load--idle",
+    };
+
+    private bool JustReady => Status is { Phase: "ready", At: > 0 } s
+        && DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds((long)s.At) < FreshFor;
+
+    private string Hint => Status switch
+    {
+        { Phase: "ready", Reason: { Length: > 0 } reason } s => $"On the CPU because {reason}. It works, several times slower than on the GPU.{(s.Error is { Length: > 0 } e ? $" Details: {e}" : "")}",
+        { Error: { Length: > 0 } error } => error,
+        { Phase: "ready", LoadMs: { } ms } s => $"{s.Model} on {Backend}{Precision}, ready in {(ms / 1000).ToString("0.0", CultureInfo.InvariantCulture)} s.",
+        { Phase: "warming" } s => $"{s.Model} is built; its first run on {Backend} compiles the GPU shaders, which takes a few seconds.",
+        { Phase: "downloading" } s => $"{s.Model}: downloading weights (cached after the first time), then building on {Backend}.",
+        _ => "Loads when the camera starts.",
+    };
+
+    private static string Mb(double bytes) => (bytes / 1_048_576).ToString("0", CultureInfo.InvariantCulture);
+}

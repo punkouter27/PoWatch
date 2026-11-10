@@ -21,7 +21,7 @@
   // ("sound effect", "sine wave") say nothing either, and body sounds read as medical, which stories avoid.
   const IGNORED = /^(speech|male speech|female speech|child speech|conversation|narration|silence|inside, small room|inside, large room|inside, public space|outside|white noise|pink noise|hum|static|noise|environmental noise|mains hum|sound effect|sine wave|tone|heart murmur|heart sounds|breathing|wheeze|gasp|cough|sneeze|snoring)/i;
 
-  const call = window.powatchWorkerRpc('/js/audio-worker.js?v=20261031-audio');
+  const call = window.powatchWorkerRpc('/js/audio-worker.js?v=20261109-loadstatus', 'hearing');
   let state = null;
 
   /** 0 at −60 dBFS or below, 1 at full scale. */

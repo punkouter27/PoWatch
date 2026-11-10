@@ -5,7 +5,7 @@
 
 // The vendored transformers.js, its fetch retry and the frame hand-off live in transformers-env.js;
 // the models in caption-models.js; what counts as a usable caption in caption-quality.js.
-import { FETCH_ATTEMPTS, bitmapToRawImage, loadTransformers } from './transformers-env.js';
+import { FETCH_ATTEMPTS, bitmapToRawImage, loadTransformers, modelStatus } from './transformers-env.js';
 import { CAPTION_MODELS, DEFAULT_CAPTION_MODEL, captionSpec, decodeGenerated, dtypeName, generateOptions, isOllamaModel, loadModel, loadProcessor, prepareInputs } from './caption-models.js';
 import { judgeCaption } from './caption-quality.js';
 import { tryEmbed } from './embedder.js';
@@ -48,6 +48,13 @@ let _lastInferenceTimestamp = null;
 let _lastInferenceOutput = null;
 let _inferLock = Promise.resolve();
 
+// The page's view of the in-browser model's load (the Live strip): downloading, then 'warming' until the
+// first caption finishes (WebGPU compiles its shaders on that run), then 'ready'.
+const _status = modelStatus();
+let _loadStarted = 0;
+let _warm = false;
+let _cpuReason = null; // why the model runs on the CPU (wasm), told to the user once; null on WebGPU
+
 async function hasWebGpu() {
   try {
     return !!navigator.gpu && (await navigator.gpu.requestAdapter()) !== null;
@@ -74,18 +81,24 @@ async function ensureModelLoaded(modelKey, avoidGpu = false) {
   _runtimeFallbackStage = 0;
   _fp16FallbackUsed = false;
   const started = performance.now();
+  _loadStarted = started;
 
   _loadPromise = (async () => {
     _transformers ??= await loadTransformers();
     _processor = await loadProcessor(_transformers, _spec);
 
-    const plan = (!avoidGpu && await hasWebGpu())
+    const gpu = !avoidGpu && await hasWebGpu();
+    const plan = gpu
       ? [..._spec.webgpu.map((dtype) => ({ device: 'webgpu', dtype })), ..._spec.wasm.map((dtype) => ({ device: 'wasm', dtype }))]
       : _spec.wasm.map((dtype) => ({ device: 'wasm', dtype }));
     let lastError = null;
     while (plan.length > 0) {
       const step = plan.shift();
       try {
+        _cpuReason = step.device === 'webgpu' ? null
+          : avoidGpu ? 'the GPU reset twice in this session'
+            : !gpu ? 'this browser offers no WebGPU adapter'
+              : `WebGPU could not load it (${describeError(lastError)})`;
         await loadOn(step.device, step.dtype);
         _fp16FallbackUsed = step.device === 'webgpu' && step.dtype !== _spec.webgpu[0];
         // A wasm session created as a fallback from a failed WebGPU run can still be unusable, so
@@ -108,14 +121,17 @@ async function ensureModelLoaded(modelKey, avoidGpu = false) {
   } catch (err) {
     _loadState = 'error';
     _loadError = err?.message ?? 'Model failed to load';
+    _status.report({ phase: 'failed', model: _spec.id, error: _loadError });
     throw err;
   }
 }
 
 async function loadOn(device, dtype) {
-  _model = await loadModel(_transformers, _spec, device, dtype);
+  _model = await loadModel(_transformers, _spec, device, dtype, _status.progress(_spec.id, device, dtypeName(dtype)));
   _device = device;
   _dtype = dtypeName(dtype);
+  _warm = false;
+  _status.report({ phase: 'warming', model: _spec.id, device, dtype: _dtype });
 }
 
 function describeError(err) {
@@ -242,13 +258,20 @@ async function runInference(bitmap, prompt, maxNewTokens = 32, modelKey = null, 
 
     if (generatedIds) {
       output = decodeGenerated(_processor, _spec, generatedIds, inputs, image);
-      if (output.length > 0) break;
+      if (output.length > 0) {
+        if (!_warm) {
+          _warm = true;
+          _status.report({ phase: 'ready', model: _spec.id, device: _device, dtype: _dtype, loadMs: Math.round(performance.now() - _loadStarted), reason: _device === 'wasm' ? _cpuReason : null });
+        }
+        break;
+      }
     }
 
     const fallback = _runtimeFallbacks.shift();
     if (!fallback) break;
 
     _runtimeFallbackStage += 1;
+    if (fallback.device === 'wasm' && _device === 'webgpu') _cpuReason = 'WebGPU loaded it but gave no caption on this machine';
     try {
       await loadOn(fallback.device, fallback.dtype);
       _fp16FallbackUsed = fallback.device === 'webgpu';
@@ -258,6 +281,9 @@ async function runInference(bitmap, prompt, maxNewTokens = 32, modelKey = null, 
       break;
     }
   }
+
+  // Loaded but never produced a caption on any backend: say so rather than "starting" forever.
+  if (!_warm && generateError) _status.report({ phase: 'failed', model: _spec.id, device: _device, dtype: _dtype, error: generateError });
 
   return finish(output, prompt, inferStart, generateError
     ? `Inference error: ${generateError}`
