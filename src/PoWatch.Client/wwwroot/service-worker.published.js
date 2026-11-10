@@ -4,14 +4,21 @@
 self.importScripts('./service-worker-assets.js');
 self.addEventListener('install', event => event.waitUntil(onInstall()));
 self.addEventListener('activate', event => event.waitUntil(onActivate()));
-self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
+const serverRoutes = /^\/(api|auth|hubs|health|diag|scalar|openapi|signin-oidc|signout-callback-oidc)(\/|$)/;
+// Only the app's own files are answered here. Everything else is left to the browser untouched: a
+// request relayed through this worker loses its page (so Chrome cannot ask for local-network access
+// when captions call Ollama on localhost), and its failure surfaced here as an uncaught rejection.
+self.addEventListener('fetch', event => {
+    const url = new URL(event.request.url);
+    if (event.request.method !== 'GET' || url.origin !== self.origin || serverRoutes.test(url.pathname)) return;
+    event.respondWith(onFetch(event));
+});
 
 const cacheNamePrefix = 'offline-cache-';
 const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff2?$/, /\.png$/, /\.svg$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/];
 // The vision model's runtime is ~20 MB and only needed with captions on: fetched on first use, not at install.
 const offlineAssetsExclude = [/^service-worker\.js$/, /^lib\/transformers/];
-const serverRoutes = /^\/(api|auth|hubs|health|diag|scalar|openapi|signin-oidc|signout-callback-oidc)(\/|$)/;
 
 const baseUrl = new URL('/', self.origin);
 const manifestUrlList = self.assetsManifest.assets.map(asset => new URL(asset.url, baseUrl).href);
@@ -35,10 +42,6 @@ async function onActivate() {
 }
 
 async function onFetch(event) {
-    const url = new URL(event.request.url);
-    if (event.request.method !== 'GET' || url.origin !== self.origin || serverRoutes.test(url.pathname))
-        return fetch(event.request);
-
     // Any in-app address is the one page; a file from the manifest is itself.
     const shouldServeIndexHtml = event.request.mode === 'navigate' && !manifestUrlList.some(known => known === event.request.url);
     const cache = await caches.open(cacheName);

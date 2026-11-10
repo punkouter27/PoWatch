@@ -129,10 +129,10 @@ function signature(pixels, box) {
   return n === 0 ? [] : bins.map((c) => Math.round((c / n) * 10000) / 10000);
 }
 
-async function detect(bitmap, threshold) {
+async function detect(bitmap, threshold, forceDevice) {
   let image, pixels;
   try {
-    await load();
+    await load(forceDevice);
     ({ image, pixels } = bitmapToRawImage(RawImage, bitmap));
   } finally {
     bitmap.close(); // also when the model failed to load, or the transferred frame leaks
@@ -142,6 +142,7 @@ async function detect(bitmap, threshold) {
   const output = await detector(image, { threshold, percentage: true });
   return {
     latencyMs: Math.round(performance.now() - started),
+    device: loaded.device,
     detections: output.map((d) => ({
       label: d.label,
       score: d.score,
@@ -157,7 +158,7 @@ self.onmessage = async (event) => {
     if (type === 'LOAD') {
       self.postMessage({ id, type: 'LOADED', ...(await load(event.data.device, event.data.from, event.data.rejected)) });
     } else if (type === 'DETECT') {
-      self.postMessage({ id, type: 'DETECTED', ...(await detect(event.data.bitmap, event.data.threshold ?? 0.5)) });
+      self.postMessage({ id, type: 'DETECTED', ...(await detect(event.data.bitmap, event.data.threshold ?? 0.5, event.data.device)) });
     }
   } catch (err) {
     if (err instanceof Poisoned) self.postMessage({ id, type: 'POISONED', next: err.next, rejected: err.rejected });

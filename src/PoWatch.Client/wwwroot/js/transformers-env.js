@@ -44,6 +44,17 @@ async function fetchWithRetry(input, init) {
 
 self.fetch = fetchWithRetry;
 
+// A GPU reset (driver crash, sleep, out of memory) kills every WebGPU session in this worker. ONNX
+// Runtime's buffer read-back then rejects where nothing awaits it, and the run that was waiting on it
+// never settles: the caption queue or the detector stalls for good. Tell the page instead; worker-rpc.js
+// fails what was pending and starts a fresh worker on the next call.
+self.addEventListener('unhandledrejection', (event) => {
+  const message = String(event.reason?.message ?? event.reason ?? '');
+  if (!/mapAsync|GPUBuffer|Instance reference|device (is|was) lost/i.test(message)) return;
+  event.preventDefault();
+  self.postMessage({ type: 'GPU_LOST', message });
+});
+
 /** Imports the vendored library once and points its ONNX Runtime at our own wasm. */
 export async function loadTransformers() {
   const transformers = await import(TRANSFORMERS_URL);

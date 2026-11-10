@@ -1,6 +1,7 @@
 // Request/response over a module Web Worker, shared by the detector and caption bridges.
 // Each message carries an `id` the worker echoes back; a reply with type 'ERROR' rejects.
-// The worker starts on first use and is recreated after a crash.
+// The worker starts on first use and is recreated after a crash or a GPU reset (a 'GPU_LOST'
+// message, sent by transformers-env.js).
 (function () {
   'use strict';
 
@@ -9,21 +10,30 @@
     let nextId = 1;
     const pending = new Map();
 
+    /** Fails whatever the worker still owed and lets it go; the next call starts a fresh one. */
+    function drop(reason) {
+      worker?.terminate();
+      worker = null;
+      for (const { reject } of pending.values()) reject(new Error(reason));
+      pending.clear();
+    }
+
     function ensureWorker() {
       if (worker) return worker;
       worker = new Worker(url, { type: 'module' });
       worker.onmessage = (event) => {
+        if (event.data.type === 'GPU_LOST') {
+          call.gpuLosses++;
+          drop('The GPU was reset; the model reloads on the next run');
+          return;
+        }
         const entry = pending.get(event.data.id);
         if (!entry) return;
         pending.delete(event.data.id);
         if (event.data.type === 'ERROR') entry.reject(new Error(event.data.message));
         else entry.resolve(event.data);
       };
-      worker.onerror = () => {
-        for (const { reject } of pending.values()) reject(new Error('Worker crashed'));
-        pending.clear();
-        worker = null;
-      };
+      worker.onerror = () => drop('Worker crashed');
       return worker;
     }
 
@@ -46,12 +56,10 @@
     }
 
     /** Ends the worker (and fails whatever it still owed); the next call starts a fresh one. */
-    call.restart = () => {
-      worker?.terminate();
-      worker = null;
-      for (const { reject } of pending.values()) reject(new Error('Worker restarted'));
-      pending.clear();
-    };
+    call.restart = () => drop('Worker restarted');
+
+    /** GPU resets seen on this page. Twice is a GPU that cannot hold the model: callers then ask for wasm. */
+    call.gpuLosses = 0;
 
     return call;
   };

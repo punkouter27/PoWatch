@@ -1,7 +1,7 @@
 // Page side of the L2 caption model: owns the webcam stream and the preview element, captures frames
 // on the main thread (the worker cannot touch the DOM) and hands them to inference-worker.js.
 (() => {
-  const call = window.powatchWorkerRpc('/js/inference-worker.js?v=20261017-ollama');
+  const call = window.powatchWorkerRpc('/js/inference-worker.js?v=20261109-gpulost');
 
   let activeStream = null;
   let activePreviewElement = null;
@@ -139,11 +139,15 @@
       // The detector yields the GPU while this runs (detector-bridge.js).
       gpu.captioning++;
       try {
-        const res = await call({ type: 'RUN_INFERENCE', payload: { frame, prompt, maxNewTokens: maxInferenceTokens, model } }, [frame]);
+        // After two GPU resets the in-browser model reloads on wasm instead (worker-rpc.js counts them).
+        const res = await call({ type: 'RUN_INFERENCE', payload: { frame, prompt, maxNewTokens: maxInferenceTokens, model, avoidGpu: call.gpuLosses >= 2 } }, [frame]);
         _lastCaptionModel = model;
         // Searchable by meaning from the command palette (caption-index.js); the vector stays on this device.
         if (res.result?.isAvailable && res.result.embedding) window.powatchCaptionIndex?.put(Date.now(), res.result.activity, res.result.embedding);
         return res.result;
+      } catch (err) {
+        // The worker died under this caption (GPU reset, crash): this one is lost, the next starts a fresh worker.
+        return unavailable(`Model unavailable: ${err?.message ?? err}`);
       } finally {
         gpu.captioning--;
       }

@@ -17,6 +17,10 @@ const OLLAMA_CHAT_URL = 'http://localhost:11434/api/chat';
 const OLLAMA_TIMEOUT_MS = 120_000;
 let _ollamaModel = null; // the Ollama model that answered last; null while the in-browser model is in use
 let _ollamaMissing = null; // the chosen Ollama model when Ollama answered without it (404): the browser model stands in
+// Nothing answered (no server, or the browser refused the call): ask again after this long instead of
+// on every caption, which cost a JPEG encode and a console error each time.
+const OLLAMA_RETRY_MS = 60_000;
+let _ollamaRetryAt = 0;
 
 // Model state
 let _modelKey = null;
@@ -52,7 +56,7 @@ async function hasWebGpu() {
   }
 }
 
-async function ensureModelLoaded(modelKey) {
+async function ensureModelLoaded(modelKey, avoidGpu = false) {
   const key = CAPTION_MODELS[modelKey] ? modelKey : DEFAULT_CAPTION_MODEL;
   if (_loadState === 'loading') await _loadPromise.catch(() => { });
   if (_loadState === 'ready' && key === _modelKey) return;
@@ -75,7 +79,7 @@ async function ensureModelLoaded(modelKey) {
     _transformers ??= await loadTransformers();
     _processor = await loadProcessor(_transformers, _spec);
 
-    const plan = (await hasWebGpu())
+    const plan = (!avoidGpu && await hasWebGpu())
       ? [..._spec.webgpu.map((dtype) => ({ device: 'webgpu', dtype })), ..._spec.wasm.map((dtype) => ({ device: 'wasm', dtype }))]
       : _spec.wasm.map((dtype) => ({ device: 'wasm', dtype }));
     let lastError = null;
@@ -147,6 +151,7 @@ async function toJpegBase64(bitmap) {
 // The reply from the local Ollama server; null when nothing listens there and { missing } when it has no
 // such model (the caller then uses the in-browser model either way). Any other error throws.
 async function ollamaGenerate(model, bitmap, prompt, maxNewTokens) {
+  if (performance.now() < _ollamaRetryAt) return null;
   const image = await toJpegBase64(bitmap);
   let response;
   try {
@@ -164,6 +169,7 @@ async function ollamaGenerate(model, bitmap, prompt, maxNewTokens) {
     });
   } catch (err) {
     if (err?.name === 'TimeoutError') throw new Error(`${model} took longer than ${OLLAMA_TIMEOUT_MS / 1000} s to answer`);
+    _ollamaRetryAt = performance.now() + OLLAMA_RETRY_MS;
     return null;
   }
   if (!response.ok) {
@@ -174,7 +180,7 @@ async function ollamaGenerate(model, bitmap, prompt, maxNewTokens) {
   return ((await response.json()).message?.content ?? '').trim();
 }
 
-async function runInference(bitmap, prompt, maxNewTokens = 32, modelKey = null) {
+async function runInference(bitmap, prompt, maxNewTokens = 32, modelKey = null, avoidGpu = false) {
   if (!bitmap) return unavailable('No frame captured');
 
   const safeMaxNewTokens = Number.isFinite(maxNewTokens)
@@ -204,7 +210,7 @@ async function runInference(bitmap, prompt, maxNewTokens = 32, modelKey = null) 
   _ollamaModel = null;
 
   try {
-    await ensureModelLoaded(modelKey);
+    await ensureModelLoaded(modelKey, avoidGpu);
   } catch (err) {
     bitmap.close?.();
     // "Failed to fetch" reads as an app bug rather than what it is — the weights could not be downloaded.
@@ -281,7 +287,7 @@ self.onmessage = async (e) => {
 
   switch (type) {
     case 'RUN_INFERENCE': {
-      const run = _inferLock.then(() => runInference(payload.frame, payload.prompt, payload.maxNewTokens, payload.model));
+      const run = _inferLock.then(() => runInference(payload.frame, payload.prompt, payload.maxNewTokens, payload.model, payload.avoidGpu));
       _inferLock = run.then(() => undefined, () => undefined);
       let result;
       try {

@@ -63,7 +63,10 @@
     if (!video || video.readyState < 2 || !video.videoWidth) return null;
     const height = Math.round(CAPTURE_WIDTH * video.videoHeight / video.videoWidth);
     const bitmap = await createImageBitmap(video, { resizeWidth: CAPTURE_WIDTH, resizeHeight: height });
-    return call({ type: 'DETECT', bitmap, threshold }, [bitmap]);
+    // A fresh worker (after a GPU reset) loads the model on its first frame: on wasm once the GPU has failed twice.
+    const result = await call({ type: 'DETECT', bitmap, threshold, device: call.gpuLosses >= 2 ? 'wasm' : undefined }, [bitmap]);
+    _device = result.device ?? _device;
+    return result;
   }
 
   async function start(video, dotnetRef, intervalMs, threshold) {
