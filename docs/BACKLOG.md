@@ -89,6 +89,12 @@ to light and the cost is real on phones. This is the subset that improves this a
 - `PoWatch.Integration.FeatureEndpointTests.A_stopped_session_gets_its_chapters_joined_into_one_story_written_once`
   failed once on 2026-11-09 with `Nothing was observed in this window.` and passed on rerun — a
   time-window boundary in `ObserveAsync`.
+- `PoWatch.Integration.FeatureEndpointTests.What_the_microphone_heard_is_a_transcript_and_part_of_the_story`
+  failed once on 2026-11-09 (asserting `someone said: “Has anyone seen my keys?”` in the story) and
+  passed on rerun. Same shape as the one above: the transcript read fine, so the chapter was written
+  from an empty stretch. Both would be fixed by making the chapter's minute window (narrowed for a
+  stop that lands in the same minute as the start) always readable back, and by retrying a chapter
+  whose text is `NothingObserved` while its stretch has raw rows.
 - `PoWatch.E2EUI.ViewportFitE2ETests` failed twice on 2026-11-09 (once `app-navbar` never appeared,
   once the fake-camera session) with floods of `TypeError: Failed to fetch` and
   `ERR_ABORTED` on `/api/diagnostics/client-error`, then passed on the second rerun. That pattern is
