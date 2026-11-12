@@ -1,0 +1,19 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+
+<CascadingAuthenticationState>
+    <main tabindex="-1">
+        <ErrorBoundary @key="new Uri(Nav.Uri).AbsolutePath">
+            <ChildContent>
+                @Body
+            </ChildContent>
+            <ErrorContent>
+                <div class="po-error-panel" role="alert">
+                    <h2>Something went wrong</h2>
+                    <p>This page hit an unexpected error. Reload the page to try again.</p>
+                </div>
+            </ErrorContent>
+        </ErrorBoundary>
+    </main>
+    <BuildVersion />
+</CascadingAuthenticationState>

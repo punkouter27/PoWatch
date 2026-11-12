@@ -112,7 +112,7 @@ app.UsePoWatchExceptionHandler();
 // Only enforce HTTPS redirect in non-development environments.
 // In dev the API binds only to HTTP; the middleware cannot resolve the HTTPS port and
 // emits a WRN on every request otherwise.
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsProduction())
     app.UseHttpsRedirection();
 
 // Before authentication, so responses the auth handlers end themselves (the OIDC callback) still carry one.

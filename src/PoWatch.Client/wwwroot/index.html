@@ -20,6 +20,9 @@
         }
     </style>
     <link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin="anonymous" href="_content/Radzen.Blazor/fonts/MaterialSymbolsOutlined.woff2" />
+    <link rel="stylesheet" href="css/po-tokens.css" />
+    <link rel="stylesheet" href="css/po-motion.css" />
     <link rel="stylesheet" href="css/terminal.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="manifest" href="manifest.webmanifest" />
@@ -68,7 +71,7 @@
     </div>
     <!-- All app-specific JS bridges now load in <head> with defer (see above). Only the
          Radzen vendor bundle and Blazor runtime remain in <body>. -->
-    <script src="_content/Radzen.Blazor/Radzen.Blazor.js" defer></script>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
     <script>navigator.serviceWorker?.register('service-worker.js', { updateViaCache: 'none' });</script>
 </body>

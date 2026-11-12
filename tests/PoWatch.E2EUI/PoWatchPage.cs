@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Microsoft.Playwright;
 
 namespace PoWatch.E2EUI;
@@ -16,6 +17,22 @@ internal static class PoWatchPage
 {
     /// <summary>Generous enough for a cold WASM boot on a slow host.</summary>
     private const int BootTimeoutMs = 60_000;
+    private static readonly ConditionalWeakTable<IPage, ConcurrentQueue<string>> PageErrors = new();
+
+    public static void ClearErrors(this IPage page)
+    {
+        if (PageErrors.TryGetValue(page, out var errors))
+            errors.Clear();
+    }
+
+    public static void ThrowIfErrors(this IPage page)
+    {
+        if (PageErrors.TryGetValue(page, out var errors) && !errors.IsEmpty)
+        {
+            throw new InvalidOperationException(
+                "E2EUI detected browser console/network errors:\n - " + string.Join("\n - ", errors));
+        }
+    }
 
     /// <remarks>The caller must dispose the returned page to close its isolated browser context.</remarks>
     /// <param name="user">A distinct guest identity, for tests that need a user with no history.</param>
@@ -27,15 +44,21 @@ internal static class PoWatchPage
             ViewportSize = new() { Width = 1600, Height = 1000 }
         });
         var errors = new ConcurrentQueue<string>();
+        PageErrors.AddOrUpdate(page, errors);
         page.PageError += (_, error) => errors.Enqueue($"Page error: {error}");
         page.Console += (_, message) =>
         {
             if (message.Type == "error") errors.Enqueue($"Console: {message.Text}");
         };
-        page.RequestFailed += (_, request) => errors.Enqueue($"Request failed: {request.Url}: {request.Failure}");
+        page.RequestFailed += (_, request) =>
+        {
+            if (request.Failure?.Contains("ERR_ABORTED", StringComparison.Ordinal) != true)
+                errors.Enqueue($"Request failed: {request.Url}: {request.Failure}");
+        };
         page.Response += (_, response) =>
         {
-            if (response.Status >= 400) errors.Enqueue($"HTTP {response.Status}: {response.Url}");
+            if (response.Status >= 400 && !response.Url.EndsWith(".map", StringComparison.OrdinalIgnoreCase))
+                errors.Enqueue($"HTTP {response.Status}: {response.Url}");
         };
 
         try

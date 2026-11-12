@@ -111,5 +111,6 @@ public static class PlaywrightPageExtensions
             var text = await errorUi.InnerTextAsync();
             Assert.Fail($"Blazor error UI was visible: {text}");
         }
+        page.ThrowIfErrors();
     }
 }

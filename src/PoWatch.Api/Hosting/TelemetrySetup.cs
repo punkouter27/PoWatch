@@ -68,12 +68,25 @@ public static class TelemetrySetup
         // service.name resource attribute is projected onto cloud_RoleName by the Azure exporter.
         var roleName = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? "PoWatch";
 
+        var isDev = string.Equals(configuration["ASPNETCORE_ENVIRONMENT"], "Development", StringComparison.OrdinalIgnoreCase);
+
         services.AddOpenTelemetry()
             .ConfigureResource(r => r.AddService(roleName))
             .WithTracing(tracing =>
             {
                 tracing
-                    .AddAspNetCoreInstrumentation()
+                    .SetSampler(isDev ? new AlwaysOnSampler() : new TraceIdRatioBasedSampler(0.1))
+                    .AddAspNetCoreInstrumentation(options =>
+                    {
+                        options.RecordException = true;
+                        options.Filter = ctx =>
+                        {
+                            var path = ctx.Request.Path.Value ?? string.Empty;
+                            return !path.StartsWith("/health", StringComparison.OrdinalIgnoreCase)
+                                && !path.StartsWith("/_framework/", StringComparison.OrdinalIgnoreCase)
+                                && !path.Equals("/favicon.ico", StringComparison.OrdinalIgnoreCase);
+                        };
+                    })
                     .AddSource("PoWatch.*");
 
                 if (!string.IsNullOrWhiteSpace(aiConnectionString))

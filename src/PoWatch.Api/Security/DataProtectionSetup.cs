@@ -36,7 +36,7 @@ public static class DataProtectionSetup
             .SetApplicationName(ApplicationName);
 
         var container = storage.DataProtectionKeysContainer;
-        var storageBacked = !builder.Environment.IsDevelopment();
+        var storageBacked = builder.Environment.IsProduction();
 
         if (storageBacked
             && !string.IsNullOrWhiteSpace(storage.ServiceUri)

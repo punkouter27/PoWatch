@@ -2,7 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using PoWatch.Client.Services;
 
-namespace PoWatch.Client.Components;
+namespace PoWatch.Client.Layout.Components;
 
 /// <summary>A stat family's panels: loads whenever the range changes and renders nothing stale.</summary>
 public abstract class StatsTabBase<T> : ComponentBase where T : class

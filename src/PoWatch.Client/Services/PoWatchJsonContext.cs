@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using PoWatch.Shared.Models;
 using PoWatch.Shared.Services;
@@ -65,4 +66,5 @@ namespace PoWatch.Client.Services;
 [JsonSerializable(typeof(ShareDto))]
 [JsonSerializable(typeof(List<ShareDto>))]
 [JsonSerializable(typeof(ReplayDayDto))]
+[JsonSerializable(typeof(JsonElement))]
 internal sealed partial class PoWatchJsonContext : JsonSerializerContext;

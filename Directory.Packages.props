@@ -37,7 +37,7 @@
   <ItemGroup>
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.14" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.14" />
-    <PackageVersion Include="Radzen.Blazor" Version="10.4.9" />
+    <PackageVersion Include="Radzen.Blazor" Version="12.1.12" />
     <!-- Live stats push; pinned to the same 10.0.x line as the other ASP.NET Core packages. -->
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.14" />
   </ItemGroup>

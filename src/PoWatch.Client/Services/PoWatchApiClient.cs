@@ -199,6 +199,12 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<HealthReportDto?> GetHealthAsync(CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.GetAsync("health", ct), Json.HealthReportDto, cancellationToken);
 
+    public Task<AuthConfigDto?> GetAuthConfigAsync(CancellationToken cancellationToken = default) =>
+        ReadAsync(ct => httpClient.GetAsync("auth/config", ct), Json.AuthConfigDto, cancellationToken);
+
+    public Task<bool> LogoutAsync(CancellationToken cancellationToken = default) =>
+        SendAsync(ct => httpClient.PostAsync("auth/logout", content: null, ct), cancellationToken);
+
     private static string Day(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     /// <summary>Sends and reads the body; null on any failure that is not the caller cancelling.</summary>

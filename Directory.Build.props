@@ -1,27 +1,14 @@
 <Project>
-
-  <!-- Compiler contract applied to every project in the solution (rule 1: zero warnings, strict null
-       safety). Kept in one place so no project can quietly opt out. -->
   <PropertyGroup>
-    <!-- TargetFramework stays in each .csproj on purpose: setting it here is evaluated too early for
-         the SDK's framework inference, which breaks IsTrimmable/EnableTrimAnalyzer in the Blazor WASM
-         and Shared projects (NETSDK1124/NETSDK1212). -->
+    <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- Run .editorconfig style rules as part of the build so a local build can never disagree with
-         the `dotnet format` verification gate in CI. -->
-    <AnalysisLevel>latest</AnalysisLevel>
-    <AnalysisMode>Recommended</AnalysisMode>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <!-- Fail the build on a NuGet advisory rather than emitting a warning nobody reads. The
-         transitive pins in Directory.Packages.props exist to keep this green. -->
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
-    <!-- Deterministic output for CI artifacts. -->
-    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
-
 </Project>

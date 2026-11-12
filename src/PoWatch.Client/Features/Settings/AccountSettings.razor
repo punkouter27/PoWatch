@@ -1,8 +1,8 @@
 @using System.Security.Claims
 @inherits SettingsTab
 @inject NavigationManager Navigation
-@inject HttpClient Http
 @inject DialogService Dialogs
+@inject Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment HostEnvironment
 
 <TerminalPanel Title="Your data and account" Test="your-data" Flush="true">
     <Aside>@_email</Aside>
@@ -135,7 +135,7 @@
         try
         {
             if (Sensing.IsRunning) await Sensing.StopAsync();
-            using var response = await Http.PostAsync("auth/logout", content: null);
+            await Api.LogoutAsync();
         }
         catch (HttpRequestException)
         {

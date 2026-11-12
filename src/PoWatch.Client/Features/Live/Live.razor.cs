@@ -195,7 +195,7 @@ public sealed partial class Live
         // shows its recap, as Stop would have, unless that card was already dismissed here.
         if (!Sensing.IsRunning && Sensing.Recap is null && latest.Count > 0 && latest[0] is { EndedUtc: { } ended } last
             && DateTimeOffset.UtcNow - ended < TimeSpan.FromMinutes(2)
-            && await JS.TryInvokeAsync<string>("localStorage.getItem", PoWatch.Client.Components.AwayCard.DismissedKey) != last.Id.ToString())
+            && await JS.TryInvokeAsync<string>("localStorage.getItem", PoWatch.Client.Layout.Components.AwayCard.DismissedKey) != last.Id.ToString())
         {
             Sensing.Recap = new SessionRecap(last, null);
         }

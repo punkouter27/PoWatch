@@ -1,71 +1,26 @@
 root = true
 
 [*]
+indent_style = space
 end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[*.{cs,csx,vb,vbx}]
-indent_style = space
+[*.{cs,razor}]
 indent_size = 4
 
-[*.{xml,csproj,slnx,props,targets}]
-indent_style = space
+[*.{json,yml,yaml,csproj,props,targets,slnx}]
 indent_size = 2
 
-[*.json]
-indent_style = space
-indent_size = 2
+[*.{md,txt}]
+trim_trailing_whitespace = false
 
-[*.{yml,yaml}]
-indent_style = space
-indent_size = 2
-
-# ---------------------------------------------------------------------------
-# Analyzer configuration
-#
-# Directory.Build.props runs the Recommended analyzer set with
-# TreatWarningsAsErrors, so every exception below is a deliberate, justified
-# opt-out rather than noise suppression. Do not add to this list without a
-# reason on the same line.
-# ---------------------------------------------------------------------------
 [*.cs]
-
-# CA1716 wants PoWatch.Shared renamed because 'Shared' is a reserved word in
-# some CLR languages. The Po{Name}.Shared project name is mandated by the
-# solution naming convention, so the rule loses to the convention.
-dotnet_diagnostic.CA1716.severity = none
-
-# CA1805 flags explicitly-assigned default values. SharedFeatureFlagsOptions
-# spells out every flag's default on purpose so the whole contract reads
-# uniformly instead of half the flags being silently defaulted.
-dotnet_diagnostic.CA1805.severity = none
-
-# --- Micro-allocation rules, deliberately deferred -------------------------
-# CA1848/CA1873 want every log call rewritten as a source-generated
-# LoggerMessage delegate to avoid boxing the arguments. The codebase already
-# uses structured templates with named placeholders everywhere (zero string
-# interpolation in log calls), so the correctness benefit is already banked;
-# what remains is an allocation saving that does not register at this app's
-# request volume, against ~84 rewritten call sites. Revisit if a profile ever
-# shows logging on a hot path.
-dotnet_diagnostic.CA1848.severity = none
-dotnet_diagnostic.CA1873.severity = none
-
-# CA1859 asks for concrete return/parameter types (List<T> over
-# IReadOnlyList<T>) for devirtualization. That would leak mutable collection
-# types across service boundaries to save a virtual call — the API design is
-# worth more than the nanoseconds.
-dotnet_diagnostic.CA1859.severity = none
-
-[tests/**/*.cs]
-
-# Test method names use Snake_case_sentences across all four suites — it makes
-# the failure output read as prose. CA1707 (no underscores) is for public API
-# surface, which a test assembly is not.
 dotnet_diagnostic.CA1707.severity = none
-
-# CA1711 objects to the 'Collection' suffix, but xUnit's ICollectionFixture
-# marker types are conventionally named <Thing>Collection.
 dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1859.severity = none
+dotnet_diagnostic.CA1873.severity = none
+dotnet_diagnostic.CA2007.severity = none

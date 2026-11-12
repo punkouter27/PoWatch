@@ -26,6 +26,7 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(captions).ToHaveValueAsync("qwen2.5vl:7b", new() { Timeout = 60_000 });
         await Assertions.Expect(chat).ToHaveValueAsync("Ollama");
 
+        page.ThrowIfErrors();
         await page.RouteAsync("**/api/ai/models", async route =>
         {
             if (route.Request.Method == "PUT") await route.FulfillAsync(new() { Status = 503 });
@@ -35,6 +36,8 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByRole(AriaRole.Alert)).ToContainTextAsync("Could not switch server AI");
         await Assertions.Expect(chat).ToHaveValueAsync("Ollama");
         await page.UnrouteAsync("**/api/ai/models");
+        // Clear the intentional 503 fault-injection error verified immediately above.
+        page.ClearErrors();
 
         // Exercise the real session scheduler without downloading GPU models or requesting a camera.
         await page.EvaluateAsync("""
