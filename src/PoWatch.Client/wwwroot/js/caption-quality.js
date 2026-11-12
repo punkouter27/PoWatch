@@ -1,6 +1,6 @@
 // caption-quality.js
 // Decides whether a caption model's reply describes the scene. Shared by inference-worker.js and the
-// offline caption eval (SCRIPTS/caption-eval), so the harness scores exactly what the app keeps.
+// offline caption eval (scripts/caption-eval), so the harness scores exactly what the app keeps.
 // Pure functions, no DOM, no transformers.js.
 
 // Words that say nothing about the scene (Florence-2 answers "unanswerable" to a frame it cannot read),

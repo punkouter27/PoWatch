@@ -372,18 +372,18 @@ multi-threaded.
 ## Quality gates
 
 - `TreatWarningsAsErrors`, `dotnet format --verify-no-changes`.
-- A pre-commit hook (`SCRIPTS/hooks/pre-commit`, installed by `SCRIPTS/setup.ps1` through
+- A pre-commit hook (`scripts/hooks/pre-commit`, installed by `scripts/setup.ps1` through
   `core.hooksPath`) runs the format check on the staged C# files (`POWATCH_HOOK_FULL=1` for the whole
   solution) and `check-hygiene.ps1`.
-- Test caps (`SCRIPTS/check-test-caps.ps1`): 100 unit · 50 integration · 25 API E2E · 25 UI E2E.
-- `SCRIPTS/check-hygiene.ps1`: layout, naming, central package versions, shell assets, no
+- Test caps (`scripts/check-test-caps.ps1`): 100 unit · 50 integration · 25 API E2E · 25 UI E2E.
+- `scripts/check-hygiene.ps1`: layout, naming, central package versions, shell assets, no
   caregiver-era vocabulary, no unused CSS classes, and no unused components (every `.razor` that is
   not a `@page` must be rendered somewhere as `<Name>`, `typeof(Name)` or `@layout Name`).
 - CI runs all four suites; UI E2E installs Playwright's Chromium and runs with `E2E_LOCAL=1`.
   Each UI test disposes its page (and isolated browser context), including each viewport-loop
   iteration. Failed sign-in/startup reports browser exceptions, console errors and failed resource
   requests alongside the original assertion, rather than only a missing navigation bar.
-- `SCRIPTS/caption-eval.ps1` (by hand, not CI): runs every caption model over 40 COCO indoor frames
+- `scripts/caption-eval.ps1` (by hand, not CI): runs every caption model over 40 COCO indoor frames
   with human captions (or your own `-Frames` folder) through the app's own prompt and rejection
   rules, and reports load time, latency, how many captions were kept and their similarity to the
   references, plus the same-scene/different-scene cosines that novelty has to separate.

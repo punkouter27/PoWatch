@@ -23,7 +23,7 @@ foreach ($projectDir in Get-ChildItem -LiteralPath $sourceRoot -Directory | Wher
 }
 
 if (@(Get-ChildItem -LiteralPath $repoRoot -Filter '*.ps1' -File).Count -gt 0) {
-    throw 'Developer scripts belong in SCRIPTS.'
+    throw 'Developer scripts belong in scripts.'
 }
 foreach ($script in Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.ps1' -File) {
     if ($script.BaseName -cnotmatch '^[a-z]+(-[a-z]+)*$') { throw "Use lowercase script names: $($script.Name)" }

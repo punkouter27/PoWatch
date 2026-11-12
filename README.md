@@ -18,7 +18,7 @@ The project targets .NET 10 from `global.json` and uses central package manageme
 Run the setup script from the repository root:
 
 ```powershell
-.\SCRIPTS\setup.ps1
+.\scripts\setup.ps1
 ```
 
 The script prepares local tooling, starts Azurite through Docker Compose, and walks the Azure login path when needed. The development API listens on `http://localhost` (port 80, set by `PoWatch:Ports:Http` in
@@ -35,7 +35,7 @@ dotnet run --project src/PoWatch.Api/PoWatch.Api.csproj
 ```
 
 Test suites have maximums of 100 unit, 50 integration, 25 API E2E, and 25 UI E2E cases.
-After building, run `./SCRIPTS/check-test-caps.ps1` and `./SCRIPTS/check-hygiene.ps1`.
+After building, run `./scripts/check-test-caps.ps1` and `./scripts/check-hygiene.ps1`.
 For isolated UI verification, install Chromium using the suite's generated `playwright.ps1`, set
 `E2E_LOCAL=1`, and run `dotnet test tests/PoWatch.E2EUI -c Release`.
 

@@ -24,7 +24,7 @@ public sealed class HighlightRules(TimeProvider time, int maxPerHour = 20)
     /// <summary>
     /// With sentence embeddings (MiniLM, unit length), a caption at most this close in meaning to each
     /// recent one is novel. Words alone call "a man on a sofa" and "a person sitting on a couch" new;
-    /// meaning does not. From SCRIPTS/caption-eval (40 COCO indoor frames): two captions of one scene
+    /// meaning does not. From scripts/caption-eval (40 COCO indoor frames): two captions of one scene
     /// sit at a median cosine of 0.63, captions of different scenes at 0.19 (90th percentile 0.44).
     /// </summary>
     public const double NoveltyMaxCosine = 0.45;

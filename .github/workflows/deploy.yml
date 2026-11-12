@@ -43,7 +43,7 @@ jobs:
           "resource_group=$($settings.solutionResourceGroupName)" >> $env:GITHUB_OUTPUT
       - name: Check repository hygiene
         shell: pwsh
-        run: ./SCRIPTS/check-hygiene.ps1
+        run: ./scripts/check-hygiene.ps1
       - name: Compile infrastructure
         run: az bicep build --file infra/main.bicep --outfile "${{ runner.temp }}/powatch-template.json"
       - uses: actions/setup-dotnet@v6
@@ -68,7 +68,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          ./SCRIPTS/check-test-caps.ps1
+          ./scripts/check-test-caps.ps1
           dotnet format ${{ env.SOLUTION_PATH }} --verify-no-changes --verbosity minimal
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./tests/PoWatch.E2EUI/bin/Release/net10.0/playwright.ps1 install --with-deps chromium

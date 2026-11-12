@@ -13,7 +13,7 @@ Rules for any agent working in this repository.
 ### 3. Architecture & Setup
 * **Keep Docs Updated:** Check `DOCS/` and `README.md` first to get an overview of app quickly (if they exist)
 * **Fully Automated:** Run all builds, scripts, and setup commands directly. Do not ask the user to run terminal commands.
-* **Shared Components:** Look to consolidate functionality and UI into shared components when possible. Reusable UI goes in `src/PoWatch.Client/Components/` (`WhoList`, `StatCell`, `Sparkline`, `TerminalPanel`), browser-safe logic in `PoWatch.Shared/Services`; two panels that render the same list or number should share one component rather than copy the markup. `SCRIPTS/check-hygiene.ps1` fails on a component nothing renders.
+* **Shared Components:** Look to consolidate functionality and UI into shared components when possible. Reusable UI goes in `src/PoWatch.Client/Components/` (`WhoList`, `StatCell`, `Sparkline`, `TerminalPanel`), browser-safe logic in `PoWatch.Shared/Services`; two panels that render the same list or number should share one component rather than copy the markup. `scripts/check-hygiene.ps1` fails on a component nothing renders.
 
 ### 4. UI & Output Rules
 * **UI Previews:** For visual changes, save before-and-after HTML mockups to `SCREENSHOTS/{YYMMDD}-{feature}.html` / Annotate screenshots and show in a single PNG the before and after with notes
@@ -30,7 +30,7 @@ Rules for any agent working in this repository.
 
 - A push to `master` builds, tests, deploys and health-gates (`.github/workflows/deploy.yml`). Nothing is deployed by hand.
 - Azure sign-in is GitHub OIDC (the `gh-<repo>-deploy` app). Its IDs are repo **variables** `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID`, and the App Service name is `AZURE_WEBAPP_NAME`. Never move them to secrets or write resource names into workflows.
-- Every permission the app and CI need lives in `SCRIPTS/ensure-azure-access.ps1`. A role granted by hand and not added there is a bug: the next re-provision loses it.
+- Every permission the app and CI need lives in `scripts/ensure-azure-access.ps1`. A role granted by hand and not added there is a bug: the next re-provision loses it.
 - The app answers `/health/live` (process up, no dependencies) and `/health` (dependencies reachable). The deploy's health gate checks both.
 - Tests pass on any machine: no drive-letter, temp-folder or working-directory assumptions, and no live config value hard-coded as an expected result (read it from the same config the app reads).
 - A red run on the default branch gets an ntfy push from the CI watcher in PoPunkouterSoftware. Fix it, or say why it is red.

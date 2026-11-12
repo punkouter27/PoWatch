@@ -14,9 +14,9 @@ docker compose up -d                                   # Azurite; storage is req
 dotnet build PoWatch.slnx                              # warnings are errors
 dotnet run --project src/PoWatch.Api --launch-profile http   # http://localhost (port 80); steps to the next free port if taken
 dotnet format PoWatch.slnx --verify-no-changes         # the CI formatting gate
-./SCRIPTS/check-hygiene.ps1                            # layout, naming, package versions, vocabulary, dead CSS + components
-./SCRIPTS/check-test-caps.ps1                          # after a build: 100 unit / 50 integration / 25 API E2E / 25 UI E2E
-./SCRIPTS/caption-eval.ps1 -Count 10                   # score the caption models (Node; first run downloads ~1 GB)
+./scripts/check-hygiene.ps1                            # layout, naming, package versions, vocabulary, dead CSS + components
+./scripts/check-test-caps.ps1                          # after a build: 100 unit / 50 integration / 25 API E2E / 25 UI E2E
+./scripts/caption-eval.ps1 -Count 10                   # score the caption models (Node; first run downloads ~1 GB)
 ```
 
 Tests, narrowest first (integration and E2E start Azurite through Testcontainers, so Docker must be up):
@@ -64,7 +64,7 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   `ArchitectureBoundaryTests` fails the build on a reference that points the wrong way.
 - **The client is trim-analyzed.** Anything serialized in `PoWatch.Client` goes through `PoWatchJsonContext`
   (source-generated); add new DTOs there.
-- **Folders.** At most two directory levels under each project; scripts live in `SCRIPTS/`.
+- **Folders.** At most two directory levels under each project; scripts live in `scripts/`.
 - **PDFs fail on Windows on ARM.** QuestPDF ships no `win-arm64` native library, so on an ARM machine every
   PDF endpoint answers 503 (the client shows why in a toast). Production is x64 and unaffected; to make PDFs
   locally, install the x64 .NET 10 SDK and run with `-r win-x64`.

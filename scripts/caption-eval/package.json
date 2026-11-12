@@ -2,7 +2,7 @@
   "name": "powatch-caption-eval",
   "private": true,
   "type": "module",
-  "description": "Scores PoWatch's caption models on a fixed frame set. Run SCRIPTS/caption-eval.ps1.",
+  "description": "Scores PoWatch's caption models on a fixed frame set. Run scripts/caption-eval.ps1.",
   "dependencies": {
     "@huggingface/transformers": "3.8.1"
   }

@@ -1,8 +1,8 @@
 # Scores the caption models (wwwroot/js/caption-models.js) on a fixed frame set: latency, how many
-# replies the app would keep, and how close they are to human captions. See SCRIPTS/caption-eval/eval.mjs.
-#   ./SCRIPTS/caption-eval.ps1                                  # every model, 40 COCO indoor frames
-#   ./SCRIPTS/caption-eval.ps1 -Models florence-2 -Count 10
-#   ./SCRIPTS/caption-eval.ps1 -Frames C:\frames                # your own frames + captions.json
+# replies the app would keep, and how close they are to human captions. See scripts/caption-eval/eval.mjs.
+#   ./scripts/caption-eval.ps1                                  # every model, 40 COCO indoor frames
+#   ./scripts/caption-eval.ps1 -Models florence-2 -Count 10
+#   ./scripts/caption-eval.ps1 -Frames C:\frames                # your own frames + captions.json
 param([string]$Models = '', [int]$Count = 40, [string]$Frames = '')
 
 $ErrorActionPreference = 'Stop'

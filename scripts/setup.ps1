@@ -49,10 +49,10 @@ if (-not $SkipAzureLogin -and (Test-Cmd az)) {
     if ($LASTEXITCODE -ne 0) { az login } else { Write-Host "Azure CLI already signed in." -ForegroundColor DarkGray }
 }
 
-# 5. Git hooks: pre-commit runs the format gate and the hygiene check (SCRIPTS/hooks/pre-commit)
+# 5. Git hooks: pre-commit runs the format gate and the hygiene check (scripts/hooks/pre-commit)
 if (Test-Cmd git) {
-    git -C $repo config core.hooksPath SCRIPTS/hooks
-    Write-Host "Git hooks installed (core.hooksPath = SCRIPTS/hooks)." -ForegroundColor Green
+    git -C $repo config core.hooksPath scripts/hooks
+    Write-Host "Git hooks installed (core.hooksPath = scripts/hooks)." -ForegroundColor Green
 }
 
 # 6. Restore + build

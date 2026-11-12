@@ -1,6 +1,6 @@
 // caption-models.js
 // The caption models PoWatch can run, and how the in-browser one is loaded, prompted and decoded. Shared
-// by inference-worker.js and the offline caption eval (SCRIPTS/caption-eval), which passes in its own
+// by inference-worker.js and the offline caption eval (scripts/caption-eval), which passes in its own
 // copy of transformers.js; nothing here touches the DOM or imports the library itself.
 
 // The models Settings offers. They run on this machine's GPU through its own Ollama server; each was
@@ -18,7 +18,7 @@ export function isOllamaModel(key) {
 // loaded fine produces nothing (NaN logits never throw).
 export const CAPTION_MODELS = {
   // A captioner rather than a chat model: a fixed task token, no instruction to echo, short sentences.
-  // On SCRIPTS/caption-eval it came closest to human captions (cosine 0.76 against 0.69 for SmolVLM
+  // On scripts/caption-eval it came closest to human captions (cosine 0.76 against 0.69 for SmolVLM
   // 500M) with none rejected. It cannot take the detector's hint.
   'florence-2': {
     id: 'onnx-community/Florence-2-base-ft',
