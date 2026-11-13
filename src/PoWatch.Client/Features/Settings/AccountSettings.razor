@@ -7,22 +7,13 @@
 <TerminalPanel Title="Your data and account" Test="your-data" Flush="true">
     <Aside>@_email</Aside>
     <ChildContent>
-        @if (Profile is null)
-        {
-            <p class="term-empty">@ProfileMissing</p>
-        }
-        else
-        {
+        <SettingsBody Profile="@Profile" Missing="@ProfileMissing" Message="@ProfileMessage" Context="profile">
             <div class="settings-list">
                 <button class="term-menu-item" @onclick="NextRetention" disabled="@Saving" data-test="retention-toggle">
-                    <span>Raw detail kept <i>replays, captions, moments; charts and totals stay forever</i></span><b>@RetentionLabel(Profile.RetentionDays)</b>
+                    <span>Raw detail kept <i>replays, captions, moments; charts and totals stay forever</i></span><b>@RetentionLabel(profile.RetentionDays)</b>
                 </button>
             </div>
-            @if (ProfileMessage is not null)
-            {
-                <p class="term-stat-hint settings-note" role="status">@ProfileMessage</p>
-            }
-        }
+        </SettingsBody>
         <div class="settings-list">
             <a class="term-menu-item" href="system" data-test="nav-system"><span>System status <i>connections, runtime, inference, pipeline</i></span><b>→</b></a>
             <a class="term-menu-item" href="@PoWatchApiClient.ExportUrl(TimeZoneInfo.Local.Id)" download="PoWatch-days.csv" data-test="export-csv"><span>Export days <i>one row per observed day</i></span><b>CSV ↓</b></a>

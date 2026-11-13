@@ -4,15 +4,10 @@
 <TerminalPanel Title="Weather" Test="weather-settings" Flush="true">
     <Aside>SAVED WITH YOUR ACCOUNT</Aside>
     <ChildContent>
-        @if (Profile is null)
-        {
-            <p class="term-empty">@ProfileMissing</p>
-        }
-        else
-        {
+        <SettingsBody Profile="@Profile" Missing="@ProfileMissing" Message="@ProfileMessage" Context="profile">
             <div class="settings-place" data-test="weather-place">
                 <span>Weather from <i>daily weather beside each day</i></span>
-                @if (Profile.Place is { } place)
+                @if (profile.Place is { } place)
                 {
                     <b>@place.Name.ToUpperInvariant()</b>
                     <button class="term-icon-button" @onclick="ClearPlaceAsync" disabled="@Saving" aria-label="Stop showing weather" title="Stop showing weather">✕</button>
@@ -40,11 +35,7 @@
                     }
                 </ul>
             }
-            @if (ProfileMessage is not null)
-            {
-                <p class="term-stat-hint settings-note" role="status">@ProfileMessage</p>
-            }
-        }
+        </SettingsBody>
     </ChildContent>
 </TerminalPanel>
 

@@ -2,7 +2,6 @@
    the day's numbers in one row, then the replay with the day's timeline, then its moments and time-lapse.
    The week against the week before and the caption words fold away under the numbers. ◀ ▶ and the arrow
    keys step a day (menus.js); the calendar button jumps to any day. *@
-@using System.Globalization
 @using PoWatch.Shared.Services
 @inject PoWatchApiClient Api
 @inject NavigationManager Navigation
@@ -33,7 +32,7 @@
             <DayRecap Day="@Day" Recap="@_recap" Presence="@_presence" Loaded="@_loaded" Rewriting="@_rewriting" />
 
             <div class="term-stats reader-numbers" data-test="history-numbers">
-                <StatCell Label="Occupancy" Value="@_presence.Occupancy.ToString("0.0%", CultureInfo.InvariantCulture)" Test="history-occupancy" />
+                <StatCell Label="Occupancy" Value="@DisplayText.Percent(_presence.Occupancy)" Test="history-occupancy" />
                 <StatCell Label="Observed" Value="@DisplayText.Duration(_presence.SecondsObserved)" />
                 <StatCell Label="Visits" Value="@_presence.Visits.ToString(CultureInfo.InvariantCulture)" />
                 <StatCell Label="Peak at once" Value="@_presence.PeakConcurrency.ToString(CultureInfo.InvariantCulture)" />

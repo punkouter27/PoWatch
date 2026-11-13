@@ -33,8 +33,8 @@ Status: ✅ shipped · ⚠️ stale when checked against the code on 2026-11-09.
 | 16 | ~~Unused package audit~~ | **No-op, verified 2026-11-09:** all 22 `PackageReference`s have a live call site. | — |
 | 17 ✅ | Trim gate in CI | Done — the build job publishes the client with `-p:PublishTrimmed=true`, so a reflection-only DTO fails CI instead of someone's browser. | S |
 | 18 | Native AOT probe on the API | Throwaway `PublishAot` run; findings either way are worth having. | L |
-| 19 | `StatsTabBase` consolidation | `PipelineTab` + `PatternsTab` share fetch/loading; fold into one base with an overridable query. | M |
-| 20 | Split `terminal.css` | Live / Journal / Settings get their own `.razor.css` (only `Login.razor.css` exists today); `terminal.css` is ~1,200 lines. | M |
+| 19 ✅ | `StatsTabBase` consolidation | Done — one `StatsTabBase<T>` owns the `StatsQuery` parameter, the load-on-range-change path, the `ShouldRender` gate and the shared formatters, with a single `LoadAsync` override; `PipelineTab`, `PatternsTab` and `OddMoment` inherit it. | S |
+| 20 ✅ | Split `terminal.css` | Done — the 1,359-line file is now six role-based sheets (`terminal-base`, `-shell`, `-pages`, `-overlays`, `-dash`, `-journal`), loaded in that order by `index.html`. Page-scoped `.razor.css` was not needed: the split follows which surface a rule belongs to, not which page first used it. | S |
 
 ## Graphics & audio (21–30)
 

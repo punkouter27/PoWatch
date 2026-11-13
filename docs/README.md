@@ -25,7 +25,7 @@ camera ──► browser (all sensing on-device)                        server
 ```
 
 - **Audio never leaves the device, and is never kept.** The microphone is heard in the browser
-  (`js/sensing/audio-layer.js`, `js/audio-worker.js`): a second's loudness goes into each tick
+  (`js/sensing/audio-layer.js`, `js/sensing/audio-worker.js`): a second's loudness goes into each tick
   (`SoundMean`/`SoundMax`), a stretch of speech goes to Whisper (base, English, int8, WASM) and comes
   back as words (a `Speech` scene event), and a loud moment that is not speech goes to an AudioSet
   classifier (AST, int8, WASM) and comes back as a label (a `Sound` event: "Dog", "Music", "Knock").
@@ -70,7 +70,7 @@ and story. Starting a new session clears it. One bar names the session ("Recordi
 number is in the Journal's Export menus. Under it the MODELS strip, then a nine-cell grid with the camera in the middle (one
 Start button; a synthetic demo whenever stopped) and, beside the picture, its narration: every caption
 (SAW), line of speech (SAID), recognised sound (HEARD), coming and going (IN/OUT) and notable moment,
-newest first, a few lines tall and scrolling, under a minimap of the whole session (`Components/SessionMinimap.razor`:
+newest first, a few lines tall and scrolling, under a minimap of the whole session (`Layout/Components/SessionMinimap.razor`:
 shading for how busy each stretch was, a pin per arrival, thing said and ★ that scrolls to and lights its line)
 (`Features/Live/LiveNarration.razor`; while recording it is
 the browser's own list in `LiveSensingState.Narration`, after that what the server kept). Two cells on each
@@ -103,7 +103,7 @@ opens a tab). Session, view and day live in the URL, so
 reloads, links and Back/Forward keep their place. On a desktop each Journal column scrolls on its own;
 on a phone the reader comes first. Every page needs a sign-in.
 
-**Lines of what happened** (`Services/TimelineEntry.cs`, `Components/MomentLine.razor`). Live's
+**Lines of what happened** (`Services/TimelineEntry.cs`, `Layout/Components/MomentLine.razor`). Live's
 narration, a session's or a day's timeline, and a day's moments are all the
 same line: the time, a tag (SAW · SAID · HEARD · IN · OUT · ★), the sentence ("Sam came in", "Sam: “hello”")
 and the snapshot when one was kept. Replay events carry the regular's name (`Who`) for speech, entries
@@ -140,7 +140,7 @@ Settings on the Alerts and People tabs.
 **Saving the words.** Live's narration and every timeline in the Journal (a day's or a session's, as
 filtered) have a "Text ↓" link: the lines as a plain-text file, oldest first, one per line ("2026-11-01
 21:53:06  SAW   A person walks across the room."). The text rides in the link as a `data:` URL
-(`Components/TranscriptLink.razor`, `TimelineEntry.Transcript`), so saving needs no script or request.
+(`Layout/Components/TranscriptLink.razor`, `TimelineEntry.Transcript`), so saving needs no script or request.
 
 **AI models** (the MODELS strip on Live, under the Ask bar). Three dropdowns. SEES (camera captions)
 chooses MiniCPM-V, Qwen3-VL 8B, Qwen2.5-VL 7B, or captions off; its status reports whether Ollama

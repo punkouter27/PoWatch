@@ -54,24 +54,15 @@
 </TerminalPanel>
 <TerminalPanel Title="Weekly email" Test="settings-email" Flush="true">
     <ChildContent>
-        @if (Profile is null)
-        {
-            <p class="term-empty">@ProfileMissing</p>
-        }
-        else
-        {
+        <SettingsBody Profile="@Profile" Missing="@ProfileMissing" Message="@ProfileMessage" Context="profile">
             <div class="settings-list">
-                <button class="term-menu-item" role="switch" aria-checked="@(Profile.DigestEmail ? "true" : "false")" @onclick="ToggleDigestEmailAsync"
-                        disabled="@(Saving || !Profile.DigestEmailAvailable)" data-test="digest-toggle">
-                    <span>Weekly email <i>@(Profile.DigestEmailAvailable ? (Profile.DigestEmail ? $"Mondays, to {Profile.Email}" : "the week in review, Monday mornings") : "this server cannot send email; the week is in the Journal")</i></span>
-                    <b>@(Profile.DigestEmail ? "ON" : "OFF")</b>
+                <button class="term-menu-item" role="switch" aria-checked="@(profile.DigestEmail ? "true" : "false")" @onclick="ToggleDigestEmailAsync"
+                        disabled="@(Saving || !profile.DigestEmailAvailable)" data-test="digest-toggle">
+                    <span>Weekly email <i>@(profile.DigestEmailAvailable ? (profile.DigestEmail ? $"Mondays, to {profile.Email}" : "the week in review, Monday mornings") : "this server cannot send email; the week is in the Journal")</i></span>
+                    <b>@(profile.DigestEmail ? "ON" : "OFF")</b>
                 </button>
             </div>
-            @if (ProfileMessage is not null)
-            {
-                <p class="term-stat-hint settings-note" role="status">@ProfileMessage</p>
-            }
-        }
+        </SettingsBody>
     </ChildContent>
 </TerminalPanel>
 
