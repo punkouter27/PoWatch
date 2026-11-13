@@ -3,12 +3,12 @@ using System.Text.Json;
 namespace PoWatch.Shared.Services;
 
 /// <summary>A vision-model caption reduced to the parts the stats use.</summary>
-public sealed record ParsedCaption(string Text, IReadOnlyList<string> Activities, string? Weather, bool Notable);
+public sealed record ParsedCaption(string Text, bool Notable);
 
 /// <summary>
 /// Reads whatever the vision model said. Small models reliably produce one plain sentence but not
 /// strict JSON, so the prompt asks for a sentence and this parser takes JSON only when a model
-/// volunteers it; otherwise activities and weather come from a keyword taxonomy over the text.
+/// volunteers it.
 /// </summary>
 public static class CaptionParser
 {
@@ -34,32 +34,6 @@ public static class CaptionParser
         return counts.Count == 0 ? Instruction : $"{Instruction}\nVisible: {string.Join(", ", counts)}.";
     }
 
-    private static readonly (string Activity, string[] Keywords)[] ActivityKeywords =
-    [
-        ("cleaning", ["clean", "vacuum", "sweep", "mop", "wipe"]),
-        ("cooking", ["cook", "stove", "frying", "baking", "chopping"]),
-        ("drinking", ["drink", "coffee", "tea ", "sipping", "mug"]),
-        ("eating", ["eat", "meal", "snack", "dinner", "lunch", "breakfast"]),
-        ("exercising", ["exercis", "workout", "yoga", "stretching", "push-up", "running on"]),
-        ("playing", ["play", "game", "toy", "wrestl", "chasing"]),
-        ("reading", ["read", "book", "newspaper", "magazine"]),
-        ("sleeping", ["sleep", "asleep", "nap", "dozing"]),
-        ("talking", ["talk", "chat", "conversation", "phone call", "speaking"]),
-        ("typing", ["typing", "keyboard", "laptop", "computer"]),
-        ("walking", ["walk", "stroll", "pacing", "passing by"]),
-        ("watching", ["watch", "television", " tv", "screen"]),
-    ];
-
-    private static readonly (string Weather, string[] Keywords)[] WeatherKeywords =
-    [
-        ("snowy", ["snow"]),
-        ("rainy", ["rain", "drizzle", "wet street"]),
-        ("foggy", ["fog", "mist", "haze"]),
-        ("sunny", ["sunny", "sunlight", "sun is shining", "bright sun"]),
-        ("cloudy", ["cloud", "overcast", "grey sky", "gray sky"]),
-        ("dark", ["night", "dark outside", "darkness"]),
-    ];
-
     public static ParsedCaption? Parse(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
@@ -72,8 +46,7 @@ public static class CaptionParser
         var text = FirstSentence(cleaned);
         if (!text.Any(char.IsLetter)) return null;
 
-        var lower = $" {cleaned.ToLowerInvariant()} ";
-        return new ParsedCaption(text, ActivitiesIn(lower), WeatherIn(lower), Notable: false);
+        return new ParsedCaption(text, Notable: false);
     }
 
     private static ParsedCaption? TryParseJson(string json)
@@ -85,14 +58,9 @@ public static class CaptionParser
             var text = (Str(root, "caption") ?? Str(root, "scene") ?? Str(root, "description"))?.Trim();
             if (string.IsNullOrWhiteSpace(text) || !text.Any(char.IsLetter)) return null;
 
-            var lower = $" {text.ToLowerInvariant()} ";
-            var activities = root.TryGetProperty("activities", out var list) && list.ValueKind == JsonValueKind.Array
-                ? list.EnumerateArray().Where(a => a.ValueKind == JsonValueKind.String).Select(a => a.GetString()!.Trim().ToLowerInvariant())
-                    .Where(a => a.Length > 0).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList()
-                : ActivitiesIn(lower);
             var notable = root.TryGetProperty("notable", out var flag) && flag.ValueKind == JsonValueKind.True;
 
-            return new ParsedCaption(Truncate(text), activities, Str(root, "weather") ?? WeatherIn(lower), notable);
+            return new ParsedCaption(Truncate(text), notable);
         }
         catch (JsonException)
         {
@@ -120,10 +88,4 @@ public static class CaptionParser
     }
 
     private static string Truncate(string text) => text.Length <= MaxLength ? text : text[..MaxLength].TrimEnd();
-
-    private static List<string> ActivitiesIn(string lower) =>
-        ActivityKeywords.Where(a => a.Keywords.Any(k => lower.Contains(k, StringComparison.Ordinal))).Select(a => a.Activity).ToList();
-
-    private static string? WeatherIn(string lower) =>
-        WeatherKeywords.FirstOrDefault(w => w.Keywords.Any(k => lower.Contains(k, StringComparison.Ordinal))).Weather;
 }

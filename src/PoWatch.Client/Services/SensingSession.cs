@@ -247,7 +247,15 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
 
         await KeepAsync(_batcher.Flush(final: true));
         // A send cancelled with the session may still be finishing; then one last pass with the final batch.
-        await _sending;
+        try
+        {
+            await _sending;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // A failed pass must not keep the session from closing; the batches are still in the outbox.
+            Console.Error.WriteLine($"Outbox pass failed: {ex.Message}");
+        }
         await SendOutboxAsync();
         if (Live.Session is { } session)
         {
@@ -287,7 +295,17 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         try
         {
             while (await timer.WaitForNextTickAsync(ct))
-                await step(ct);
+            {
+                try
+                {
+                    await step(ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // One bad pass must not end the loop for the rest of the session.
+                    Console.Error.WriteLine($"Sensing loop step failed: {ex.Message}");
+                }
+            }
         }
         catch (OperationCanceledException)
         {

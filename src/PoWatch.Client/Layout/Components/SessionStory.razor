@@ -29,9 +29,9 @@
         @* One chapter is the whole story; listing it again under the story would say it twice. *@
         @if (_story.Chapters.Count > 1 || (_story.Chapters.Count == 1 && _story.Story is null))
         {
-            @* Folded once there is a story (unless the page asks for them open); open while the session runs,
+            @* Folded once there is a story; open while the session runs,
                when the chapters are all there is. *@
-            <details class="session-story-chapters" open="@(ChaptersOpen || _story.Story is null)">
+            <details class="session-story-chapters" open="@(_story.Story is null)">
                 <summary>@(_story.Chapters.Count == 1 ? "1 CHAPTER" : $"{_story.Chapters.Count} CHAPTERS") · EVERY 10 MINUTES@(NewestFirst ? " · NEWEST FIRST" : null)</summary>
                 <ol>
                     @foreach (var chapter in NewestFirst ? _story.Chapters.AsEnumerable().Reverse() : _story.Chapters)
@@ -52,9 +52,6 @@
 
     /// <summary>The Journal lists the latest chapter first, as it lists the latest session first.</summary>
     [Parameter] public bool NewestFirst { get; set; }
-
-    /// <summary>Show the chapters unfolded even once the story is written.</summary>
-    [Parameter] public bool ChaptersOpen { get; set; }
 
     private Guid _loaded;
     private bool _loading = true;

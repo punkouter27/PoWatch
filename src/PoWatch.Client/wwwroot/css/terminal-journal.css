@@ -1,0 +1,237 @@
+/* Tabs, the Journal, Regulars and Settings, then touch targets, safety nets and small shared parts. */
+
+/* ── Tabs ───────────────────────────────────────── */
+
+/* Tabs (Settings, the Journal): text with an underline on the open one, a rule under the whole strip. */
+.term-tabbar { display: flex; gap: 4px; border-bottom: 1px solid var(--term-line); overflow-x: auto; scrollbar-width: none; }
+.term-tab { padding: 10px 16px 9px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer; color: var(--term-muted); text-decoration: none; font: 600 var(--fs-sm) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.term-tab:hover { color: var(--term-text); }
+.term-tab--on { color: var(--term-accent); border-bottom-color: var(--term-accent); }
+.settings-tabs .term-tab { flex: 1; padding: 8px 6px 7px; font-size: var(--fs-xs); letter-spacing: 0.04em; }
+
+/* ── The Journal: the index beside the reader ───────────────────── */
+
+/* A phone reads first (the reader), then the index; a desktop puts the index on the left and lets each
+   column scroll on its own. The reader is the same for a day, a session and a period: panels of prose
+   first, then the replay with its timeline. */
+.journal { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); align-content: start; }
+.journal-reader, .journal-index { display: grid; grid-auto-rows: max-content; gap: var(--term-gap); min-width: 0; align-content: start; }
+.journal-days .term-panel-meta .term-link + .term-link { margin-left: 10px; }
+.journal-list { list-style: none; margin: 0; padding: 0; }
+.journal-list > li { padding: 4px 0 6px; border-bottom: 1px solid var(--term-line); }
+.journal-list ul { list-style: none; margin: 0; padding: 0 0 0 10px; }
+.journal-day, .journal-session { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; text-decoration: none; color: var(--term-muted); font: 12px var(--term-mono); }
+.journal-day { justify-content: space-between; color: var(--term-text); font-weight: 600; }
+.journal-session .term-stat-hint { margin-left: auto; }
+.journal-session .num { color: var(--term-text); font-variant-numeric: tabular-nums; }
+.journal-day:hover, .journal-session:hover { color: var(--term-accent); }
+.journal-on, .journal-on .num { color: var(--term-accent); }
+.journal-day.journal-on, .journal-session.journal-on { background: color-mix(in srgb, var(--term-accent) 10%, transparent); box-shadow: inset 2px 0 0 var(--term-accent); }
+.story-more { justify-self: start; margin: 10px; }
+.story-card .term-panel-body, .reader .term-panel-body { padding: 14px 16px; }
+.story-card .session-story { margin-top: 0; max-width: none; gap: 10px; }
+.story-meta { margin-right: 12px; }
+.reader-numbers { margin-top: 14px; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
+.reader-more { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--term-line); }
+.reader-more > summary { cursor: pointer; font: 600 11px var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-muted); }
+.replay-lines { max-height: 55vh; overflow-y: auto; border: 1px solid var(--term-line); border-radius: var(--term-radius); }
+.moment-list--snaps .moment { padding-left: 0; padding-right: 0; }
+.history-nav { display: inline-flex; align-items: center; gap: 4px; }
+.history-nav .term-button { min-height: 28px; min-width: 28px; padding: 0 8px; }
+.history-day { font: 600 12px var(--term-mono); color: var(--term-text); min-width: 15ch; text-align: center; }
+.history-recap-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+.history-recap-foot > .term-stat-hint { margin-right: auto; }
+.history-pick .rz-datepicker-trigger, .history-pick button { min-height: 28px; min-width: 28px; }
+.history-sub { margin: 16px 0 6px; padding-top: 10px; border-top: 1px solid var(--term-line); font: 600 11px var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-muted); }
+.history-sub--first { margin-top: 0; padding-top: 0; border-top: 0; }
+
+@media (min-width: 960px) {
+    .journal { height: 100%; grid-template-columns: minmax(260px, 1fr) minmax(0, 2.6fr); grid-template-rows: minmax(0, 1fr); }
+    .journal-index { order: -1; }
+    .journal-reader, .journal-index { min-height: 0; overflow-y: auto; }
+}
+
+/* ── Regulars grid, Settings ───────────────────────────────── */
+
+/* Cards flow as many across as fit; the name is edited in place; the merge bar floats over the page. */
+.regulars-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border-bottom: 1px solid var(--term-line); font: var(--fs-sm) var(--term-mono); }
+.regulars-bar input[type="search"], .regulars-merge select { min-height: 32px; padding: 0 8px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: var(--fs-sm) var(--term-mono); }
+.regulars-bar input[type="search"] { width: min(220px, 100%); }
+.regulars-merge {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    margin-left: auto;
+    padding: 2px 8px;
+    border-left: 2px solid var(--term-accent);
+    animation: fx-pop 0.35s var(--spring);
+}
+.regulars-merge .term-button { min-height: 32px; padding: 0 10px; }
+.regulars-cards { list-style: none; margin: 0; padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--term-gap); }
+.regular-card { display: grid; gap: 8px; align-content: start; padding: 10px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-panel); }
+.regular-card--on { border-color: var(--term-accent); box-shadow: 0 0 0 1px var(--term-accent) inset; }
+.regular-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.regular-kind { font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; color: var(--term-accent); background: var(--term-panel-2); }
+.regular-voice { margin-right: auto; font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; padding: 2px 6px; border-radius: 2px; color: var(--term-bg); background: var(--term-accent); }
+.regular-card input[type="checkbox"] { width: 24px; height: 24px; margin: 0; accent-color: var(--term-accent); }
+.regular-name input { box-sizing: border-box; width: 100%; min-height: 34px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: 600 var(--fs-md) var(--term-font); padding: 0 8px; }
+.regular-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 0; }
+.regular-stats dt { font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-dim); }
+.regular-stats dd { margin: 0; font: 600 var(--fs-md) var(--term-mono); font-variant-numeric: tabular-nums; color: var(--term-text); }
+.regular-first { margin: 0; font: var(--fs-xs) var(--term-mono); letter-spacing: 0.06em; color: var(--term-dim); }
+
+.settings-list { display: grid; padding: 4px; }
+.settings-list i { font-style: normal; color: var(--term-dim); margin-left: 8px; }
+.rule-row, .rule-form { max-width: 420px; font: 12px var(--term-mono); }
+
+.settings-place { display: flex; align-items: center; gap: 8px; padding: 8px 10px; color: var(--term-text); font: var(--fs-sm) var(--term-mono); }
+.settings-place > span { flex: 1; }
+.settings-place b { font: 600 12px var(--term-mono); color: var(--term-muted); }
+.settings-search { display: flex; gap: 6px; padding: 0 10px 8px; }
+.settings-search input { flex: 1; min-width: 0; min-height: 32px; padding: 0 8px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: 12px var(--term-mono); }
+.settings-results { list-style: none; margin: 0 0 6px; padding: 0 6px; display: grid; }
+.settings-results .term-menu-item b { color: var(--term-accent); }
+.settings-note { margin: 0; padding: 4px 10px 10px; }
+
+/* ── Journal: weather, the week, sharing, replay ───────────────────── */
+
+.history-insight, .history-weather { margin: 8px 0 0; font: 12px var(--term-mono); color: var(--term-muted); }
+.history-weather { padding-top: 8px; border-top: 1px dashed var(--term-line); }
+.history-week-stats { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.history-week-headline { margin: 8px 0 0; font: 600 var(--fs-lg) var(--term-font); color: var(--term-accent); }
+.history-week-summary { margin: 8px 0 0; font-size: var(--fs-md); line-height: 1.5; color: var(--term-text); }
+.history-share { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; }
+.history-share input { flex: 1 1 260px; min-width: 0; min-height: 32px; padding: 0 8px; background: var(--term-bg); border: 1px solid var(--term-accent); border-radius: var(--term-radius); color: var(--term-text); font: 12px var(--term-mono); }
+.history-share .term-stat-hint { flex-basis: 100%; }
+
+.replay-stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); }
+.replay-view { position: relative; margin: 0; border: 1px solid var(--term-line); border-radius: var(--term-radius); overflow: hidden; background: var(--term-bg); }
+.replay-view[hidden] { display: none; }
+.replay-heat, .replay-view img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.replay-view figcaption { position: absolute; left: 6px; top: 6px; padding: 2px 6px; background: color-mix(in srgb, var(--term-bg) 70%, transparent); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; color: var(--term-muted); }
+.replay-readout { display: grid; align-content: start; gap: 4px; }
+.replay-clock { font: 600 32px/1 var(--term-mono); color: var(--term-accent); font-variant-numeric: tabular-nums; }
+.replay-caption { margin: 4px 0 0; min-height: 2.6em; font-size: var(--fs-md); line-height: 1.4; color: var(--term-text); font-style: italic; }
+.replay-track-wrap { position: relative; margin-top: 10px; height: 64px; }
+.replay-track { position: absolute; inset: 0 0 18px; width: 100%; height: calc(100% - 18px); }
+.replay-scrub { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; margin: 0; accent-color: var(--term-accent); }
+.replay-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
+@media (min-width: 900px) {
+    .replay-stage { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(180px, 0.8fr); }
+}
+
+.term-button--on { border-color: var(--term-accent); color: var(--term-accent); }
+.tray-item--week { text-decoration: none; border-left-color: var(--term-green); }
+.tray-item--week .tray-kicker { color: var(--term-green); }
+.tray-item--week b { font-weight: 500; font-size: 12px; line-height: 1.45; }
+
+/* ── Touch: fingers need 44 px ────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .term-button, .term-header .term-button, .term-icon-button, .term-key, .term-menu-item,
+    .history-nav .term-button, .stats-toolbar .term-button, .regulars-merge .term-button,
+    .rule-row .term-icon-button, .rule-form .term-button, .away-bar .term-icon-button,
+    .settings-search .term-button, .moment-filters .term-button, .history-share .term-button { min-height: 44px; }
+    .term-icon-button, .rule-row .term-icon-button, .away-bar .term-icon-button { min-width: 44px; }
+    .term-key { font-size: 12px; }
+    .regulars-bar input[type="search"], .regulars-merge select, .regular-name input, .stats-ask input,
+    .rule-form select, .rule-form input, .name-prompt input, .settings-search input, .history-share input { min-height: 44px; }
+    .regular-card input[type="checkbox"] { width: 24px; height: 24px; }
+}
+
+/* ── Safety nets, build stamp ───────────────────────────────── */
+
+/* A panel whose content threw: a small retry box in place of its content, the rest of the page untouched. */
+.panel-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; color: var(--term-red); font: var(--fs-sm) var(--term-mono); }
+
+/* yyMMdd of this build, on System. */
+.build-stamp { display: block; margin: 0 0 6px; text-align: right; color: var(--term-dim); font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; }
+
+/* The same stamp pinned to the viewport's bottom-right on every page: a bug report can always name the
+   build. Never takes a click and stays under drawers, alerts and toasts. */
+.build-stamp--corner {
+    position: fixed;
+    right: 10px;
+    bottom: 6px;
+    z-index: 30;
+    margin: 0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-align: left;
+    background: color-mix(in srgb, var(--term-bg) 72%, transparent);
+    pointer-events: none;
+}
+
+@media print { .build-stamp--corner { display: none; } }
+
+.try-demo { margin-left: 8px; min-height: 28px; }
+
+.history-skel-sessions { height: 96px !important; }
+
+/* Tables with data-label cells turn into one small card per row on a phone: no sideways scrolling. */
+@media (max-width: 719.98px) {
+    .term-table--cards thead { display: none; }
+    .term-table--cards tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; padding: 8px 10px; border-bottom: 1px solid var(--term-line); }
+    .term-table--cards td { padding: 0; border: 0; text-align: left; }
+    .term-table--cards td.r { text-align: left; }
+    .term-table--cards td[data-label]::before { content: attr(data-label); display: block; color: var(--term-dim); font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; }
+}
+
+/* ── Shared small parts ───────────────────────────────────────────────── */
+
+/* A short message that a download or action failed (files.js), above the phone tab bar. */
+.term-toast {
+    position: fixed;
+    z-index: 60;
+    left: 50%;
+    bottom: calc(16px + var(--term-bottom-bar));
+    transform: translateX(-50%);
+    max-width: min(560px, calc(100vw - 24px));
+    padding: 8px 14px;
+    border: 1px solid var(--term-red);
+    border-radius: var(--term-radius);
+    background: var(--term-surface);
+    color: var(--term-text);
+    font: var(--fs-sm) var(--term-mono);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+}
+/* Not a failure, just worth knowing (a model on the CPU, AiSelectors.razor). */
+.term-toast--info { border-color: var(--term-amber); }
+
+/* Export ▾: a native <details> that drops a short list of files under its button. */
+.export-menu { position: relative; display: inline-flex; }
+.export-menu > summary { display: inline-flex; align-items: center; list-style: none; cursor: pointer; }
+.export-menu > summary::-webkit-details-marker { display: none; }
+.export-menu[open] > summary { border-color: var(--term-accent); }
+.export-menu-items { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; min-width: 280px; padding: 4px; background: var(--term-panel); border: 1px solid var(--term-line); border-radius: var(--term-radius); box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); }
+
+
+/* A text link inside a table, with a target a finger can hit. */
+.term-link { display: inline-block; padding: 4px 6px; margin: -4px -6px; color: var(--term-accent); text-decoration: none; }
+.term-link:hover { text-decoration: underline; }
+
+/* Loading placeholders the height of what replaces them, so nothing below jumps when it lands. */
+.history-skel-day { height: 104px !important; }
+.history-skel-week { height: 136px !important; }
+[data-test="health-overall"] > .term-panel-body { min-height: 150px; }
+@media (max-width: 719.98px) {
+    .history-skel-day { height: 196px !important; }
+    .history-skel-week { height: 236px !important; }
+    [data-test="health-overall"] > .term-panel-body { min-height: 230px; }
+}
+
+/* ── Ambient: the frosted header ── */
+
+/* The header is frosted glass. The blur sits on a layer behind its contents, not on the header itself:
+   backdrop-filter there would trap the phone tab bar (fixed) and unfrost the drawers hanging from it. */
+.term-header { z-index: 40; background: color-mix(in srgb, var(--term-surface) 66%, transparent); }
+.term-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    -webkit-backdrop-filter: var(--term-glass-blur);
+    backdrop-filter: var(--term-glass-blur);
+}

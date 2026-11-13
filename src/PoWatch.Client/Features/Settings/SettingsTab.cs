@@ -6,19 +6,31 @@ using PoWatch.Shared.Models;
 
 namespace PoWatch.Client.Features.Settings;
 
-/// <summary>One tab of <see cref="SettingsPanel"/>: redraws when the session changes.</summary>
+/// <summary>One tab of <see cref="SettingsPanel"/>: redraws when a setting or the recording state changes.</summary>
 public abstract class SettingsTab : ComponentBase, IDisposable
 {
     [Inject] protected SensingSession Sensing { get; set; } = default!;
     [Inject] protected PoWatchApiClient Api { get; set; } = default!;
     [Inject] protected IJSRuntime JS { get; set; } = default!;
 
+    private object? _shown;
+
     protected override void OnInitialized()
     {
+        _shown = Shown;
         Sensing.Changed += OnChanged;
     }
 
-    private void OnChanged() => InvokeAsync(StateHasChanged);
+    /// <summary>What the tabs draw from the session. It changes several times a second while recording; these rarely do.</summary>
+    private object Shown => (Sensing.IsRunning, Sensing.Captions, Sensing.Listening, Sensing.ReadPosture, Sensing.SitNudgeMinutes, Sensing.CaptionModel);
+
+    private void OnChanged()
+    {
+        var now = Shown;
+        if (now.Equals(_shown)) return;
+        _shown = now;
+        InvokeAsync(StateHasChanged);
+    }
 
     public void Dispose()
     {

@@ -54,10 +54,6 @@ public sealed class LiveSensingState
     /// <summary>The microphone: "listening", why it could not, or null when it was not asked to.</summary>
     public string? AudioStatus { get; set; }
 
-    /// <summary>The latest lines the speech model heard this session, newest last.</summary>
-    public IReadOnlyList<HeardLineDto> Heard => _heard;
-    private readonly List<HeardLineDto> _heard = [];
-
     /// <summary>The latest sound the classifier named, and when.</summary>
     public string? LastSound { get; private set; }
 
@@ -74,8 +70,6 @@ public sealed class LiveSensingState
 
     public void RecordHeard(DateTimeOffset atUtc, string text, string? speaker = null)
     {
-        _heard.Add(new HeardLineDto { AtUtc = atUtc, Text = text, Speaker = speaker });
-        if (_heard.Count > 50) _heard.RemoveAt(0);
         Narrate(new TimelineEntry(atUtc, "speech", text, speaker));
     }
 
@@ -85,7 +79,6 @@ public sealed class LiveSensingState
         Narrate(new TimelineEntry(atUtc, "sound", label));
     }
 
-    public string? LastCaption { get; private set; }
     public DateTimeOffset? LastCaptionUtc { get; private set; }
 
     public long BatchesSent { get; set; }
@@ -195,7 +188,6 @@ public sealed class LiveSensingState
 
     public void RecordCaption(ParsedCaption caption, DateTimeOffset atUtc)
     {
-        LastCaption = caption.Text;
         LastCaptionUtc = atUtc;
         Narrate(new TimelineEntry(atUtc, "caption", caption.Text));
     }

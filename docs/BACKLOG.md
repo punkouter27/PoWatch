@@ -86,15 +86,12 @@ to light and the cost is real on phones. This is the subset that improves this a
 
 ## Known flaky (not the code)
 
-- `PoWatch.Integration.FeatureEndpointTests.A_stopped_session_gets_its_chapters_joined_into_one_story_written_once`
-  failed once on 2026-11-09 with `Nothing was observed in this window.` and passed on rerun — a
-  time-window boundary in `ObserveAsync`.
-- `PoWatch.Integration.FeatureEndpointTests.What_the_microphone_heard_is_a_transcript_and_part_of_the_story`
-  failed once on 2026-11-09 (asserting `someone said: “Has anyone seen my keys?”` in the story) and
-  passed on rerun. Same shape as the one above: the transcript read fine, so the chapter was written
-  from an empty stretch. Both would be fixed by making the chapter's minute window (narrowed for a
-  stop that lands in the same minute as the start) always readable back, and by retrying a chapter
-  whose text is `NothingObserved` while its stretch has raw rows.
+- Fixed 2026-11-13 (was: the two `FeatureEndpointTests` story tests, `A_stopped_session_gets_its_chapters…`
+  and `What_the_microphone_heard…`, failing with an empty or half-told chapter). The tests stamped
+  their ticks and events 2 to 12 seconds after the session's start and then stopped it at once; the
+  last chapter reads back to the end of the minute the session ended in, so whenever the minute turned
+  in between, that data fell outside it. They now stamp everything within milliseconds of the start.
+  The app itself only loses data stamped after a session's last minute, which a browser does not send.
 - `PoWatch.E2EUI.ViewportFitE2ETests` failed twice on 2026-11-09 (once `app-navbar` never appeared,
   once the fake-camera session) with floods of `TypeError: Failed to fetch` and
   `ERR_ABORTED` on `/api/diagnostics/client-error`, then passed on the second rerun. That pattern is

@@ -1,0 +1,151 @@
+/* Motion, then what floats over a page: drawers, the notification tray, the command palette. */
+
+/* ── Motion: springs, ticks, skeletons, the dial ──────────────────────── */
+
+@keyframes fx-pop { from { opacity: 0; transform: scale(0.94) translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes fx-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fx-shimmer { to { background-position: -200% 0; } }
+
+/* A panel settles into place; a pressed button gives a little. */
+.term-panel { animation: fx-rise 0.45s var(--spring-soft) both; }
+.term-button, .term-key, .term-icon-button { transition: transform 0.35s var(--spring), border-color 0.15s, background-color 0.15s; }
+.term-button:active:not([disabled]), .term-key:active, .term-icon-button:active { transform: scale(0.94); transition-duration: 0.05s; }
+.fx-rise { animation: fx-rise 0.5s var(--spring-soft) both; }
+
+/* Loading placeholders: the size of what is coming, with a slow sheen. */
+.term-skeleton {
+    border-color: transparent;
+    background: linear-gradient(100deg, var(--term-panel) 30%, var(--term-panel-2) 50%, var(--term-panel) 70%) 0 0 / 200% 100%;
+    animation: fx-shimmer 1.4s linear infinite;
+}
+
+/* A stat panel whose numbers have not arrived yet. */
+.stats-pending { min-height: 120px; border-radius: var(--term-radius); }
+
+@media (prefers-reduced-motion: reduce) {
+    .term-panel, .fx-rise, .term-skeleton, .term-drawer, .term-palette { animation: none; }
+    .term-button, .term-key, .term-icon-button { transition: none; }
+}
+
+/* ── Drawers (the bell, Settings) and the notification tray ───────────── */
+
+/* Static, so a drawer inside it hangs from the header (the nearest positioned box), as Settings' does. */
+.term-tray { position: static; flex: none; }
+.term-icon-button--on { color: var(--term-accent); border-color: var(--term-accent); }
+
+.term-tray-count {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    min-width: 15px;
+    padding: 0 3px;
+    border-radius: 8px;
+    background: var(--term-accent);
+    color: var(--term-accent-ink);
+    font: 700 var(--fs-xs)/15px var(--term-mono);
+    text-align: center;
+    box-sizing: border-box;
+    animation: fx-pop 0.4s var(--spring);
+}
+
+/* Hangs from the header's bottom edge down to the bottom of the screen, so the header (and the section
+   keys) stay in reach; the page beside it stays usable. Full width on a phone. */
+.term-drawer {
+    position: absolute;
+    z-index: 50;
+    top: 100%;
+    right: 0;
+    width: min(420px, 100vw);
+    height: calc(100dvh - 100%);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    background: var(--term-glass);
+    -webkit-backdrop-filter: var(--term-glass-blur);
+    backdrop-filter: var(--term-glass-blur);
+    border-left: 1px solid var(--term-line);
+    box-shadow: -16px 0 40px rgba(0, 0, 0, 0.4);
+    font-size: var(--fs-sm);
+    animation: fx-drawer 0.35s var(--spring-soft) both;
+}
+
+.term-drawer:focus { outline: none; }
+
+@keyframes fx-drawer { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+
+.term-drawer-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 4px 12px;
+    border-bottom: 1px solid var(--term-line);
+    font: 700 var(--fs-xs) var(--term-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.term-drawer-head h2 { font: inherit; margin: 0; }
+.term-drawer-head .term-panel-meta { margin-left: auto; color: var(--term-dim); font-weight: 400; letter-spacing: 0.04em; }
+.term-drawer-head .term-icon-button { margin-left: auto; }
+.term-drawer-head .term-panel-meta + .term-icon-button { margin-left: 0; }
+.term-drawer-body { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: 6px; padding: 10px; }
+.term-drawer-body > .term-empty { padding: 6px 4px; margin: 0; }
+
+/* Settings: one column, in the drawer and on its own page. */
+.settings-stack { display: grid; gap: var(--term-gap); align-content: start; }
+.settings-page { max-width: 640px; margin: 0 auto; }
+.term-menu-item--danger, .term-menu-item--danger b { color: var(--term-red); }
+
+.tray-item {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--term-line);
+    border-left: 3px solid var(--term-accent);
+    border-radius: var(--term-radius);
+    background: var(--term-panel);
+    color: var(--term-muted);
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.tray-item b { font: 600 var(--fs-md) var(--term-font); color: var(--term-text); }
+.tray-item--bad { border-left-color: var(--term-red); color: var(--term-red); font-family: var(--term-mono); }
+.tray-item--alert { border-left-color: var(--term-cyan); }
+.tray-kicker { font: 600 11px var(--term-mono); letter-spacing: 0.08em; color: var(--term-accent); }
+.tray-item--alert .tray-kicker { color: var(--term-cyan); }
+.tray-item.name-prompt { grid-template-columns: auto 1fr; gap: 10px; }
+
+.rule-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--term-text); }
+.rule-row .term-icon-button { min-width: 28px; min-height: 28px; }
+.rule-form { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.rule-form select, .rule-form input { min-height: 32px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: 12px var(--term-mono); padding: 0 6px; }
+.rule-form input { width: 5ch; }
+.rule-form .term-button { min-height: 32px; margin-left: auto; }
+.rule-form--words input { flex: 1; width: auto; min-width: 0; font-family: var(--term-font); }
+.rule-row--draft { margin-top: 6px; padding: 4px 6px; border: 1px dashed var(--term-accent); border-radius: var(--term-radius); }
+.rule-row--draft > span:last-child { display: flex; align-items: center; gap: 6px; }
+
+/* ── Command palette (menus.js) ───────────────────────────────────────── */
+
+.term-palette {
+    width: min(480px, calc(100vw - 24px));
+    margin-top: 14vh;
+    padding: 6px;
+    background: var(--term-glass);
+    -webkit-backdrop-filter: var(--term-glass-blur);
+    backdrop-filter: var(--term-glass-blur);
+    color: var(--term-text);
+    border: 1px solid var(--term-line);
+    border-radius: var(--term-radius);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    animation: fx-pop 0.4s var(--spring);
+}
+
+.term-palette::backdrop { background: rgba(5, 7, 10, 0.5); }
+.term-palette input { width: 100%; box-sizing: border-box; min-height: 40px; padding: 0 10px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: 14px var(--term-font); }
+.term-palette ul { list-style: none; margin: 6px 0 0; padding: 0; max-height: 50vh; overflow: auto; }
+.term-palette li { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 36px; padding: 0 10px; border-radius: 2px; font: var(--fs-md) var(--term-font); cursor: pointer; }
+.term-palette li[aria-selected="true"], .term-palette li:hover { background: var(--term-accent); color: var(--term-accent-ink); }
+.term-palette kbd { font: 11px var(--term-mono); opacity: 0.75; }

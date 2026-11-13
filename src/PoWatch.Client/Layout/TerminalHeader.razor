@@ -94,7 +94,7 @@
 
     protected override void OnInitialized()
     {
-        Sensing.Changed += OnChanged;
+        Sensing.Changed += OnSensingChanged;
         Drawers.Changed += OnChanged;
         Navigation.LocationChanged += OnNavigated;
         // Only the uptime ticks, so only a running session needs a per-second render.
@@ -103,11 +103,22 @@
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
+    private object? _shown;
+
+    /// <summary>The session changes several times a second; the header only draws these (the clock redraws the uptime).</summary>
+    private void OnSensingChanged()
+    {
+        var now = (Sensing.IsRunning, Sensing.Live.Demo, Sensing.Live.PendingBatches, Sensing.Live.LostTicks);
+        if (now.Equals(_shown)) return;
+        _shown = now;
+        OnChanged();
+    }
+
     private void OnNavigated(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => OnChanged();
 
     public void Dispose()
     {
-        Sensing.Changed -= OnChanged;
+        Sensing.Changed -= OnSensingChanged;
         Drawers.Changed -= OnChanged;
         Navigation.LocationChanged -= OnNavigated;
         _clock?.Dispose();

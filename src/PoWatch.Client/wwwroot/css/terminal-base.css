@@ -1,0 +1,56 @@
+/* Base: page, focus, scrollbars, the boot spinner, Radzen popup and input overrides. */
+
+html, body {
+    margin: 0;
+    background: var(--term-bg);
+    color: var(--term-text);
+    font-family: var(--term-font);
+}
+
+/* Behind the glass, in the dark theme: a deep field with faint rings. */
+:root:not([data-theme="light"]) .term-shell {
+    background:
+        repeating-radial-gradient(circle at 25% 38%, rgba(130, 205, 255, 0.06) 0 1px, transparent 1px 84px),
+        radial-gradient(120% 90% at 25% 30%, #0b2540 0%, #030a12 62%) fixed;
+}
+
+a { color: var(--term-text); }
+pre, code { font-family: var(--term-mono); }
+:focus-visible { outline: 2px solid var(--term-cyan); outline-offset: 2px; }
+main:focus { outline: none; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--term-line); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--term-dim); }
+
+/* Boot spinner and Blazor's unhandled-error bar (index.html). The spinner floats (fixed): in flow, its
+   margin collapsed through <body>, and the app shell replacing it shifted the whole page. */
+.loading-progress { position: fixed; inset: 0; display: block; width: 8rem; height: 8rem; margin: auto; }
+.loading-progress circle { fill: none; stroke: var(--term-line); stroke-width: 0.6rem; transform-origin: 50% 50%; transform: rotate(-90deg); }
+.loading-progress circle:last-child { stroke: var(--term-accent); stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%; transition: stroke-dasharray 0.05s ease-in-out; }
+.loading-progress-text { position: fixed; left: 0; right: 0; top: calc(50% + 4.5rem); text-align: center; font: 600 12px var(--term-mono); color: var(--term-muted); }
+.loading-progress-text::after { content: var(--blazor-load-percentage-text, "Loading"); }
+#blazor-error-ui { display: none; position: fixed; left: 0; bottom: 0; width: 100%; z-index: 1000; padding: 0.8rem; background: #2f0014; color: #fff; }
+#blazor-error-ui .dismiss { cursor: pointer; position: absolute; right: 0.75rem; top: 0.5rem; }
+.auth-checking { padding: 16px; font: 12px var(--term-mono); color: var(--term-muted); }
+.po-error-panel { padding: 16px; }
+
+/* Radzen popups and inputs (the theme variables above cover the rest). */
+.rz-dropdown-panel, .rz-multiselect-panel, .rz-datepicker-popup-container .rz-datepicker { background: var(--term-surface) !important; border: 1px solid var(--term-line) !important; }
+.rz-selectbar .rz-button { font: 600 var(--fs-sm) var(--term-mono); letter-spacing: 0.04em; }
+.rz-dropdown-panel li { color: var(--term-text) !important; }
+.rz-dropdown-panel li:hover { background: var(--term-panel-2) !important; }
+.rz-dropdown-panel li.rz-state-highlight { background: var(--term-accent) !important; color: var(--term-accent-ink) !important; }
+.rz-dropdown, .rz-textbox { background: var(--term-bg) !important; color: var(--term-text) !important; border: 1px solid var(--term-line) !important; }
+.rz-dropdown.rz-state-focused, .rz-textbox:focus { border-color: var(--term-accent) !important; }
+.rz-button:disabled, .rz-button.rz-state-disabled { opacity: 0.55; }
+/* Radzen hovers an unselected range to near-white, which hid its light label. */
+.rz-selectbar .rz-button[aria-pressed="false"]:hover { background: var(--term-panel-2) !important; color: var(--term-text) !important; }
+.rz-chart, .rz-chart text, .rz-legend { font-family: var(--term-mono); font-size: 11px; }
+.rz-data-grid, .rz-grid-table td, .rz-grid-table th, .rz-grid-table tr { border-color: var(--term-line) !important; }
+
+.num, .mono {
+    font-family: var(--term-mono);
+    font-variant-numeric: tabular-nums;
+}
