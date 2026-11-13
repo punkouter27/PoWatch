@@ -57,7 +57,7 @@
     private bool _playing;
     private string? _videoUrl;
 
-    private string DayKey => Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    private string DayKey => DisplayText.DayKey(Day);
 
     protected override async Task OnParametersSetAsync()
     {

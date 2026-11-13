@@ -25,17 +25,15 @@ internal static class RegularEndpoints
     {
         var group = app.MapGroup("/api/regulars").WithTags("Regulars").RequireAuthorization();
 
-        group.MapGet("/", async (HttpContext http, RegularsService service, CancellationToken ct) =>
+        group.MapGet("/", async (UserId userId, RegularsService service, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 var regulars = await service.ListAsync(userId, ct);
                 return Results.Ok(regulars.OrderByDescending(r => r.Visits).ThenByDescending(r => r.LastSeenUtc).Select(r => r.ToDto()).ToList());
             })
             .WithName("ListRegulars");
 
-        group.MapPost("/observe", async (ObserveRegularRequestDto request, HttpContext http, RegularsService service, CancellationToken ct) =>
+        group.MapPost("/observe", async (ObserveRegularRequestDto request, UserId userId, RegularsService service, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (string.IsNullOrWhiteSpace(request.Class) || request.Class.Length > 40
                     || request.Signature.Count != RegularMatcher.SignatureBins
                     || request.Signature.Any(v => v < 0 || !float.IsFinite(v)))
@@ -47,18 +45,16 @@ internal static class RegularEndpoints
             .WithName("ObserveRegular")
             .WithSummary("Recognise a tracked person, pet or object by its look, or start a new unnamed regular.");
 
-        group.MapPatch("/{id}", async (string id, RenameRegularRequestDto request, HttpContext http, RegularsService service, CancellationToken ct) =>
+        group.MapPatch("/{id}", async (string id, RenameRegularRequestDto request, UserId userId, RegularsService service, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 var renamed = await service.RenameAsync(userId, id, request.Name, ct);
                 return renamed is null ? Results.NotFound() : Results.Ok(renamed.ToDto());
             })
             .WithName("RenameRegular")
             .InvalidatesStats();
 
-        group.MapPost("/merge", async (MergeRegularsRequestDto request, HttpContext http, RegularsService service, CancellationToken ct) =>
+        group.MapPost("/merge", async (MergeRegularsRequestDto request, UserId userId, RegularsService service, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 var merged = await service.MergeAsync(userId, request.PrimaryId, request.DuplicateId, ct);
                 return merged is null ? Results.NotFound() : Results.Ok(merged.ToDto());
             })

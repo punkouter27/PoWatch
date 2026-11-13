@@ -42,9 +42,8 @@ internal static class StatsEndpoints
         Map(group, "pipeline", (s, u, w, ct) => s.PipelineAsync(u, w, ct));
 
         // Everything the families know about a range in one file; the Live grid shows only the headlines.
-        group.MapGet("/all", async (string? range, string? tz, Guid? sessionId, string? date, HttpContext http, StatsQueryService s, CancellationToken ct) =>
+        group.MapGet("/all", async (string? range, string? tz, Guid? sessionId, string? date, UserId u, StatsQueryService s, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } u) return Results.Unauthorized();
                 var (error, w, _) = await WindowAsync(u, range, tz, sessionId, date, s, ct);
                 if (w is null) return error!;
 
@@ -66,9 +65,8 @@ internal static class StatsEndpoints
             .WithSummary("Every stat family for a range in one JSON document.");
 
         // One day minute by minute, for History's replay. Not cached: a day is read once per visit.
-        group.MapGet("/replay", async (string? date, string? tz, HttpContext http, StatsQueryService s, CancellationToken ct) =>
+        group.MapGet("/replay", async (string? date, string? tz, UserId u, StatsQueryService s, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } u) return Results.Unauthorized();
                 if (!ApiParsing.TryDay(date, out var day)) return Results.BadRequest(new { message = "date must be yyyy-MM-dd." });
                 var w = await s.ResolveAsync(u, StatsRange.Day, tz, null, ct, day);
                 return w is null ? Results.NotFound() : Results.Ok(await s.ReplayAsync(u, w, ct));
@@ -107,12 +105,11 @@ internal static class StatsEndpoints
                 string? tz,
                 Guid? sessionId,
                 string? date,
-                HttpContext http,
+                UserId userId,
                 StatsQueryService service,
                 HybridCache cache,
                 CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 var (error, window, parsed) = await WindowAsync(userId, range, tz, sessionId, date, service, ct);
                 if (window is null) return error!;
 

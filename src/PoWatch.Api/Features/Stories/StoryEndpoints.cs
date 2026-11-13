@@ -8,9 +8,8 @@ internal static class StoryEndpoints
 {
     internal static IEndpointRouteBuilder MapStoriesFeature(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/sessions/{id:guid}/story", async (Guid id, HttpContext http, StoryService stories, CancellationToken ct) =>
+        app.MapPost("/api/sessions/{id:guid}/story", async (Guid id, UserId userId, StoryService stories, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 var story = await stories.UpdateAsync(userId, id, ct);
                 return story is null ? Results.NotFound() : Results.Ok(story);
             })
@@ -19,9 +18,8 @@ internal static class StoryEndpoints
             .WithName("SessionStory")
             .WithSummary("Writes the session's ten-minute chapters that have closed and, once it has ended, the story they make; returns all of it.");
 
-        app.MapGet("/api/sessions/{id:guid}/transcript", async (Guid id, HttpContext http, StoryService stories, CancellationToken ct) =>
+        app.MapGet("/api/sessions/{id:guid}/transcript", async (Guid id, UserId userId, StoryService stories, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 var lines = await stories.TranscriptAsync(userId, id, ct);
                 return lines is null ? Results.NotFound() : Results.Ok(lines);
             })
@@ -30,9 +28,8 @@ internal static class StoryEndpoints
             .WithName("SessionTranscript")
             .WithSummary("Every line the on-device speech model heard during the session, in order.");
 
-        app.MapGet("/api/stories/{kind}", async (string kind, string? date, string? tz, HttpContext http, PeriodStoryService periods, TimeProvider time, CancellationToken ct) =>
+        app.MapGet("/api/stories/{kind}", async (string kind, string? date, string? tz, UserId userId, PeriodStoryService periods, TimeProvider time, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (kind is not ("week" or "month")) return Results.BadRequest(new { message = "kind must be week or month." });
                 var zone = ApiParsing.Zone(tz);
                 DateOnly day;

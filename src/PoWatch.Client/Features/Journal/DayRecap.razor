@@ -71,7 +71,7 @@ else
     private bool _copied;
     private string? _shareError;
 
-    private string DayKey => Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    private string DayKey => DisplayText.DayKey(Day);
 
     protected override void OnParametersSet()
     {

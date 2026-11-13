@@ -16,16 +16,14 @@ internal static class ProfileEndpoints
     {
         var group = app.MapGroup("/api/profile").WithTags("Profile").RequireAuthorization();
 
-        group.MapGet("/", async (HttpContext http, IProfileStore profiles, IDigestSender sender, CancellationToken ct) =>
+        group.MapGet("/", async (UserId userId, IProfileStore profiles, IDigestSender sender, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 return Results.Ok(ToDto(await profiles.GetAsync(userId, ct), sender.IsEnabled));
             })
             .WithName("GetProfile");
 
-        group.MapPut("/", async (UpdateProfileDto request, HttpContext http, IProfileStore profiles, IDigestSender sender, CancellationToken ct) =>
+        group.MapPut("/", async (UpdateProfileDto request, UserId userId, HttpContext http, IProfileStore profiles, IDigestSender sender, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (request.RetentionDays is { } days && !UserProfile.RetentionChoices.Contains(days))
                     return Results.BadRequest(new { message = $"retentionDays must be one of {string.Join(", ", UserProfile.RetentionChoices)}, or null to keep everything." });
                 if (request.Place is { } p && (string.IsNullOrWhiteSpace(p.Name) || p.Name.Length > MaxPlaceName

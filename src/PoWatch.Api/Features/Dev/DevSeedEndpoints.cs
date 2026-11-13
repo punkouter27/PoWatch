@@ -23,12 +23,11 @@ internal static class DevSeedEndpoints
         app.MapPost("/api/dev/seed", async (
                 int? days,
                 string? tz,
-                HttpContext http,
+                UserId userId,
                 IRollupStore rollups,
                 TimeProvider time,
                 CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 // Rollups merge, so a second seed would stack another copy of history on top (a 15-hour
                 // day reading 149 h observed). UI tests seed the shared guest on every run: seed once.
                 if ((await rollups.GetAllTimeAsync(userId, ct)).Ticks > 0)

@@ -172,7 +172,7 @@ client csproj). System is three tabs (Connections, Engine, Pipeline), and
 tables marked `term-table--cards` turn into one card per row on a phone.
 
 **Look.** One palette on every page (deep-blue glass in the dark theme, plain panels in the light one),
-five type sizes (`--fs-xs` to `--fs-xl`), and Radzen's `--rz-*` variables pointed at the same tokens.
+four type sizes (`--fs-xs` to `--fs-lg`), and Radzen's `--rz-*` variables pointed at the same tokens.
 
 **Keyboard.** `g` then `l` or `j` jumps to Live or the Journal, Space starts or stops, ← → step the
 Journal's day, Ctrl+K opens a command palette (also: the demo scene, System, full screen) (`wwwroot/js/menus.js`).

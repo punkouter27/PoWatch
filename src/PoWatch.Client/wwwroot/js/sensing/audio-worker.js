@@ -6,7 +6,7 @@
 // detector and the caption model. Audio arrives as 16 kHz mono Float32Array, is used once and dropped:
 // nothing is kept or sent anywhere.
 // Speaks worker-rpc.js: replies echo the `id`, and a failure is a type 'ERROR' reply.
-import { loadTransformers, modelStatus } from './transformers-env.js';
+import { loadTransformers, modelStatus } from '../transformers-env.js';
 
 const SPEECH_MODEL = 'Xenova/whisper-base.en';
 const SOUND_MODEL = 'Xenova/ast-finetuned-audioset-10-10-0.4593';

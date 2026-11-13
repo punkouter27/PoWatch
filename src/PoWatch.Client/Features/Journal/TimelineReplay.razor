@@ -120,7 +120,7 @@
 
     private string TranscriptFile => From is { } from
         ? $"powatch-session-{from.ToLocalTime().ToString("yyyy-MM-dd-HHmm", CultureInfo.InvariantCulture)}.txt"
-        : $"powatch-{Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}.txt";
+        : $"powatch-{DayKey}.txt";
 
     private ElementReference _root;
     private (DateOnly, DateTimeOffset?, DateTimeOffset?)? _shown;
@@ -134,7 +134,7 @@
     private bool _saving;
     private bool _cutting;
 
-    private string DayKey => Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    private string DayKey => DisplayText.DayKey(Day);
 
     protected override async Task OnParametersSetAsync()
     {

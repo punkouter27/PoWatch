@@ -23,7 +23,12 @@
     <link rel="preload" as="font" type="font/woff2" crossorigin="anonymous" href="_content/Radzen.Blazor/fonts/MaterialSymbolsOutlined.woff2" />
     <link rel="stylesheet" href="css/po-tokens.css" />
     <link rel="stylesheet" href="css/po-motion.css" />
-    <link rel="stylesheet" href="css/terminal.css" />
+    <link rel="stylesheet" href="css/terminal-base.css" />
+    <link rel="stylesheet" href="css/terminal-shell.css" />
+    <link rel="stylesheet" href="css/terminal-pages.css" />
+    <link rel="stylesheet" href="css/terminal-overlays.css" />
+    <link rel="stylesheet" href="css/terminal-dash.css" />
+    <link rel="stylesheet" href="css/terminal-journal.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="theme-color" content="#030a12" />
@@ -36,8 +41,11 @@
          paints the app shell, so there is no theme flash, but it is NOT synchronous. -->
     <script src="js/error-report.js"></script>
     <script src="js/theme-controller.js" defer></script>
+    <script src="js/idb.js" defer></script>
+    <script src="js/local-day.js" defer></script>
     <script src="js/worker-rpc.js" defer></script>
-    <script src="js/inference-bridge.js" defer></script>
+    <script src="js/sensing/camera.js" defer></script>
+    <script src="js/sensing/inference-bridge.js" defer></script>
     <script src="js/sensing/pixel-layer.js" defer></script>
     <script src="js/sensing/audio-layer.js" defer></script>
     <script src="js/sensing/detector-bridge.js" defer></script>

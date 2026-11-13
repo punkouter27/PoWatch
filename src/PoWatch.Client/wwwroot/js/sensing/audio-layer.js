@@ -21,7 +21,10 @@
   // ("sound effect", "sine wave") say nothing either, and body sounds read as medical, which stories avoid.
   const IGNORED = /^(speech|male speech|female speech|child speech|conversation|narration|silence|inside, small room|inside, large room|inside, public space|outside|white noise|pink noise|hum|static|noise|environmental noise|mains hum|sound effect|sine wave|tone|heart murmur|heart sounds|breathing|wheeze|gasp|cough|sneeze|snoring)/i;
 
-  const call = window.powatchWorkerRpc('/js/audio-worker.js?v=20261109-loadstatus', 'hearing');
+  const rpc = window.powatchWorkerRpc;
+  const call = rpc('sensing/audio-worker.js', 'hearing');
+  let _opening = null;
+  let _starts = 0;
   let state = null;
 
   /** 0 at −60 dBFS or below, 1 at full scale. */
@@ -100,32 +103,54 @@
   }
 
   /** Opens the microphone; resolves to 'OK' or a reason it could not listen. */
-  async function start(dotnet) {
-    if (state) return 'OK';
+  function start(dotnet) {
+    if (state) return Promise.resolve('OK');
+    // One opening at a time: a second Start while the permission prompt is up waits for the first, and
+    // opens again only if a Stop in between gave that one's stream back.
+    if (_opening) return _opening.then((result) => (state || result !== 'OK' ? result : start(dotnet)));
+    return _opening = open(dotnet).finally(() => { _opening = null; });
+  }
+
+  async function open(dotnet) {
+    const opening = (_starts += 1);
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
     } catch (err) {
       return err?.name === 'NotAllowedError' ? 'Microphone access was not allowed.' : 'No microphone could be opened.';
     }
-    const context = new AudioContext({ sampleRate: RATE });
-    const source = context.createMediaStreamSource(stream);
-    // A ScriptProcessor keeps this one file; 4096 samples is a quarter of a second at 16 kHz.
-    const processor = context.createScriptProcessor(4096, 1, 1);
-    processor.onaudioprocess = (e) => onChunk(new Float32Array(e.inputBuffer.getChannelData(0)));
-    source.connect(processor);
-    processor.connect(context.destination);
+    const release = () => stream.getTracks().forEach((t) => t.stop());
+    // Stopped while the permission prompt was up: the microphone must not stay open behind it.
+    if (opening !== _starts) { release(); return 'OK'; }
+
+    let context = null;
+    let processor;
+    try {
+      context = new AudioContext({ sampleRate: RATE });
+      const source = context.createMediaStreamSource(stream);
+      // A ScriptProcessor keeps this one file; 4096 samples is a quarter of a second at 16 kHz.
+      processor = context.createScriptProcessor(4096, 1, 1);
+      processor.onaudioprocess = (e) => onChunk(new Float32Array(e.inputBuffer.getChannelData(0)));
+      source.connect(processor);
+      processor.connect(context.destination);
+    } catch {
+      release();
+      context?.close().catch(() => { });
+      return 'No microphone could be opened.';
+    }
     state = {
       dotnet, stream, context, processor, levels: [], recent: [], recentSamples: 0, speech: null,
       classifying: false, lastClassify: 0, lastLabel: null, lastLabelAt: 0,
       timer: setInterval(report, 1000),
     };
     // Load both models now, while the room is quiet, rather than on the first word.
+    call.keep();
     call({ type: 'warm' }).catch(() => { });
     return 'OK';
   }
 
   function stop() {
+    _starts += 1; // an opening still waiting on the permission prompt gives its stream back
     const s = state;
     if (!s) return;
     state = null;
@@ -133,6 +158,8 @@
     s.processor.disconnect();
     s.stream.getTracks().forEach((t) => t.stop());
     s.context.close().catch(() => { });
+    // The hearing models stay loaded for a quick restart, then their worker is let go (worker-rpc.js).
+    call.releaseAfter(rpc.IDLE_MS);
   }
 
   window.powatchAudio = { start, stop };

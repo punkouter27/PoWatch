@@ -35,7 +35,7 @@
             @foreach (var alert in _alerts)
             {
                 <p class="tray-item tray-item--alert" data-test="tray-alert">
-                    <span class="tray-kicker">● WATCH RULE · @alert.AtUtc.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture)</span>
+                    <span class="tray-kicker">● WATCH RULE · @DisplayText.LocalTime(alert.AtUtc)</span>
                     <b>@alert.Text</b>
                 </p>
             }
@@ -139,7 +139,7 @@
         Drawers.Close();
     }
 
-    private static string Key(DateOnly weekStart) => weekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    private static string Key(DateOnly weekStart) => DisplayText.DayKey(weekStart);
 
     private void Toggle()
     {

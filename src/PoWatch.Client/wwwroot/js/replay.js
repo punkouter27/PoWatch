@@ -48,6 +48,9 @@
     /** `startAt` (Unix ms, optional) opens the replay on that minute — a caption search result. */
     function mount(root, json, day, startAt) {
         unmount(root);
+        // Taken whether or not this mount goes ahead, so a day that never mounts does not stay staged.
+        const stagedGrids = staged.get(day);
+        staged.delete(day);
         if (!root) return;
         const data = JSON.parse(json);
         const $ = (name) => root.querySelector(`[data-replay="${name}"]`);
@@ -58,15 +61,14 @@
         const from = Date.parse(data.window.fromUtc);
         const to = Date.parse(data.window.toUtc);
         const minutes = data.minutes.map((m) => ({ at: Date.parse(m.atUtc), occupancy: m.occupancy, peak: m.peak, motion: m.motion }));
-        const grids = staged.get(day) ?? decode(data.grids);
-        staged.delete(day);
+        const grids = stagedGrids ?? decode(data.grids);
         const events = data.events.map((e) => ({ kind: e.kind, text: e.text, cls: e.class, at: Date.parse(e.atUtc) }));
         const captions = events.filter((e) => e.kind === 'caption');
         const moments = events.filter((e) => e.kind === 'moment');
         const maxMotion = Math.max(0.0001, ...minutes.map((m) => m.motion));
         const empty = new Array(GRID).fill(0);
 
-        const state = { at: startAt >= from && startAt < to ? startAt : minutes.length ? minutes[0].at : from, timer: 0, frames: [], frameUrl: null, colors: null, observer: null, detach: null, line: null };
+        const state = { at: startAt >= from && startAt < to ? startAt : minutes.length ? minutes[0].at : from, timer: 0, frames: [], frameUrl: null, colors: null, observer: null, theme: null, detach: null, line: null, heat };
         mounted.set(root, state);
 
         scrub.min = '0';
@@ -128,17 +130,23 @@
             ctx.fillRect(Math.round(x(state.at)) - dpr / 2, 0, dpr * 2, h);
         }
 
-        function showFrame() {
+        // state.frames holds only when each frame was taken; the picture nearest the playhead is read
+        // from the time-lapse store when it is wanted, so a day of JPEGs is never held here.
+        async function showFrame() {
             if (!cameraBox || !frameImg || state.frames.length === 0) return;
             let best = null;
             for (const f of state.frames) if (!best || Math.abs(f.at - state.at) < Math.abs(best.at - state.at)) best = f;
             const near = best && Math.abs(best.at - state.at) <= FRAME_NEAR_MS;
             cameraBox.hidden = !near;
             if (!near || frameImg.dataset.at === String(best.at)) return;
-            if (state.frameUrl) URL.revokeObjectURL(state.frameUrl);
-            state.frameUrl = URL.createObjectURL(best.blob);
-            frameImg.src = state.frameUrl;
+            // Claimed before the read, so the minutes that pass while it loads do not ask for it again.
             frameImg.dataset.at = String(best.at);
+            const blob = await window.powatchTimelapse.frame(best.key);
+            // Unmounted, or the playhead has moved on to another frame, while this one was read.
+            if (!blob || mounted.get(root) !== state || frameImg.dataset.at !== String(best.at)) return;
+            if (state.frameUrl) URL.revokeObjectURL(state.frameUrl);
+            state.frameUrl = URL.createObjectURL(blob);
+            frameImg.src = state.frameUrl;
         }
 
         function render() {
@@ -222,13 +230,16 @@
         readColors();
         state.observer = new ResizeObserver(() => drawTrack());
         state.observer.observe(track);
+        // The header's theme toggle changes the palette under an open replay.
+        state.theme = new MutationObserver(() => { readColors(); drawTrack(); });
+        state.theme.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
         seek(state.at, false);
 
         // The day's captions become searchable by meaning from the palette (in the background, once).
         window.powatchCaptionIndex?.addMany(captions.map((c) => ({ at: c.at, text: c.text })));
 
         // This device's time-lapse for the day, if it kept one; the replay works without it.
-        window.powatchTimelapse?.frames(day).then((frames) => {
+        window.powatchTimelapse?.stamps(day).then((frames) => {
             if (mounted.get(root) !== state) return;
             state.frames = frames;
             showFrame();
@@ -241,6 +252,8 @@
         clearInterval(state.timer);
         state.detach?.();
         state.observer?.disconnect();
+        state.theme?.disconnect();
+        window.powatchHeat?.release?.(state.heat);
         if (state.frameUrl) URL.revokeObjectURL(state.frameUrl);
         mounted.delete(root);
     }

@@ -54,22 +54,22 @@
 </TerminalPanel>
 <TerminalPanel Title="Weekly email" Test="settings-email" Flush="true">
     <ChildContent>
-        @if (_profile is null)
+        @if (Profile is null)
         {
-            <p class="term-empty">@(_profileLoaded ? "Could not load your settings — the server did not answer." : "Loading…")</p>
+            <p class="term-empty">@ProfileMissing</p>
         }
         else
         {
             <div class="settings-list">
-                <button class="term-menu-item" role="switch" aria-checked="@(_profile.DigestEmail ? "true" : "false")" @onclick="ToggleDigestEmailAsync"
-                        disabled="@(_saving || !_profile.DigestEmailAvailable)" data-test="digest-toggle">
-                    <span>Weekly email <i>@(_profile.DigestEmailAvailable ? (_profile.DigestEmail ? $"Mondays, to {_profile.Email}" : "the week in review, Monday mornings") : "this server cannot send email; the week is in the Journal")</i></span>
-                    <b>@(_profile.DigestEmail ? "ON" : "OFF")</b>
+                <button class="term-menu-item" role="switch" aria-checked="@(Profile.DigestEmail ? "true" : "false")" @onclick="ToggleDigestEmailAsync"
+                        disabled="@(Saving || !Profile.DigestEmailAvailable)" data-test="digest-toggle">
+                    <span>Weekly email <i>@(Profile.DigestEmailAvailable ? (Profile.DigestEmail ? $"Mondays, to {Profile.Email}" : "the week in review, Monday mornings") : "this server cannot send email; the week is in the Journal")</i></span>
+                    <b>@(Profile.DigestEmail ? "ON" : "OFF")</b>
                 </button>
             </div>
-            @if (_profileMessage is not null)
+            @if (ProfileMessage is not null)
             {
-                <p class="term-stat-hint settings-note" role="status">@_profileMessage</p>
+                <p class="term-stat-hint settings-note" role="status">@ProfileMessage</p>
             }
         }
     </ChildContent>
@@ -86,28 +86,17 @@
     private WatchRule? _draft;
     private string? _draftError;
 
-    private ProfileDto? _profile;
-    private bool _profileLoaded;
-    private bool _saving;
-    private string? _profileMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        var profile = Api.GetProfileAsync();
+        var profile = LoadProfileAsync();
         _rules = await WatchRules.LoadAsync(JS);
-        (_profile, _profileLoaded) = (await profile, true);
+        await profile;
     }
 
-    private async Task ToggleDigestEmailAsync()
-    {
-        if (_profile is null) return;
-        var done = _profile.DigestEmail ? "The weekly email is off." : "The weekly email is on.";
-        _saving = true;
-        var saved = await SaveProfileAsync(_profile, p => new() { RetentionDays = p.RetentionDays, Place = p.Place, DigestEmail = !p.DigestEmail });
-        if (saved is not null) _profile = saved;
-        _profileMessage = saved is null ? "Could not save — nothing was changed." : done;
-        _saving = false;
-    }
+    private Task ToggleDigestEmailAsync() =>
+        SaveProfileAsync(p => new() { RetentionDays = p.RetentionDays, Place = p.Place, DigestEmail = !p.DigestEmail },
+            Profile?.DigestEmail == true ? "The weekly email is off." : "The weekly email is on.");
 
     private async Task DraftRuleAsync()
     {

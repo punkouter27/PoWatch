@@ -57,12 +57,8 @@
         Sensing.Feed = _feed;
         await JS.TryInvokeVoidAsync("powatchMenus.setup");
         // Remembered per browser: whether camera sessions also run the caption model.
-        if (await JS.TryInvokeAsync<string>("localStorage.getItem", CaptionsKey) == "off") Sensing.Captions = false;
-        if (await JS.TryInvokeAsync<string>("localStorage.getItem", ListeningKey) == "off") Sensing.Listening = false;
-        if (await JS.TryInvokeAsync<string>("localStorage.getItem", PostureKey) == "off") Sensing.ReadPosture = false;
-        if (int.TryParse(await JS.TryInvokeAsync<string>("localStorage.getItem", SitNudgeKey), out var nudge)) Sensing.SitNudgeMinutes = nudge;
+        await Sensing.LoadPreferencesAsync();
         await Sensing.LoadVoicesAsync();
-        Sensing.CaptionModel = CaptionModels.Normalize(await JS.TryInvokeAsync<string>("localStorage.getItem", CaptionModels.Key));
         await Sensing.SendOutboxAsync();
     }
 
@@ -73,11 +69,6 @@
         Drawers.Close();
         InvokeAsync(StateHasChanged);
     }
-
-    public const string CaptionsKey = "powatch:captions";
-    public const string ListeningKey = "powatch:listening";
-    public const string PostureKey = "powatch:posture";
-    public const string SitNudgeKey = "powatch:sit-nudge";
 
     private static bool IsLive(string uri) => Section(uri).Length == 0;
 

@@ -23,3 +23,18 @@ internal static class CurrentUser
         ?? user?.FindFirst(ClaimTypes.Email)?.Value
         ?? user?.FindFirst("upn")?.Value;
 }
+
+/// <summary>
+/// The caller's resolved partition id, bound from <see cref="CurrentUser.Id"/> by Minimal APIs so
+/// feature endpoints never repeat the null-check boilerplate.
+/// </summary>
+internal readonly record struct UserId(string Value)
+{
+    public static implicit operator string(UserId id) => id.Value;
+    public override string ToString() => Value;
+
+    public static ValueTask<UserId> BindAsync(HttpContext context) =>
+        CurrentUser.Id(context.User) is { } id
+            ? ValueTask.FromResult(new UserId(id))
+            : throw new UnauthorizedAccessException("Caller has no user identifier claim.");
+}

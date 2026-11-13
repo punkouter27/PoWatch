@@ -206,7 +206,17 @@ public sealed partial class Live
         try
         {
             while (await timer.WaitForNextTickAsync(ct))
-                await RefreshStatsAsync();
+            {
+                try
+                {
+                    await RefreshStatsAsync();
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // One failed refresh must not end the fallback timer.
+                    Console.Error.WriteLine($"Stats refresh failed: {ex.Message}");
+                }
+            }
         }
         catch (OperationCanceledException)
         {
@@ -245,7 +255,7 @@ public sealed partial class Live
 
     private Task DockFeedAsync() => Sensing.DockFeedAsync(_slot);
 
-    private static string Pct(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+    private static string Pct(double value) => DisplayText.Fraction(value);
 
     public async ValueTask DisposeAsync()
     {

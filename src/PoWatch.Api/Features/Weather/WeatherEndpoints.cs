@@ -15,9 +15,8 @@ internal static class WeatherEndpoints
             .WithName("SearchPlaces")
             .WithSummary("Places matching a name, for picking where the weather comes from.");
 
-        group.MapGet("/weather/year", async (string? tz, HttpContext http, WeatherService weather, CancellationToken ct) =>
+        group.MapGet("/weather/year", async (string? tz, UserId userId, WeatherService weather, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 return Results.Ok(await weather.YearAsync(userId, tz, ct));
             })
             .WithName("WeatherYear")

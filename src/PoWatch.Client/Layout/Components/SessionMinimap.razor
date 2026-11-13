@@ -77,7 +77,7 @@
         await JS.TryInvokeVoidAsync("powatchMenus.showLine", List, index);
     }
 
-    private static string Time(DateTimeOffset at) => at.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+    private static string Time(DateTimeOffset at) => DisplayText.LocalTime(at);
 
-    private static string Pct(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+    private static string Pct(double value) => DisplayText.Fraction(value);
 }

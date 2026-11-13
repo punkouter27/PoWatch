@@ -12,9 +12,8 @@ internal static class AskEndpoints
 
     internal static IEndpointRouteBuilder MapAskFeature(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/ask", async (AskRequestDto request, HttpContext http, AskService ask, ILogger<AskService> logger, CancellationToken ct) =>
+        app.MapPost("/api/ask", async (AskRequestDto request, UserId userId, AskService ask, ILogger<AskService> logger, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 var question = request.Question?.Trim();
                 if (string.IsNullOrEmpty(question) || question.Length > AskService.MaxQuestionLength)
                     return Results.BadRequest(new { message = $"question is required, at most {AskService.MaxQuestionLength} characters." });
@@ -37,9 +36,8 @@ internal static class AskEndpoints
             .WithName("Ask")
             .WithSummary("Answer a plain-language question from the caller's own statistics.");
 
-        app.MapPost("/api/ask/rule", async (RuleDraftRequestDto request, HttpContext http, AssistService assist, CancellationToken ct) =>
+        app.MapPost("/api/ask/rule", async (RuleDraftRequestDto request, UserId _, AssistService assist, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is null) return Results.Unauthorized();
                 var text = request.Text?.Trim();
                 if (string.IsNullOrEmpty(text) || text.Length > RuleDraftRequestDto.MaxLength)
                     return Results.BadRequest(new { message = $"text is required, at most {RuleDraftRequestDto.MaxLength} characters." });
@@ -55,9 +53,8 @@ internal static class AskEndpoints
             .WithName("DraftWatchRule")
             .WithSummary("Draft a watch rule from a sentence; the caller confirms it before keeping it.");
 
-        app.MapPost("/api/alerts", async (AlertDto alert, HttpContext http, IHubContext<StatsHub> hub, TimeProvider time, CancellationToken ct) =>
+        app.MapPost("/api/alerts", async (AlertDto alert, UserId userId, IHubContext<StatsHub> hub, TimeProvider time, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (string.IsNullOrWhiteSpace(alert.Text) || alert.Text.Length > AlertDto.MaxLength)
                     return Results.BadRequest(new { message = $"text is required, at most {AlertDto.MaxLength} characters." });
 

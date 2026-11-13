@@ -8,9 +8,8 @@ internal static class DigestEndpoints
 {
     internal static IEndpointRouteBuilder MapDigestFeature(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/digest/week", async (string? date, string? tz, HttpContext http, DigestService digests, TimeProvider time, CancellationToken ct) =>
+        app.MapGet("/api/digest/week", async (string? date, string? tz, UserId userId, DigestService digests, TimeProvider time, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 var zone = ApiParsing.Zone(tz);
                 DateOnly day;
                 if (date is null) day = LocalDay.Today(time, zone);

@@ -5,10 +5,10 @@
 
 // The vendored transformers.js, its fetch retry and the frame hand-off live in transformers-env.js;
 // the models in caption-models.js; what counts as a usable caption in caption-quality.js.
-import { FETCH_ATTEMPTS, bitmapToRawImage, loadTransformers, modelStatus } from './transformers-env.js';
-import { CAPTION_MODELS, DEFAULT_CAPTION_MODEL, captionSpec, decodeGenerated, dtypeName, generateOptions, isOllamaModel, loadModel, loadProcessor, prepareInputs } from './caption-models.js';
-import { judgeCaption } from './caption-quality.js';
-import { tryEmbed } from './embedder.js';
+import { FETCH_ATTEMPTS, bitmapToRawImage, loadTransformers, modelStatus } from '../transformers-env.js';
+import { CAPTION_MODELS, DEFAULT_CAPTION_MODEL, captionSpec, decodeGenerated, dtypeName, generateOptions, isOllamaModel, loadModel, loadProcessor, prepareInputs } from '../caption-models.js';
+import { judgeCaption } from '../caption-quality.js';
+import { tryEmbed } from '../embedder.js';
 
 // Settings' models run on this machine's own Ollama server. Ollama allows http://localhost origins out
 // of the box; any other origin needs OLLAMA_ORIGINS, or captions fall back to the in-browser model.
@@ -68,12 +68,6 @@ async function ensureModelLoaded(modelKey, avoidGpu = false) {
   if (_loadState === 'loading') await _loadPromise.catch(() => { });
   if (_loadState === 'ready' && key === _modelKey) return;
 
-  // A different model was chosen in Settings: let the old one go before loading the next.
-  if (_model && key !== _modelKey) {
-    await _model.dispose?.();
-    _model = null;
-  }
-
   _modelKey = key;
   _spec = captionSpec(key);
   _loadState = 'loading';
@@ -127,6 +121,10 @@ async function ensureModelLoaded(modelKey, avoidGpu = false) {
 }
 
 async function loadOn(device, dtype) {
+  // A fallback reload replaces a session that is still alive: let it (and its GPU buffers) go first.
+  const previous = _model;
+  _model = null;
+  try { await previous?.dispose?.(); } catch { /* a session that is already gone */ }
   _model = await loadModel(_transformers, _spec, device, dtype, _status.progress(_spec.id, device, dtypeName(dtype)));
   _device = device;
   _dtype = dtypeName(dtype);
@@ -239,8 +237,12 @@ async function runInference(bitmap, prompt, maxNewTokens = 32, modelKey = null, 
   const inferStart = performance.now();
 
   // Frames arrive as a transferred ImageBitmap: no JPEG encode on the page, no base64 copy, no decode here.
-  const { image } = bitmapToRawImage(_transformers.RawImage, bitmap);
-  bitmap.close?.();
+  let image;
+  try {
+    ({ image } = bitmapToRawImage(_transformers.RawImage, bitmap));
+  } finally {
+    bitmap.close?.();
+  }
   // Rebuild tensors after every backend switch: reusing WebGPU inputs on wasm is how generate()
   // started throwing a bare ONNX code with no .message.
   let inputs = await prepareInputs(_processor, _spec, image, prompt);

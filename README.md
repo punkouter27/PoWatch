@@ -30,7 +30,7 @@ Useful commands:
 ```powershell
 dotnet restore PoWatch.slnx
 dotnet build PoWatch.slnx
-dotnet test PoWatch.slnx
+dotnet test tests/PoWatch.Unit --no-build
 dotnet run --project src/PoWatch.Api/PoWatch.Api.csproj
 ```
 

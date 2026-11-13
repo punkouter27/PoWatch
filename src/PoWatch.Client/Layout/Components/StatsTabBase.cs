@@ -39,9 +39,9 @@ public abstract class StatsTabBase<T> : ComponentBase where T : class
         return dirty;
     }
 
-    protected static string Percent(double value) => value.ToString("0.0%", CultureInfo.InvariantCulture);
+    protected static string Percent(double value) => DisplayText.Percent(value);
 
-    protected static string Number(double value, string format = "0.##") => value.ToString(format, CultureInfo.InvariantCulture);
+    protected static string Number(double value, string format = "0.##") => DisplayText.Number(value, format);
 
     protected static string Duration(double seconds) => DisplayText.Duration(seconds);
 

@@ -105,10 +105,6 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<PeriodStoryDto?> GetPeriodStoryAsync(bool month, DateOnly day, string timeZoneId, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.GetAsync($"api/stories/{(month ? "month" : "week")}?date={Day(day)}&tz={Uri.EscapeDataString(timeZoneId)}", ct), Json.PeriodStoryDto, cancellationToken);
 
-    /// <summary>Every line the microphone heard in the session; empty on failure.</summary>
-    public async Task<IReadOnlyList<HeardLineDto>> GetTranscriptAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
-        await ReadAsync(ct => httpClient.GetAsync($"api/sessions/{sessionId}/transcript", ct), Json.ListHeardLineDto, cancellationToken) ?? [];
-
     public async Task<IReadOnlyList<MomentDto>> GetMomentsAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         await ReadAsync(ct => httpClient.GetAsync($"api/sessions/{sessionId}/moments", ct), Json.ListMomentDto, cancellationToken) ?? [];
 
@@ -205,7 +201,7 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<bool> LogoutAsync(CancellationToken cancellationToken = default) =>
         SendAsync(ct => httpClient.PostAsync("auth/logout", content: null, ct), cancellationToken);
 
-    private static string Day(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    private static string Day(DateOnly day) => DisplayText.DayKey(day);
 
     /// <summary>Sends and reads the body; null on any failure that is not the caller cancelling.</summary>
     private static async Task<T?> ReadAsync<T>(Func<CancellationToken, Task<HttpResponseMessage>> send, JsonTypeInfo<T> type, CancellationToken cancellationToken)

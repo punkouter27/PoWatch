@@ -142,7 +142,7 @@
         if (day is { } d) Navigation.NavigateTo(StoryLinks.Day(d));
     }
 
-    private static string Time(DateTimeOffset at) => at.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+    private static string Time(DateTimeOffset at) => DisplayText.LocalTime(at);
 
     private static DateOnly? DayFor(int index)
     {

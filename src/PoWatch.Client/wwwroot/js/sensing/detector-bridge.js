@@ -10,11 +10,11 @@
 (function () {
   'use strict';
 
-  const WORKER_URL = new URL('./detector-worker.js', document.currentScript?.src ?? location.href);
-  const CLOCK_URL = new URL('./sample-clock.js', document.currentScript?.src ?? location.href);
+  const rpc = window.powatchWorkerRpc;
+  const CLOCK_URL = rpc.url('sensing/sample-clock.js');
   const CAPTURE_WIDTH = 640;
 
-  const call = window.powatchWorkerRpc(WORKER_URL, 'detector');
+  const call = rpc('sensing/detector-worker.js', 'detector');
   let _clock = null;
   let _busy = false;
   let _device = null;
@@ -60,6 +60,7 @@
 
   /** Loads the detector; resolves to { modelId, device, dtype, loadMs }. `device` forces 'webgpu' or 'wasm'. */
   async function load(device) {
+    call.keep();
     let info = await call({ type: 'LOAD', device });
     // ONNX Runtime aborted on one precision and took the worker with it: carry on in a fresh worker
     // from the next candidate (detector-worker.js). Each round skips at least one, so this ends.
@@ -78,7 +79,14 @@
     const bitmap = await createImageBitmap(video, { resizeWidth: CAPTURE_WIDTH, resizeHeight: height });
     // A fresh worker (after a GPU reset) loads the model on its first frame: on wasm once the GPU has failed twice.
     const pose = _pose && _passes++ % POSE_EVERY === 0;
-    const result = await call({ type: 'DETECT', bitmap, threshold, pose, device: call.gpuLosses >= 2 ? 'wasm' : undefined }, [bitmap]);
+    let result;
+    try {
+      result = await call({ type: 'DETECT', bitmap, threshold, pose, device: call.gpuLosses >= 2 ? 'wasm' : undefined }, [bitmap]);
+    } catch (err) {
+      // A transferred frame is the worker's to close; one that never left (the worker could not start) is ours.
+      bitmap.close();
+      throw err;
+    }
     _device = result.device ?? _device;
     return result;
   }
@@ -86,6 +94,7 @@
   /** `pose` also reads people's body keypoints (posture); setPose changes it while running. */
   async function start(video, dotnetRef, intervalMs, threshold, pose) {
     stop();
+    call.keep();
     _pose = pose === true;
     _clock = new Worker(CLOCK_URL, { type: 'module' });
     _clock.onmessage = async () => {
@@ -111,6 +120,8 @@
   function stop() {
     if (_clock) { _clock.terminate(); _clock = null; }
     _busy = false;
+    // The detector stays loaded for a quick restart, then its worker is let go (worker-rpc.js).
+    call.releaseAfter(rpc.IDLE_MS);
   }
 
   function setPose(on) { _pose = on === true; }
