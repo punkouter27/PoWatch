@@ -76,9 +76,7 @@ void main() {
         return shader;
     }
 
-    function create(canvas, cols, rows) {
-        const gl = canvas.getContext('webgl2', { antialias: false, alpha: false });
-        if (!gl) return null;
+    function initGl(gl) {
         const program = gl.createProgram();
         gl.attachShader(program, compile(gl, gl.VERTEX_SHADER, VERTEX));
         gl.attachShader(program, compile(gl, gl.FRAGMENT_SHADER, FRAGMENT));
@@ -98,13 +96,39 @@ void main() {
             gl.texParameteri(gl.TEXTURE_2D, name, value);
 
         const uniform = (name) => gl.getUniformLocation(program, name);
-        return {
-            gl, cols, rows, raf: 0,
+        return { grid: uniform('u_grid'), size: uniform('u_size'), time: uniform('u_time'), hot: uniform('u_hot'), cold: uniform('u_cold') };
+    }
+
+    function create(canvas, cols, rows) {
+        const gl = canvas.getContext('webgl2', { antialias: false, alpha: false });
+        if (!gl) return null;
+        const state = {
+            gl, cols, rows, raf: 0, lost: false, theme: null, colors: null,
             shown: new Float32Array(cols * rows),
             target: new Float32Array(cols * rows),
             pixels: new Uint8Array(cols * rows),
-            u: { grid: uniform('u_grid'), size: uniform('u_size'), time: uniform('u_time'), hot: uniform('u_hot'), cold: uniform('u_cold') },
+            u: initGl(gl),
+            onLost: null, onRestored: null,
         };
+        state.onLost = (e) => {
+            e.preventDefault();
+            cancelAnimationFrame(state.raf);
+            state.raf = 0;
+            state.lost = true;
+        };
+        state.onRestored = () => {
+            try {
+                state.u = initGl(gl);
+                state.lost = false;
+                if (reduced.matches) render(canvas, state);
+                else if (!state.raf) loop(canvas, state);
+            } catch {
+                release(canvas);
+            }
+        };
+        canvas.addEventListener('webglcontextlost', state.onLost);
+        canvas.addEventListener('webglcontextrestored', state.onRestored);
+        return state;
     }
 
     function rgb(canvas, variable, fallback) {
@@ -113,7 +137,19 @@ void main() {
         return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255];
     }
 
+    function colorsFor(canvas, state) {
+        const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+        if (state.colors && state.theme === theme) return state.colors;
+        state.theme = theme;
+        state.colors = {
+            hot: rgb(canvas, '--term-accent', '#8fdcff'),
+            cold: rgb(canvas, '--term-bg', '#030a12'),
+        };
+        return state.colors;
+    }
+
     function render(canvas, state) {
+        if (state.lost) return;
         const { gl, shown, target, pixels, u } = state;
         const ease = reduced.matches ? 1 : 0.12;
         for (let i = 0; i < shown.length; i++) {
@@ -128,23 +164,33 @@ void main() {
             canvas.width = width;
             canvas.height = height;
         }
+        const c = colorsFor(canvas, state);
         gl.viewport(0, 0, width, height);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, state.cols, state.rows, 0, gl.RED, gl.UNSIGNED_BYTE, pixels);
         gl.uniform2f(u.grid, state.cols, state.rows);
         gl.uniform2f(u.size, canvas.clientWidth, canvas.clientHeight);
         gl.uniform1f(u.time, reduced.matches ? 0 : performance.now() / 1000);
-        gl.uniform3fv(u.hot, rgb(canvas, '--term-accent', '#8fdcff'));
-        gl.uniform3fv(u.cold, rgb(canvas, '--term-bg', '#030a12'));
+        gl.uniform3fv(u.hot, c.hot);
+        gl.uniform3fv(u.cold, c.cold);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    function release(canvas) {
+        const state = canvas && states.get(canvas);
+        if (!state) return;
+        cancelAnimationFrame(state.raf);
+        state.raf = 0;
+        if (state.onLost) canvas.removeEventListener('webglcontextlost', state.onLost);
+        if (state.onRestored) canvas.removeEventListener('webglcontextrestored', state.onRestored);
+        state.gl.getExtension('WEBGL_lose_context')?.loseContext();
+        states.delete(canvas);
     }
 
     function loop(canvas, state) {
         // The page that owned the canvas is gone: stop, and let the context be collected.
         // Releasing the context now matters: Chrome keeps ~16 alive and drops the oldest past that.
         if (!canvas.isConnected) {
-            state.raf = 0;
-            state.gl.getExtension('WEBGL_lose_context')?.loseContext();
-            states.delete(canvas);
+            release(canvas);
             return;
         }
         render(canvas, state);
@@ -167,9 +213,9 @@ void main() {
         for (let i = 0; i < state.target.length; i++) state.target[i] = max > 0 ? (values[i] || 0) / max : 0;
 
         if (reduced.matches) render(canvas, state);
-        else if (!state.raf) loop(canvas, state);
+        else if (!state.raf && !state.lost) loop(canvas, state);
         return true;
     }
 
-    window.powatchHeat = { draw };
+    window.powatchHeat = { draw, release };
 })();

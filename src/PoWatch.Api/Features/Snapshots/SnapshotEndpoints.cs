@@ -9,9 +9,8 @@ internal static class SnapshotEndpoints
 {
     internal static IEndpointRouteBuilder MapSnapshotsFeature(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/snapshots", async (string? day, HttpContext http, ISnapshotStore store, CancellationToken ct) =>
+        app.MapPost("/api/snapshots", async (string? day, UserId userId, ISnapshotStore store, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (!ApiParsing.TryDay(day, out var localDay))
                     return Results.BadRequest(new { message = "day must be yyyy-MM-dd (the browser's local date)." });
 
@@ -27,12 +26,11 @@ internal static class SnapshotEndpoints
 
         app.MapGet("/api/sessions/{id:guid}/moments", async (
                 Guid id,
-                HttpContext http,
+                UserId userId,
                 ISessionRepository sessions,
                 RecapService recaps,
                 CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (await sessions.GetAsync(userId, id, ct) is not { } session) return Results.NotFound();
                 return Results.Ok(await recaps.MomentsAsync(userId, session, ct));
             })

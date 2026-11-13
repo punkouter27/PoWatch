@@ -33,8 +33,8 @@ Status: ✅ shipped · ⚠️ stale when checked against the code on 2026-11-09.
 | 16 | ~~Unused package audit~~ | **No-op, verified 2026-11-09:** all 22 `PackageReference`s have a live call site. | — |
 | 17 ✅ | Trim gate in CI | Done — the build job publishes the client with `-p:PublishTrimmed=true`, so a reflection-only DTO fails CI instead of someone's browser. | S |
 | 18 | Native AOT probe on the API | Throwaway `PublishAot` run; findings either way are worth having. | L |
-| 19 | `StatsTabBase` consolidation | `PipelineTab` + `PatternsTab` share fetch/loading; fold into one base with an overridable query. | M |
-| 20 | Split `terminal.css` | Live / Journal / Settings get their own `.razor.css` (only `Login.razor.css` exists today); `terminal.css` is ~1,200 lines. | M |
+| 19 ✅ | `StatsTabBase` consolidation | Done — one `StatsTabBase<T>` owns the `StatsQuery` parameter, the load-on-range-change path, the `ShouldRender` gate and the shared formatters, with a single `LoadAsync` override; `PipelineTab`, `PatternsTab` and `OddMoment` inherit it. | S |
+| 20 ✅ | Split `terminal.css` | Done — the 1,359-line file is now six role-based sheets (`terminal-base`, `-shell`, `-pages`, `-overlays`, `-dash`, `-journal`), loaded in that order by `index.html`. Page-scoped `.razor.css` was not needed: the split follows which surface a rule belongs to, not which page first used it. | S |
 
 ## Graphics & audio (21–30)
 
@@ -86,15 +86,12 @@ to light and the cost is real on phones. This is the subset that improves this a
 
 ## Known flaky (not the code)
 
-- `PoWatch.Integration.FeatureEndpointTests.A_stopped_session_gets_its_chapters_joined_into_one_story_written_once`
-  failed once on 2026-11-09 with `Nothing was observed in this window.` and passed on rerun — a
-  time-window boundary in `ObserveAsync`.
-- `PoWatch.Integration.FeatureEndpointTests.What_the_microphone_heard_is_a_transcript_and_part_of_the_story`
-  failed once on 2026-11-09 (asserting `someone said: “Has anyone seen my keys?”` in the story) and
-  passed on rerun. Same shape as the one above: the transcript read fine, so the chapter was written
-  from an empty stretch. Both would be fixed by making the chapter's minute window (narrowed for a
-  stop that lands in the same minute as the start) always readable back, and by retrying a chapter
-  whose text is `NothingObserved` while its stretch has raw rows.
+- Fixed 2026-11-13 (was: the two `FeatureEndpointTests` story tests, `A_stopped_session_gets_its_chapters…`
+  and `What_the_microphone_heard…`, failing with an empty or half-told chapter). The tests stamped
+  their ticks and events 2 to 12 seconds after the session's start and then stopped it at once; the
+  last chapter reads back to the end of the minute the session ended in, so whenever the minute turned
+  in between, that data fell outside it. They now stamp everything within milliseconds of the start.
+  The app itself only loses data stamped after a session's last minute, which a browser does not send.
 - `PoWatch.E2EUI.ViewportFitE2ETests` failed twice on 2026-11-09 (once `app-navbar` never appeared,
   once the fake-camera session) with floods of `TypeError: Failed to fetch` and
   `ERR_ABORTED` on `/api/diagnostics/client-error`, then passed on the second rerun. That pattern is

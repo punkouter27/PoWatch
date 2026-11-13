@@ -23,9 +23,8 @@ internal static class SessionEndpoints
     {
         var group = app.MapGroup("/api/sessions").WithTags("Sessions").RequireAuthorization();
 
-        group.MapPost("/", async (StartSessionRequestDto request, HttpContext http, SessionService service, CancellationToken ct) =>
+        group.MapPost("/", async (StartSessionRequestDto request, UserId userId, SessionService service, CancellationToken ct) =>
         {
-            if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
             try
             {
                 var session = await service.StartAsync(userId, request.TimeZoneId, request.SessionId, ct);
@@ -39,18 +38,16 @@ internal static class SessionEndpoints
         .WithName("StartSession")
         .WithSummary("Start a session, or return it if a session with the same id already exists.");
 
-        group.MapPost("/{id:guid}/stop", async (Guid id, HttpContext http, SessionService service, CancellationToken ct) =>
+        group.MapPost("/{id:guid}/stop", async (Guid id, UserId userId, SessionService service, CancellationToken ct) =>
         {
-            if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
             var session = await service.StopAsync(userId, id, ct);
             return session is null ? Results.NotFound() : Results.Ok(session.ToDto(service.Now));
         })
         .WithName("StopSession")
         .WithSummary("Stop a session; stopping twice keeps the first end time.");
 
-        group.MapGet("/", async (int? take, DateTimeOffset? from, DateTimeOffset? to, HttpContext http, SessionService service, CancellationToken ct) =>
+        group.MapGet("/", async (int? take, DateTimeOffset? from, DateTimeOffset? to, UserId userId, SessionService service, CancellationToken ct) =>
         {
-            if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
             var sessions = from is { } start && to is { } end
                 ? await service.ListBetweenAsync(userId, start, end, ct)
                 : await service.ListAsync(userId, take ?? 20, ct);
@@ -59,9 +56,8 @@ internal static class SessionEndpoints
         .WithName("ListSessions")
         .WithSummary("The caller's most recent sessions, newest first; with from and to, every session that overlaps that range.");
 
-        group.MapGet("/{id:guid}", async (Guid id, HttpContext http, SessionService service, CancellationToken ct) =>
+        group.MapGet("/{id:guid}", async (Guid id, UserId userId, SessionService service, CancellationToken ct) =>
         {
-            if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
             var session = await service.GetAsync(userId, id, ct);
             return session is null ? Results.NotFound() : Results.Ok(session.ToDto(service.Now));
         })

@@ -64,7 +64,7 @@ public sealed class SyntheticScene(int seed = 7)
         if (walking)
         {
             var x0 = -0.05 + (walkPhase / WalkSeconds * 1.0);
-            detections.Add(new Detection("person", Jitter(0.9), Math.Max(0, x0), 0.28, Math.Min(1, x0 + 0.14), 0.92, WalkerLook));
+            detections.Add(new Detection("person", Jitter(0.9), Math.Max(0, x0), 0.28, Math.Min(1, x0 + 0.14), 0.92, WalkerLook, Posture.Standing));
         }
 
         var catHere = t % CatPeriodSeconds < CatSeconds;

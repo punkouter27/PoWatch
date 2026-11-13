@@ -47,8 +47,7 @@
 
     // One lit value (or all equal) has no spread: show it at full strength.
     private string Opacity(double value) =>
-        (0.15 + (0.85 * (_range <= 1e-9 ? 1 : Math.Clamp((value - _min) / _range, 0, 1))))
-            .ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        DisplayText.Fraction(0.15 + (0.85 * (_range <= 1e-9 ? 1 : Math.Clamp((value - _min) / _range, 0, 1))));
 
     private RenderFragment Fill(double value) => __builder =>
     {
@@ -59,5 +58,5 @@
     };
 
     private string Title(int index, double value) =>
-        CellTitle?.Invoke(index, value) ?? value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        CellTitle?.Invoke(index, value) ?? DisplayText.Fraction(value);
 }

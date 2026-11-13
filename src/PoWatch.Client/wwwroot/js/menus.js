@@ -52,7 +52,7 @@
     }
 
     const pad = (n) => String(n).padStart(2, '0');
-    const localDay = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const localDay = window.powatchLocalDay;
     const when = (d) => `${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
     async function searchCaptions(query) {

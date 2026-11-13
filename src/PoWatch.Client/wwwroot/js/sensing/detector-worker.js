@@ -12,8 +12,17 @@
 // Some GPUs (seen on Adreno) do worse than fail: ONNX Runtime aborts inside its WASM core and throws a
 // bare number, and every later session in this worker fails the same way. Such an attempt is reported
 // as POISONED with where to resume; detector-bridge.js then starts a fresh worker that skips it.
+//
+// Posture: when asked to, each person the detector found is cut out of the frame and handed to a pose
+// model (ViTPose+ small, Apache-2.0, 42 MB) that returns 17 body keypoints (pose-math.js does the
+// cutting out and reads the heatmaps); PostureRules.cs reads sitting, standing or lying from the
+// shoulders, hips and knees. It always runs int8 on WASM: about 60 ms a person on a CPU, nothing for
+// the GPU the detector and the captions already share, and no fp16 path that could abort and take the
+// detector with it. It loads in the background and is optional throughout: until it is ready, or if
+// it fails, boxes simply carry no keypoints.
 
 import { bitmapToRawImage, loadTransformers, modelStatus } from '../transformers-env.js';
+import { cropForPose, readHeatmaps, POSE_HEIGHT, POSE_WIDTH } from './pose-math.js';
 
 const status = modelStatus();
 
@@ -26,6 +35,12 @@ let detector = null;
 let RawImage = null;
 let loaded = null;       // { modelId, device, dtype, loadMs }
 let loading = null;
+
+const POSE_MODEL = 'onnx-community/vitpose-plus-small-ONNX';
+const MAX_POSES = 3;          // the largest people in frame; a crowd is not worth a second of CPU
+let pose = null;              // { model, processor } once ready
+let poseLoading = null;
+let poseFailed = false;
 
 /** Thrown when ONNX Runtime aborted: this worker is unusable, a fresh one resumes at `next`. */
 class Poisoned extends Error {
@@ -141,7 +156,49 @@ function signature(pixels, box) {
   return n === 0 ? [] : bins.map((c) => Math.round((c / n) * 10000) / 10000);
 }
 
-async function detect(bitmap, threshold, forceDevice) {
+/** Starts loading the pose model once; never throws (a failure is logged and posture stays unread). */
+function ensurePose() {
+  if (pose || poseLoading || poseFailed) return;
+  poseLoading = (async () => {
+    try {
+      const transformers = await loadTransformers();
+      const [model, processor] = await Promise.all([
+        transformers.AutoModel.from_pretrained(POSE_MODEL, { device: 'wasm', dtype: 'q8' }),
+        transformers.AutoImageProcessor.from_pretrained(POSE_MODEL),
+      ]);
+      pose = { model, processor };
+    } catch (err) {
+      poseFailed = true;
+      console.warn('Pose model could not be loaded; posture is not read:', err);
+    } finally {
+      poseLoading = null;
+    }
+  })();
+}
+
+/**
+ * Adds `keypoints` to up to MAX_POSES people: 17 × (x, y, score) in COCO order, x and y both divided
+ * by the frame's width so angles are true whatever the aspect. Best-effort: a failed run adds nothing.
+ */
+async function addKeypoints(pixels, detections) {
+  const people = detections
+    .filter((d) => d.label === 'person' && d.score >= 0.5)
+    .sort((a, b) => (b.x1 - b.x0) * (b.y1 - b.y0) - (a.x1 - a.x0) * (a.y1 - a.y0))
+    .slice(0, MAX_POSES);
+  try {
+    for (const person of people) {
+      const crop = cropForPose(pixels, person);
+      const inputs = await pose.processor(new RawImage(crop.data, POSE_WIDTH, POSE_HEIGHT, 3));
+      const { heatmaps } = await pose.model({ pixel_values: inputs.pixel_values });
+      const [, joints, rows, columns] = heatmaps.dims;
+      if (joints === 17) person.keypoints = readHeatmaps(heatmaps.data, joints, rows, columns, crop, pixels.width);
+    }
+  } catch (err) {
+    console.warn('Pose run failed:', err);
+  }
+}
+
+async function detect(bitmap, threshold, forceDevice, wantPose) {
   let image, pixels;
   try {
     await load(forceDevice);
@@ -152,16 +209,18 @@ async function detect(bitmap, threshold, forceDevice) {
 
   const started = performance.now();
   const output = await detector(image, { threshold, percentage: true });
-  return {
-    latencyMs: Math.round(performance.now() - started),
-    device: loaded.device,
-    detections: output.map((d) => ({
-      label: d.label,
-      score: d.score,
-      x0: d.box.xmin, y0: d.box.ymin, x1: d.box.xmax, y1: d.box.ymax,
-      signature: signature(pixels, d.box),
-    })),
-  };
+  const latencyMs = Math.round(performance.now() - started);
+  const detections = output.map((d) => ({
+    label: d.label,
+    score: d.score,
+    x0: d.box.xmin, y0: d.box.ymin, x1: d.box.xmax, y1: d.box.ymax,
+    signature: signature(pixels, d.box),
+  }));
+  if (wantPose) {
+    if (pose) await addKeypoints(pixels, detections);
+    else ensurePose();
+  }
+  return { latencyMs, device: loaded.device, detections };
 }
 
 self.onmessage = async (event) => {
@@ -170,7 +229,7 @@ self.onmessage = async (event) => {
     if (type === 'LOAD') {
       self.postMessage({ id, type: 'LOADED', ...(await load(event.data.device, event.data.from, event.data.rejected)) });
     } else if (type === 'DETECT') {
-      self.postMessage({ id, type: 'DETECTED', ...(await detect(event.data.bitmap, event.data.threshold ?? 0.5, event.data.device)) });
+      self.postMessage({ id, type: 'DETECTED', ...(await detect(event.data.bitmap, event.data.threshold ?? 0.5, event.data.device, event.data.pose === true)) });
     }
   } catch (err) {
     if (err instanceof Poisoned) self.postMessage({ id, type: 'POISONED', next: err.next, rejected: err.rejected });

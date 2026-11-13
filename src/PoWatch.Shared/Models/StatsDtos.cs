@@ -49,6 +49,16 @@ public sealed class PresenceStatsDto
     public double LongestStillSeconds { get; init; }
     public DateTimeOffset? BusiestStartUtc { get; init; }
     public double BusiestMotion { get; init; }
+
+    /// <summary>Person-seconds spent sitting, standing and lying down in the window; all zero when posture was not read.</summary>
+    public double SittingSeconds { get; init; }
+
+    public double StandingSeconds { get; init; }
+
+    public double LyingSeconds { get; init; }
+
+    /// <summary>The longest unbroken run of buckets someone mostly sat through.</summary>
+    public double LongestSittingSeconds { get; init; }
     public List<SeriesPointDto> Series { get; init; } = [];
 }
 

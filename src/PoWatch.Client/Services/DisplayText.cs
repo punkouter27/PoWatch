@@ -24,6 +24,15 @@ public static class DisplayText
             : $"{span.Seconds}s";
     }
 
+    /// <summary>"14:48" on this device's clock.</summary>
+    public static string LocalTime(DateTimeOffset utc) => utc.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+
+    /// <summary>"2026-11-13": a day as the API, the time-lapse store and file names spell it.</summary>
+    public static string DayKey(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    /// <summary>A 0–1 share for a style or SVG attribute: at most three decimals, always a dot.</summary>
+    public static string Fraction(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+
     /// <summary>"49.1%", or "—" before the number has loaded.</summary>
     public static string Percent(double? value) => value is { } v ? v.ToString("0.0%", CultureInfo.InvariantCulture) : "—";
 
@@ -37,7 +46,7 @@ public static class DisplayText
         var line = string.Create(CultureInfo.CurrentCulture, $"{day.Summary} · {day.TempMinC:0}°–{day.TempMaxC:0}°C");
         if (day.PrecipitationMm >= 0.1) line += string.Create(CultureInfo.CurrentCulture, $" · {day.PrecipitationMm:0.#} mm");
         if (day.SunriseUtc is { } rise && day.SunsetUtc is { } set)
-            line += $" · SUN {rise.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture)}–{set.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture)}";
+            line += $" · SUN {LocalTime(rise)}–{LocalTime(set)}";
         return line;
     }
 }

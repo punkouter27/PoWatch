@@ -16,14 +16,13 @@ internal static class IngestEndpoints
         app.MapPost("/api/sessions/{id:guid}/batches", async (
                 Guid id,
                 IngestBatchDto batch,
-                HttpContext http,
+                UserId userId,
                 IValidator<IngestBatchDto> validator,
                 IngestService service,
                 HybridCache cache,
                 IHubContext<StatsHub> hub,
                 CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
 
                 var shape = await validator.ValidateAsync(batch, ct);
                 if (!shape.IsValid)
@@ -81,6 +80,9 @@ internal static class IngestEndpoints
         LuminanceMean = dto.LuminanceMean,
         SoundMean = dto.SoundMean,
         SoundMax = dto.SoundMax,
+        SittingSeconds = dto.SittingSeconds,
+        StandingSeconds = dto.StandingSeconds,
+        LyingSeconds = dto.LyingSeconds,
         Palette = dto.Palette,
         MotionGrid = dto.MotionGrid,
         PresenceGrid = dto.PresenceGrid,

@@ -1,6 +1,5 @@
 @* Under a day's replay: the day's highlight snapshots, best first, then the time-lapse this browser
    kept of it (one frame a minute while a camera session runs, for 7 days, never uploaded). *@
-@using System.Globalization
 @inject PoWatchApiClient Api
 @inject IJSRuntime JS
 
@@ -57,7 +56,7 @@
     private bool _playing;
     private string? _videoUrl;
 
-    private string DayKey => Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    private string DayKey => DisplayText.DayKey(Day);
 
     protected override async Task OnParametersSetAsync()
     {

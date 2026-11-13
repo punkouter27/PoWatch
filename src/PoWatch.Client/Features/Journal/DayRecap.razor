@@ -1,6 +1,5 @@
 @* The top of a day in the Journal: the day in a paragraph (the template first, a model's rewording when
    one arrives), its downloads and a share link. *@
-@using System.Globalization
 @inject PoWatchApiClient Api
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -71,7 +70,7 @@ else
     private bool _copied;
     private string? _shareError;
 
-    private string DayKey => Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    private string DayKey => DisplayText.DayKey(Day);
 
     protected override void OnParametersSet()
     {

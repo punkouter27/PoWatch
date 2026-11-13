@@ -12,9 +12,8 @@ internal static class DataEndpoints
 {
     internal static IEndpointRouteBuilder MapDataFeature(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/export.csv", async (string? tz, DateOnly? from, DateOnly? to, HttpContext http, StatsQueryService stats, CancellationToken ct) =>
+        app.MapGet("/api/export.csv", async (string? tz, DateOnly? from, DateOnly? to, UserId userId, StatsQueryService stats, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 var csv = new StringBuilder("date,occupancy,visits,motion\n");
                 if (await stats.ResolveAsync(userId, StatsRange.Today, tz, null, ct) is { } window)
                 {
@@ -34,9 +33,8 @@ internal static class DataEndpoints
             .WithName("ExportDays")
             .WithSummary("One CSV row per observed day of the last year: occupancy, visits, motion. Narrow it with from/to (yyyy-MM-dd).");
 
-        app.MapDelete("/api/data", async (HttpContext http, IUserDataStore data, ILogger<Program> logger, CancellationToken ct) =>
+        app.MapDelete("/api/data", async (UserId userId, IUserDataStore data, ILogger<Program> logger, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 await data.PurgeAsync(userId, ct);
                 logger.LogWarning("User data purged on request.");
                 return Results.NoContent();

@@ -30,6 +30,10 @@ public sealed partial class StatsQueryService
             LongestStillSeconds = summary.LongestStillStreak.TotalSeconds,
             BusiestStartUtc = summary.BusiestStartUtc,
             BusiestMotion = summary.BusiestMotion,
+            SittingSeconds = total.SittingSeconds,
+            StandingSeconds = total.StandingSeconds,
+            LyingSeconds = total.LyingSeconds,
+            LongestSittingSeconds = summary.LongestSittingStreak.TotalSeconds,
             Series = series.Select(r => new SeriesPointDto
             {
                 AtUtc = r.BucketStartUtc,

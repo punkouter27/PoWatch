@@ -7,22 +7,13 @@
 <TerminalPanel Title="Your data and account" Test="your-data" Flush="true">
     <Aside>@_email</Aside>
     <ChildContent>
-        @if (_profile is null)
-        {
-            <p class="term-empty">@(_profileLoaded ? "Could not load your settings — the server did not answer." : "Loading…")</p>
-        }
-        else
-        {
+        <SettingsBody Profile="@Profile" Missing="@ProfileMissing" Message="@ProfileMessage" Context="profile">
             <div class="settings-list">
-                <button class="term-menu-item" @onclick="NextRetention" disabled="@_saving" data-test="retention-toggle">
-                    <span>Raw detail kept <i>replays, captions, moments; charts and totals stay forever</i></span><b>@RetentionLabel(_profile.RetentionDays)</b>
+                <button class="term-menu-item" @onclick="NextRetention" disabled="@Saving" data-test="retention-toggle">
+                    <span>Raw detail kept <i>replays, captions, moments; charts and totals stay forever</i></span><b>@RetentionLabel(profile.RetentionDays)</b>
                 </button>
             </div>
-            @if (_profileMessage is not null)
-            {
-                <p class="term-stat-hint settings-note" role="status">@_profileMessage</p>
-            }
-        }
+        </SettingsBody>
         <div class="settings-list">
             <a class="term-menu-item" href="system" data-test="nav-system"><span>System status <i>connections, runtime, inference, pipeline</i></span><b>→</b></a>
             <a class="term-menu-item" href="@PoWatchApiClient.ExportUrl(TimeZoneInfo.Local.Id)" download="PoWatch-days.csv" data-test="export-csv"><span>Export days <i>one row per observed day</i></span><b>CSV ↓</b></a>
@@ -44,22 +35,18 @@
     private bool _deleting;
     private string? _dataMessage;
 
-    private ProfileDto? _profile;
-    private bool _profileLoaded;
-    private bool _saving;
-    private string? _profileMessage;
 
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        var profile = Api.GetProfileAsync();
+        var profile = LoadProfileAsync();
         if (AuthState is not null)
         {
             var user = (await AuthState).User;
             _email = user.FindFirst(ClaimTypes.Email)?.Value ?? user.FindFirst("preferred_username")?.Value ?? user.Identity?.Name;
         }
-        (_profile, _profileLoaded) = (await profile, true);
+        await profile;
     }
 
     private static string RetentionLabel(int? days) => days switch
@@ -72,10 +59,10 @@
     /// <summary>Forever, 1 year, 90 days, 30 days, then forever again. Keeping less deletes, so it asks first.</summary>
     private async Task NextRetention()
     {
-        if (_profile is null) return;
-        var choices = _profile.RetentionChoices.OrderByDescending(d => d).Select(d => (int?)d).Prepend(null).ToList();
-        var next = choices[(choices.IndexOf(_profile.RetentionDays) + 1) % choices.Count];
-        if (next is { } shorter && (_profile.RetentionDays is null || shorter < _profile.RetentionDays))
+        if (Profile is null) return;
+        var choices = Profile.RetentionChoices.OrderByDescending(d => d).Select(d => (int?)d).Prepend(null).ToList();
+        var next = choices[(choices.IndexOf(Profile.RetentionDays) + 1) % choices.Count];
+        if (next is { } shorter && (Profile.RetentionDays is null || shorter < Profile.RetentionDays))
         {
             var keep = RetentionLabel(shorter).ToLowerInvariant();
             var sure = await Dialogs.Confirm($"Raw detail older than {keep} will be deleted within a few hours. It cannot be brought back.",
@@ -83,19 +70,8 @@
             if (sure != true) return;
         }
 
-        await SaveAsync(p => new() { RetentionDays = next, Place = p.Place, DigestEmail = p.DigestEmail },
+        await SaveProfileAsync(p => new() { RetentionDays = next, Place = p.Place, DigestEmail = p.DigestEmail },
             next is null ? "Everything is kept." : $"Raw detail older than {RetentionLabel(next).ToLowerInvariant()} goes within a few hours.");
-    }
-
-    /// <summary>The page shows what the server saved, or keeps the old values.</summary>
-    private async Task SaveAsync(Func<ProfileDto, UpdateProfileDto> change, string done)
-    {
-        if (_profile is null) return;
-        _saving = true;
-        var saved = await SaveProfileAsync(_profile, change);
-        if (saved is not null) _profile = saved;
-        _profileMessage = saved is null ? "Could not save — nothing was changed." : done;
-        _saving = false;
     }
 
     private async Task DeleteAllAsync()

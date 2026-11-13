@@ -20,8 +20,7 @@
   const DELTA = 28;            // same per-pixel threshold as the VLM's frame-diff gate
   const TIMELAPSE_MS = 60000;  // one time-lapse frame a minute (timelapse.js)
 
-  // currentScript is only set while this file first runs, so resolve the worker URL now.
-  const CLOCK_URL = new URL('./sample-clock.js', document.currentScript?.src ?? location.href);
+  const CLOCK_URL = window.powatchWorkerRpc.url('sensing/sample-clock.js');
 
   let _canvas = null;
   let _ctx = null;
@@ -111,12 +110,29 @@
     };
     _clock.postMessage({ intervalMs: intervalMs || 250 });
 
+    document.addEventListener('visibilitychange', onVisible);
+    await keepAwake();
+  }
+
+  /** Takes the screen wake lock for as long as this clock runs. Best-effort: denied, or the page is hidden. */
+  async function keepAwake() {
+    const clock = _clock;
+    if (!clock || !('wakeLock' in navigator) || (_wakeLock && !_wakeLock.released)) return;
     try {
-      if ('wakeLock' in navigator) _wakeLock = await navigator.wakeLock.request('screen');
-    } catch { /* wake lock is best-effort (denied, or the page is hidden) */ }
+      const lock = await navigator.wakeLock.request('screen');
+      // Stopped (or restarted) while the request was pending: this lock belongs to nothing.
+      if (_clock !== clock || (_wakeLock && !_wakeLock.released)) { lock.release().catch(() => { }); return; }
+      _wakeLock = lock;
+    } catch { /* best-effort */ }
+  }
+
+  // The browser drops a wake lock when the tab is hidden; take it again when the tab comes back.
+  function onVisible() {
+    if (document.visibilityState === 'visible') keepAwake();
   }
 
   function stop() {
+    document.removeEventListener('visibilitychange', onVisible);
     if (_clock) { _clock.terminate(); _clock = null; }
     if (_wakeLock) { _wakeLock.release().catch(() => { }); _wakeLock = null; }
     _previous = null;

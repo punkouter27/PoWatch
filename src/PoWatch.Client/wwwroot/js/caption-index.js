@@ -10,46 +10,25 @@
   const MAX = 20000;           // about a month of captions; past it the oldest go
   const MIN_SCORE = 0.3;       // MiniLM cosine below this is unrelated text
   const CHUNK = 32;            // texts per embedding call
-  const call = window.powatchWorkerRpc('/js/embed-worker.js?v=20261017-ai');
-  let _db = null;
+  const call = window.powatchWorkerRpc('embed-worker.js');
   let _puts = 0;
 
-  function open() {
-    return _db ??= new Promise((resolve, reject) => {
-      const req = indexedDB.open('powatch-captions', 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('captions', { keyPath: 'key' }).createIndex('at', 'at');
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => { _db = null; reject(req.error); };
-    });
-  }
-
-  async function run(mode, work) {
-    const db = await open();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('captions', mode);
-      const req = work(tx.objectStore('captions'));
-      tx.oncomplete = () => resolve(req?.result);
-      tx.onerror = () => reject(tx.error);
-    });
-  }
+  const { run } = window.powatchIdb.store('powatch-captions', 'captions',
+    (db) => db.createObjectStore('captions', { keyPath: 'key' }).createIndex('at', 'at'));
 
   const keyOf = (at, text) => `${at}|${text}`;
 
   async function prune() {
     const count = await run('readonly', (s) => s.count());
     if (count <= MAX) return;
-    const db = await open();
-    await new Promise((resolve) => {
-      const tx = db.transaction('captions', 'readwrite');
-      let left = count - MAX;
-      tx.objectStore('captions').index('at').openCursor().onsuccess = (e) => {
+    let left = count - MAX;
+    await run('readwrite', (s) => {
+      s.index('at').openCursor().onsuccess = (e) => {
         const cursor = e.target.result;
         if (!cursor || left-- <= 0) return;
         cursor.delete();
         cursor.continue();
       };
-      tx.oncomplete = resolve;
-      tx.onerror = resolve;
     });
   }
 

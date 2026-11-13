@@ -76,7 +76,8 @@ public sealed partial class SensingSession
     /// <summary>
     /// The detector's boxes as typed arrays (detector-bridge.js), not JSON: one label per box, and in
     /// <paramref name="values"/> (a Float64Array) per box its score, x0, y0, x1, y1, the length of its
-    /// colour signature, then the signature itself.
+    /// colour signature, the signature itself, the length of its body keypoints (0 when its pose was not
+    /// read) and the keypoints (<see cref="PostureRules.Classify"/>).
     /// </summary>
     [JSExport]
     [SupportedOSPlatform("browser")]
@@ -99,8 +100,13 @@ public sealed partial class SensingSession
             if (length < 0 || at + 6 + length > values.Length) break;
             float[]? signature = length == 0 ? null : new float[length];
             for (var i = 0; i < length; i++) signature![i] = (float)values[at + 6 + i];
-            detections.Add(new Detection(label, values[at], values[at + 1], values[at + 2], values[at + 3], values[at + 4], signature));
-            at += 6 + length;
+            var next = at + 6 + length;
+            if (next >= values.Length) break;
+            var joints = (int)values[next];
+            if (joints < 0 || next + 1 + joints > values.Length) break;
+            Posture? posture = joints == 0 ? null : PostureRules.Classify(new ArraySegment<double>(values, next + 1, joints));
+            detections.Add(new Detection(label, values[at], values[at + 1], values[at + 2], values[at + 3], values[at + 4], signature, posture));
+            at = next + 1 + joints;
         }
 
         Live.DetectorLatencyMs = latencyMs;
@@ -133,6 +139,7 @@ public sealed partial class SensingSession
         foreach (var exited in frame.Exited) Live.ForgetTrack(exited.TrackId);
         foreach (var entered in frame.Entered) Announce(entered);
         Consider(_highlights.OnDetections(frame), atUtc);
+        NudgeIfSittingLong(atUtc, frame);
         RecogniseStableTracks(frame);
         Live.ExpirePrompts(time.GetUtcNow());
         Notify();
@@ -168,6 +175,20 @@ public sealed partial class SensingSession
             // The hub relays it to every open tab of this user, this one included (the tray lists it).
             _ = api.RaiseAlertAsync(text);
         }
+    }
+
+    /// <summary>Says once, and again after each further stretch, that someone has sat for <see cref="SitNudgeMinutes"/> minutes without a break.</summary>
+    private void NudgeIfSittingLong(DateTimeOffset atUtc, TrackerFrame frame)
+    {
+        var people = frame.Active.Where(t => string.Equals(t.Label, "person", StringComparison.OrdinalIgnoreCase)).Select(t => t.Posture).ToList();
+        var due = _sitting.Observe(atUtc, people);
+        Live.SittingFor = _sitting.Current;
+        if (due is not { } sat) return;
+
+        var text = $"Sitting for {(int)Math.Round(sat.TotalMinutes)} minutes without a break: time to stand up";
+        Cue("alert");
+        _ = js.TryInvokeVoidAsync("powatchCues.notify", text);
+        _ = api.RaiseAlertAsync(text);
     }
 
     private void Cue(string name, double pan = 0, double depth = 0, double? energy = null) =>
@@ -314,7 +335,7 @@ public sealed partial class SensingSession
         Live.DetectorModel = info.ModelId;
         Live.DetectorDevice = info.Dtype is null ? info.Device : $"{info.Device} · {info.Dtype}";
         s_detecting = this;
-        await js.TryInvokeVoidAsync("powatchDetector.start", video, _self, 1000, 0.5);
+        await js.TryInvokeVoidAsync("powatchDetector.start", video, _self, 1000, 0.5, ReadPosture);
         Notify();
     }
 }

@@ -1,7 +1,11 @@
 namespace PoWatch.Shared.Services;
 
-/// <summary>One detector box, with coordinates normalised to [0, 1] of the frame, and optionally its colour signature.</summary>
-public sealed record Detection(string Label, double Score, double X0, double Y0, double X1, double Y1, IReadOnlyList<float>? Signature = null)
+/// <summary>
+/// One detector box, with coordinates normalised to [0, 1] of the frame, and optionally its colour
+/// signature and, for a person whose pose was read on this pass, their posture (null when it was not
+/// read: the pose model looks only every few passes, and never at things that are not people).
+/// </summary>
+public sealed record Detection(string Label, double Score, double X0, double Y0, double X1, double Y1, IReadOnlyList<float>? Signature = null, Posture? Posture = null)
 {
     public double CentreX => (X0 + X1) / 2;
     public double CentreY => (Y0 + Y1) / 2;
@@ -11,6 +15,9 @@ public sealed record TrackState(string TrackId, string Label, Detection Box, Dat
 {
     /// <summary>The track's look, averaged over its sightings (empty until the detector sends one).</summary>
     public IReadOnlyList<float> Signature { get; init; } = [];
+
+    /// <summary>The posture a person has settled into over their last few sightings (<see cref="PostureRules.Settled"/>).</summary>
+    public Posture Posture { get; init; }
 
     public TimeSpan Age => LastSeenUtc - FirstSeenUtc;
 }
@@ -51,7 +58,14 @@ public sealed class CentroidTracker(TimeSpan? gap = null)
     };
 
     private readonly TimeSpan _gap = gap ?? TimeSpan.FromSeconds(3);
+    /// <summary>How many of a track's latest posture readings are weighed.</summary>
+    private const int PostureReadings = 5;
+
+    /// <summary>A posture nobody has read again for this long is no longer known (posture was switched off, or the model stopped).</summary>
+    private static readonly TimeSpan PostureStale = TimeSpan.FromSeconds(20);
+
     private readonly Dictionary<string, TrackState> _tracks = [];
+    private readonly Dictionary<string, (Queue<Posture> Recent, DateTimeOffset ReadUtc)> _postures = [];
     private int _nextId = 1;
 
     public IReadOnlyCollection<TrackState> Tracks => _tracks.Values;
@@ -84,13 +98,23 @@ public sealed class CentroidTracker(TimeSpan? gap = null)
                 if (claimed.Contains(detection) || seen.Contains(track.TrackId)) continue;
                 claimed.Add(detection);
                 seen.Add(track.TrackId);
-                _tracks[track.TrackId] = track with { Box = detection, LastSeenUtc = atUtc, Signature = Average(track.Signature, detection.Signature) };
+                _tracks[track.TrackId] = track with
+                {
+                    Box = detection,
+                    LastSeenUtc = atUtc,
+                    Signature = Average(track.Signature, detection.Signature),
+                    Posture = Settle(track.TrackId, detection.Posture, atUtc)
+                };
             }
 
             foreach (var detection in byLabel.Where(d => !claimed.Contains(d)))
             {
                 var id = $"T{_nextId++}";
-                _tracks[id] = new TrackState(id, detection.Label, detection, atUtc, atUtc) { Signature = detection.Signature ?? [] };
+                _tracks[id] = new TrackState(id, detection.Label, detection, atUtc, atUtc)
+                {
+                    Signature = detection.Signature ?? [],
+                    Posture = Settle(id, detection.Posture, atUtc)
+                };
                 seen.Add(id);
                 entered.Add(new TrackEntered(id, detection.Label, EdgeOf(detection), atUtc));
             }
@@ -100,7 +124,11 @@ public sealed class CentroidTracker(TimeSpan? gap = null)
             .Where(t => !seen.Contains(t.TrackId) && atUtc - t.LastSeenUtc > _gap)
             .Select(t => new TrackExited(t.TrackId, t.Label, EdgeOf(t.Box), atUtc, (t.LastSeenUtc - t.FirstSeenUtc).TotalSeconds))
             .ToList();
-        foreach (var exit in exited) _tracks.Remove(exit.TrackId);
+        foreach (var exit in exited)
+        {
+            _tracks.Remove(exit.TrackId);
+            _postures.Remove(exit.TrackId);
+        }
 
         var active = _tracks.Values.Where(t => seen.Contains(t.TrackId)).OrderBy(t => t.TrackId, StringComparer.Ordinal).ToList();
 
@@ -110,6 +138,28 @@ public sealed class CentroidTracker(TimeSpan? gap = null)
             exited,
             active.Where(t => PresenceLabels.Contains(t.Label)).Select(t => Cell(t.Box)).ToList(),
             active.GroupBy(t => t.Label, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Adds a posture reading (when this pass took one) to a track's last few and returns what they
+    /// settle on. A pass without a reading changes nothing, until the last one has gone stale.
+    /// </summary>
+    private Posture Settle(string trackId, Posture? reading, DateTimeOffset atUtc)
+    {
+        var known = _postures.TryGetValue(trackId, out var kept);
+        if (reading is not { } posture)
+        {
+            if (!known) return Posture.Unknown;
+            if (atUtc - kept.ReadUtc <= PostureStale) return PostureRules.Settled(kept.Recent);
+            _postures.Remove(trackId);
+            return Posture.Unknown;
+        }
+
+        var recent = known ? kept.Recent : new Queue<Posture>();
+        recent.Enqueue(posture);
+        if (recent.Count > PostureReadings) recent.Dequeue();
+        _postures[trackId] = (recent, atUtc);
+        return PostureRules.Settled(recent);
     }
 
     public static bool IsPresence(string label) => PresenceLabels.Contains(label);

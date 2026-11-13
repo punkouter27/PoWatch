@@ -27,12 +27,18 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         return client;
     }
 
-    /// <summary>Starts a UTC session and lands one batch: two ticks with a motion grid, an entrance, a caption and a moment.</summary>
+    /// <summary>
+    /// Starts a UTC session and lands one batch: two ticks with a motion grid, an entrance, a caption and a moment.
+    /// Everything is stamped within milliseconds of the session's start: these tests stop the session at
+    /// once, and a chapter reads back only up to the end of the minute the session ended in, so data
+    /// stamped seconds later was lost whenever the minute turned in between (a test that failed about
+    /// one run in ten).
+    /// </summary>
     private static async Task<SessionDto> ObserveAsync(HttpClient client)
     {
         var session = (await (await client.PostAsJsonAsync("/api/sessions", new StartSessionRequestDto { TimeZoneId = "UTC" }))
             .Content.ReadFromJsonAsync<SessionDto>())!;
-        var start = session.StartedUtc.AddSeconds(2);
+        var start = session.StartedUtc;
         var grid = Enumerable.Range(0, SpatialGrid.Cells).Select(i => i == 40 ? 0.8f : 0.1f).ToList();
         var response = await client.PostAsJsonAsync($"/api/sessions/{session.Id}/batches", new IngestBatchDto
         {
@@ -41,13 +47,13 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
             [
                 new() { StartUtc = start, PixelSamples = 40, DetectorSamples = 10, MotionMean = 0.2, MotionMax = 0.5, LuminanceMean = 0.6,
                         MotionGrid = grid, Classes = new() { ["person"] = new() { Max = 1, Mean = 1 } } },
-                new() { StartUtc = start.AddSeconds(10), PixelSamples = 40, MotionMean = 0.1, MotionMax = 0.2, LuminanceMean = 0.6, MotionGrid = grid },
+                new() { StartUtc = start.AddMilliseconds(10), PixelSamples = 40, MotionMean = 0.1, MotionMax = 0.2, LuminanceMean = 0.6, MotionGrid = grid },
             ],
             Events =
             [
                 new() { AtUtc = start, Kind = "TrackEnter", TrackId = "T1", Class = "person", Edge = "Left" },
-                new() { AtUtc = start.AddSeconds(4), Kind = "Caption", Text = "A person crosses the room." },
-                new() { AtUtc = start.AddSeconds(6), Kind = "Notable", Text = "Someone new", Score = 0.9 },
+                new() { AtUtc = start.AddMilliseconds(4), Kind = "Caption", Text = "A person crosses the room." },
+                new() { AtUtc = start.AddMilliseconds(6), Kind = "Notable", Text = "Someone new", Score = 0.9 },
             ]
         });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -155,16 +161,17 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         using var client = ClientFor($"listener-{Guid.NewGuid():N}");
         var session = (await (await client.PostAsJsonAsync("/api/sessions", new StartSessionRequestDto { TimeZoneId = "UTC" }))
             .Content.ReadFromJsonAsync<SessionDto>())!;
-        var start = session.StartedUtc.AddSeconds(2);
+        // Within milliseconds of the start, as in ObserveAsync: the session is stopped at once.
+        var start = session.StartedUtc;
         var ingest = await client.PostAsJsonAsync($"/api/sessions/{session.Id}/batches", new IngestBatchDto
         {
             BatchKey = Guid.NewGuid(),
             Ticks = [new() { StartUtc = start, PixelSamples = 40, LuminanceMean = 0.6, SoundMean = 0.3, SoundMax = 0.7 }],
             Events =
             [
-                new() { AtUtc = start.AddSeconds(1), Kind = "Speech", Text = "Has anyone seen my keys?" },
-                new() { AtUtc = start.AddSeconds(3), Kind = "Sound", Text = "Bark", Score = 0.8 },
-                new() { AtUtc = start.AddSeconds(4), Kind = "Speech", Text = "Found them." },
+                new() { AtUtc = start.AddMilliseconds(1), Kind = "Speech", Text = "Has anyone seen my keys?" },
+                new() { AtUtc = start.AddMilliseconds(3), Kind = "Sound", Text = "Bark", Score = 0.8 },
+                new() { AtUtc = start.AddMilliseconds(4), Kind = "Speech", Text = "Found them." },
             ]
         });
         Assert.Equal(HttpStatusCode.OK, ingest.StatusCode);
@@ -177,6 +184,39 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Contains("someone said: “Has anyone seen my keys?”", story.Story, StringComparison.Ordinal);
         Assert.Contains("a dog barking", story.Story, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/sessions/{Guid.NewGuid()}/transcript")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Posture_read_in_the_browser_comes_back_as_person_time_in_the_presence_numbers()
+    {
+        using var client = ClientFor($"sitter-{Guid.NewGuid():N}");
+        var session = (await (await client.PostAsJsonAsync("/api/sessions", new StartSessionRequestDto { TimeZoneId = "UTC" }))
+            .Content.ReadFromJsonAsync<SessionDto>())!;
+        var start = session.StartedUtc.AddSeconds(2);
+        var ingest = await client.PostAsJsonAsync($"/api/sessions/{session.Id}/batches", new IngestBatchDto
+        {
+            BatchKey = Guid.NewGuid(),
+            Ticks =
+            [
+                new() { StartUtc = start, PixelSamples = 40, DetectorSamples = 10, SittingSeconds = 10, StandingSeconds = 0.5 },
+                new() { StartUtc = start.AddSeconds(10), PixelSamples = 40, DetectorSamples = 10, SittingSeconds = 7.5, LyingSeconds = 2 },
+            ]
+        });
+        Assert.Equal(HttpStatusCode.OK, ingest.StatusCode);
+
+        var presence = (await client.GetFromJsonAsync<PresenceStatsDto>("/api/stats/presence?range=today&tz=UTC"))!;
+        Assert.Equal(17.5, presence.SittingSeconds, 6);
+        Assert.Equal(0.5, presence.StandingSeconds, 6);
+        Assert.Equal(2, presence.LyingSeconds, 6);
+        Assert.True(presence.LongestSittingSeconds > 0);
+
+        // More person-time than a frame could hold is refused like any other impossible tick.
+        var absurd = await client.PostAsJsonAsync($"/api/sessions/{session.Id}/batches", new IngestBatchDto
+        {
+            BatchKey = Guid.NewGuid(),
+            Ticks = [new() { StartUtc = start.AddSeconds(20), SittingSeconds = 100_000 }]
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, absurd.StatusCode);
     }
 
     [Fact]

@@ -7,28 +7,10 @@
   'use strict';
 
   const MAX = 360; // an hour of ten-second batches; past it the oldest go and their ticks count as lost
-  let _db = null;
   let _memory = null; // Map key -> record, once IndexedDB has failed
 
-  function open() {
-    return _db ??= new Promise((resolve, reject) => {
-      const req = indexedDB.open('powatch-outbox', 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('batches', { keyPath: 'key' }).createIndex('at', 'at');
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => { _db = null; reject(req.error); };
-    });
-  }
-
-  /** Runs `work` in one transaction and resolves with its request's result once committed. */
-  async function run(mode, work) {
-    const db = await open();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('batches', mode);
-      const req = work(tx.objectStore('batches'));
-      tx.oncomplete = () => resolve(req?.result);
-      tx.onerror = () => reject(tx.error);
-    });
-  }
+  const { run } = window.powatchIdb.store('powatch-outbox', 'batches',
+    (db) => db.createObjectStore('batches', { keyPath: 'key' }).createIndex('at', 'at'));
 
   /** Uses IndexedDB until it fails once, then memory: a batch is never dropped because storage is blocked. */
   async function store(idb, memory) {
@@ -39,6 +21,7 @@
   }
 
   const all = () => store(() => run('readonly', (s) => s.getAll()), (m) => [...m.values()]);
+  const count = () => store(() => run('readonly', (s) => s.count()), (m) => m.size);
   const add = (record) => store(() => run('readwrite', (s) => s.put(record)), (m) => { m.set(record.key, record); });
   const remove = (key) => store(() => run('readwrite', (s) => s.delete(key)), (m) => { m.delete(key); });
 
@@ -47,8 +30,9 @@
   /** Stores a batch; past the cap the oldest go. Resolves with how many ticks were dropped. */
   async function put(key, sessionId, json) {
     await add({ key, sessionId, json, at: Date.now() });
+    // Counting is all a put needs nearly every time; the batches are only read back once past the cap.
+    if (await count() <= MAX) return 0;
     const records = await all();
-    if (records.length <= MAX) return 0;
     let lost = 0;
     for (const old of records.sort((a, b) => a.at - b.at).slice(0, records.length - MAX)) {
       lost += ticksIn(old.json);

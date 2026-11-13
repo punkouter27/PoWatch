@@ -221,7 +221,7 @@
         {
             if (model != "off")
                 await JS.InvokeVoidAsync("localStorage.setItem", CaptionModels.Key, model);
-            await JS.InvokeVoidAsync("localStorage.setItem", MainLayout.CaptionsKey, model == "off" ? "off" : "on");
+            await JS.InvokeVoidAsync("localStorage.setItem", SensingSession.CaptionsKey, model == "off" ? "off" : "on");
             if (model != "off") Sensing.CaptionModel = model;
             Sensing.Captions = model != "off";
             _error = null;
@@ -235,9 +235,7 @@
 
     private async Task SelectHearingAsync(ChangeEventArgs args)
     {
-        var on = args.Value?.ToString() != "off";
-        Sensing.Listening = on;
-        await JS.TryInvokeVoidAsync("localStorage.setItem", MainLayout.ListeningKey, on ? "on" : "off");
+        await Sensing.SetListeningAsync(args.Value?.ToString() != "off");
     }
 
     private async Task SelectChatAsync(ChangeEventArgs args)

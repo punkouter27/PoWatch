@@ -11,9 +11,8 @@ internal static class RecapEndpoints
     {
         var group = app.MapGroup("/api/recaps").WithTags("Recaps").RequireAuthorization();
 
-        group.MapGet("/session/{id:guid}.pdf", async (Guid id, HttpContext http, RecapService recaps, ISessionRepository sessions, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/session/{id:guid}.pdf", async (Guid id, UserId userId, RecapService recaps, ISessionRepository sessions, ILogger<Program> logger, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (await sessions.GetAsync(userId, id, ct) is not { } session) return Results.NotFound();
                 var recap = await recaps.ForSessionAsync(userId, id, ct);
                 return recap is null ? Results.NotFound() : Pdf(recap, session.TimeZone, $"PoWatch-session-{SessionDto.Tag(id)[1..]}.pdf", logger);
@@ -22,9 +21,8 @@ internal static class RecapEndpoints
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
-        group.MapGet("/day/{date}", async (string date, string? tz, bool? ai, HttpContext http, RecapService recaps, CancellationToken ct) =>
+        group.MapGet("/day/{date}", async (string date, string? tz, bool? ai, UserId userId, RecapService recaps, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (!ApiParsing.TryDay(date, out var day)) return Results.BadRequest(new { message = "date must be yyyy-MM-dd." });
                 // ai=false answers straight from the template, so a page can paint before the model replies.
                 var recap = await recaps.ForDayAsync(userId, day, tz, ct, useAi: ai ?? true);
@@ -33,9 +31,8 @@ internal static class RecapEndpoints
             .WithName("DayRecap")
             .WithSummary("A readable recap of one local day; ai=false skips the model rewrite.");
 
-        group.MapGet("/day/{date}.pdf", async (string date, string? tz, HttpContext http, RecapService recaps, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/day/{date}.pdf", async (string date, string? tz, UserId userId, RecapService recaps, ILogger<Program> logger, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (!ApiParsing.TryDay(date, out var day)) return Results.BadRequest(new { message = "date must be yyyy-MM-dd." });
                 var recap = await recaps.ForDayAsync(userId, day, tz, ct);
                 return recap is null ? Results.NotFound() : Pdf(recap, ApiParsing.Zone(tz), $"PoWatch-{day:yyyy-MM-dd}.pdf", logger);

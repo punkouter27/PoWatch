@@ -33,10 +33,10 @@ $env:E2E_LOCAL = '1'; dotnet test tests/PoWatch.E2EUI -c Release   # needs Playw
 Sensing runs in the browser; the server only ingests 10-second ticks and serves rollups.
 
 - **Browser sensing:** `PoWatch.Client/wwwroot/js/sensing/` (pixel layer, RF-DETR detector worker) and
-  `js/inference-worker.js` (captions: models in `js/caption-models.js`, keep/reject rules in
+  `js/sensing/inference-worker.js` (captions: models in `js/caption-models.js`, keep/reject rules in
   `js/caption-quality.js`, MiniLM embeddings in `js/embedder.js`), driven from `Client/Services/SensingSession.cs`. The
   browser-safe C# parts (`CentroidTracker`, `TickBatcher`, `VlmScheduler`, `AdaptiveCadence`,
-  `HighlightRules`) sit in `PoWatch.Shared/Services` so unit tests can cover them. Unsent batches wait
+  `HighlightRules`, `PostureRules`, `ReelPlanner`) sit in `PoWatch.Shared/Services` so unit tests can cover them. Unsent batches wait
   in the IndexedDB outbox (`js/outbox.js`).
 - **Ingest:** `Api/Features/Ingest` → `Application/Features/Ingest/IngestService.cs`. It claims each `batchKey`
   once in `PoWatchIngestLedger`, writes raw rows and merges minute/hour/day/all rollups; the endpoint

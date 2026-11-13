@@ -1,6 +1,5 @@
 @page "/"
 @implements IAsyncDisposable
-@using System.Globalization
 @inject SensingSession Sensing
 @inject PoWatchApiClient Api
 @inject NavigationManager Navigation
@@ -84,7 +83,7 @@
 
         <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend"
                     OnExplain="@EventCallback.Factory.Create(this, ExplainAsync)" Asking="@_asking" />
-        <InFrame Objects="@_objects" />
+        <InFrame Objects="@_objects" Presence="@_presence" />
 
         @* What the camera and the microphone are turning into words, newest first, with the session's map. *@
         <TerminalPanel Title="Narration" Class="cell-narration" Test="live-narration-panel" Flush="true">

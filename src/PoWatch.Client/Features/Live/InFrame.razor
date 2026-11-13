@@ -1,5 +1,7 @@
-@* Who is tracked right now and how long they have been, the session's head counts, then every other
-   thing seen as one line (what is in frame now first, in bold). *@
+@* Who is tracked right now, how long they have been and how they are holding themselves, the session's
+   head counts, then every other thing seen as one line (what is in frame now first, in bold) and, where
+   posture was read, how the session's person-time split between sitting, standing and lying. *@
+@using PoWatch.Shared.Services
 @inject SensingSession Sensing
 
 @{ var census = CensusRows(); }
@@ -43,6 +45,12 @@
                 }
             </p>
         }
+        @if (PostureLine() is { } posture)
+        {
+            <p class="live-census" data-test="live-posture" title="Person-time this session, read from body joints on this machine; the longest sit is the longest unbroken run of minutes mostly sat through">
+                <span class="live-heat-label">POSTURE</span>@posture
+            </p>
+        }
         @* When each thing was around, not just whether it ever was: one line per presence class. *@
         @if (Sensing.IsRunning && Sparks() is { Count: > 0 } sparks)
         {
@@ -63,18 +71,37 @@
     /// <summary>Classes seen in the range; kept until the next answer, so a failed refresh keeps the table.</summary>
     [Parameter] public ObjectStatsDto? Objects { get; set; }
 
+    /// <summary>The session's presence numbers, for its posture split; null before the first answer.</summary>
+    [Parameter] public PresenceStatsDto? Presence { get; set; }
+
     private ObjectStatsDto? _indexed;
     private Dictionary<string, ClassStatDto> _knownClasses = new(StringComparer.OrdinalIgnoreCase);
 
     private LiveSensingState L => Sensing.Live;
 
-    /// <summary>Who is tracked right now and how long they have been.</summary>
+    /// <summary>Who is tracked right now, how long they have been and, for a person whose posture was read, what it is.</summary>
     private List<WhoList.Row> WhoIsHere() =>
         L.Tracks.Take(8)
             .Select(t => new WhoList.Row(
                 L.RegularFor(t.TrackId)?.DisplayName ?? t.Label,
-                DisplayText.Duration((DateTimeOffset.UtcNow - t.FirstSeenUtc).TotalSeconds)))
+                DisplayText.Duration((DateTimeOffset.UtcNow - t.FirstSeenUtc).TotalSeconds)
+                    + (t.Posture == Posture.Unknown ? null : $" · {t.Posture.ToString().ToLowerInvariant()}")))
             .ToList();
+
+    /// <summary>"sitting 42m 10s · standing 5m 02s · longest sit 38m 00s · sitting now 12m 40s"; null when no posture was read.</summary>
+    private string? PostureLine()
+    {
+        var parts = new List<string>();
+        if (Presence is { } p)
+        {
+            if (p.SittingSeconds >= 1) parts.Add($"sitting {DisplayText.Duration(p.SittingSeconds)}");
+            if (p.StandingSeconds >= 1) parts.Add($"standing {DisplayText.Duration(p.StandingSeconds)}");
+            if (p.LyingSeconds >= 1) parts.Add($"lying {DisplayText.Duration(p.LyingSeconds)}");
+            if (p.LongestSittingSeconds >= 60) parts.Add($"longest sit {DisplayText.Duration(p.LongestSittingSeconds)}");
+        }
+        if (Sensing.IsRunning && L.SittingFor >= TimeSpan.FromMinutes(1)) parts.Add($"sitting now {DisplayText.Duration(L.SittingFor.TotalSeconds)}");
+        return parts.Count == 0 ? null : string.Join(" · ", parts);
+    }
 
     protected override void OnParametersSet()
     {

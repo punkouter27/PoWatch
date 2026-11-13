@@ -20,9 +20,8 @@ internal static class ShareEndpoints
     {
         var group = app.MapGroup("/api/shares").WithTags("Shares").RequireAuthorization();
 
-        group.MapPost("/", async (CreateShareDto request, HttpContext http, ShareService shares, TimeProvider time, CancellationToken ct) =>
+        group.MapPost("/", async (CreateShareDto request, UserId userId, ShareService shares, TimeProvider time, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (!ShareDto.LifetimeChoices.Contains(request.Days))
                     return Results.BadRequest(new { message = $"days must be one of {string.Join(", ", ShareDto.LifetimeChoices)}." });
                 if (request.Day > DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime.AddDays(1)))
@@ -36,16 +35,14 @@ internal static class ShareEndpoints
             .WithName("CreateShare")
             .WithSummary("Freeze a day's recap behind a link that works without signing in, for 1, 7 or 30 days.");
 
-        group.MapGet("/", async (HttpContext http, ShareService shares, CancellationToken ct) =>
+        group.MapGet("/", async (UserId userId, ShareService shares, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 return Results.Ok(await shares.ListAsync(userId, ct));
             })
             .WithName("ListShares");
 
-        group.MapDelete("/{token}", async (string token, HttpContext http, ShareService shares, HybridCache cache, CancellationToken ct) =>
+        group.MapDelete("/{token}", async (string token, UserId userId, ShareService shares, HybridCache cache, CancellationToken ct) =>
             {
-                if (CurrentUser.Id(http.User) is not { } userId) return Results.Unauthorized();
                 if (!await shares.RevokeAsync(userId, token, ct)) return Results.NotFound();
                 await cache.RemoveAsync(CardKey(token), CancellationToken.None);
                 return Results.NoContent();

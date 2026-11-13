@@ -1,4 +1,5 @@
 using System.Globalization;
+using PoWatch.Client.Services;
 using PoWatch.Shared.Models;
 
 namespace PoWatch.Client.Features.Journal;
@@ -18,5 +19,5 @@ public static class StoryLinks
     /// <summary>The story of the week or month ("week" or "month") holding <paramref name="day"/>, or the current one.</summary>
     public static string Period(string kind, DateOnly? day = null) => $"journal?view={kind}{(day is { } d ? $"&date={Key(d)}" : null)}";
 
-    private static string Key(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    private static string Key(DateOnly day) => DisplayText.DayKey(day);
 }

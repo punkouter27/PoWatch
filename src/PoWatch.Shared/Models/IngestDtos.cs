@@ -28,6 +28,16 @@ public sealed class TickDto
     public double SoundMean { get; init; }
 
     public double SoundMax { get; init; }
+
+    /// <summary>
+    /// Person-seconds spent sitting, standing and lying down in the tick (two people sitting for ten
+    /// seconds is twenty), read from body keypoints in the browser; all zero when posture is off or unreadable.
+    /// </summary>
+    public double SittingSeconds { get; init; }
+
+    public double StandingSeconds { get; init; }
+
+    public double LyingSeconds { get; init; }
     public List<int> Palette { get; init; } = [];
     public List<float> MotionGrid { get; init; } = [];
     public List<float> PresenceGrid { get; init; } = [];

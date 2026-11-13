@@ -1,0 +1,27 @@
+@* The controls of one settings panel. Three tabs spelled this out word for word: the placeholder while the
+   saved profile is missing, the controls once it lands, then whatever the last save said. *@
+@if (Profile is not { } profile)
+{
+    <p class="term-empty">@Missing</p>
+}
+else
+{
+    @ChildContent(profile)
+    @if (Message is not null)
+    {
+        <p class="term-stat-hint settings-note" role="status">@Message</p>
+    }
+}
+
+@code {
+    /// <summary>The account's saved settings, or null while they load. Handed to the child content so the controls never see a null.</summary>
+    [Parameter] public ProfileDto? Profile { get; set; }
+
+    /// <summary>What to say instead of the controls: still loading, or the server did not answer.</summary>
+    [Parameter, EditorRequired] public string Missing { get; set; } = default!;
+
+    /// <summary>What the last save did, in a sentence; nothing until one has run.</summary>
+    [Parameter] public string? Message { get; set; }
+
+    [Parameter, EditorRequired] public RenderFragment<ProfileDto> ChildContent { get; set; } = default!;
+}

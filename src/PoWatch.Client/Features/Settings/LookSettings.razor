@@ -9,7 +9,7 @@
                 <span>Commands and shortcuts</span><b>CTRL K</b>
             </button>
             <button class="term-menu-item" @onclick="ResetAsync" data-test="settings-reset">
-                <span>Reset to defaults <i>dark, low sound, captions and listening on; rules and account settings stay</i></span><b>↺</b>
+                <span>Reset to defaults <i>dark, low sound, captions, listening and posture on, a sitting nudge at 45 minutes; rules and account settings stay</i></span><b>↺</b>
             </button>
         </div>
     </ChildContent>
@@ -23,12 +23,10 @@
         // Sound cues sit under Recording; the level cycles off · low · mid · high.
         for (var i = 0; i < 4 && await JS.TryInvokeAsync<string>("powatchCues.level") is { } level && level != "low"; i++)
             await JS.TryInvokeAsync<string>("powatchCues.cycle");
-        if (!Sensing.Captions) await SetCaptionsAsync(true);
-        if (!Sensing.Listening) await SetListeningAsync(true);
-        if (Sensing.CaptionModel != CaptionModels.Default)
-        {
-            Sensing.CaptionModel = CaptionModels.Default;
-            await JS.TryInvokeVoidAsync("localStorage.setItem", CaptionModels.Key, Sensing.CaptionModel);
-        }
+        if (!Sensing.Captions) await Sensing.SetCaptionsAsync(true);
+        if (!Sensing.Listening) await Sensing.SetListeningAsync(true);
+        if (!Sensing.ReadPosture) await Sensing.SetPostureAsync(true);
+        if (Sensing.SitNudgeMinutes != SensingSession.DefaultSitNudgeMinutes) await Sensing.SetSitNudgeAsync(SensingSession.DefaultSitNudgeMinutes);
+        if (Sensing.CaptionModel != CaptionModels.Default) await Sensing.SetCaptionModelAsync(CaptionModels.Default);
     }
 }

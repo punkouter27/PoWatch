@@ -12,7 +12,8 @@ public sealed record PresenceSummary(
     TimeSpan LongestEmptyStreak,
     TimeSpan LongestStillStreak,
     DateTimeOffset? BusiestStartUtc,
-    double BusiestMotion);
+    double BusiestMotion,
+    TimeSpan LongestSittingStreak);
 
 /// <summary>Stat family A — presence and motion — computed from a single-grain rollup series.</summary>
 public static class PresenceStats
@@ -44,7 +45,18 @@ public static class PresenceStats
             LongestEmptyStreak: LongestRun(buckets, grain, b => b.OccupiedTicks == 0),
             LongestStillStreak: LongestRun(buckets, grain, b => b.MotionPeak.Max < StillThreshold),
             BusiestStartUtc: busiest?.BucketStartUtc,
-            BusiestMotion: busiest?.Motion.Mean ?? 0);
+            BusiestMotion: busiest?.Motion.Mean ?? 0,
+            LongestSittingStreak: LongestRun(buckets, grain, MostlySitting));
+    }
+
+    /// <summary>
+    /// A bucket someone sat through: sitting for at least half of it, and for longer than anyone stood.
+    /// Person-seconds, so two people sitting half the time count as one sitting throughout.
+    /// </summary>
+    public static bool MostlySitting(Rollup bucket)
+    {
+        ArgumentNullException.ThrowIfNull(bucket);
+        return bucket.Seconds > 0 && bucket.SittingSeconds >= bucket.Seconds / 2 && bucket.SittingSeconds > bucket.StandingSeconds;
     }
 
     /// <summary>The dwell time at quantile <paramref name="p"/>, to the resolution of one histogram bin.</summary>

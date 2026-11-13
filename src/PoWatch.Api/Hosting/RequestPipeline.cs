@@ -18,6 +18,11 @@ internal static class RequestPipeline
             var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("GlobalException");
             var flags = context.RequestServices.GetRequiredService<IOptions<FeatureFlagsOptions>>();
             var exception = context.Features.Get<IExceptionHandlerPathFeature>()?.Error;
+            if (exception is UnauthorizedAccessException)
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return;
+            }
 
             logger.LogError(exception, "Unhandled exception. Path={Path} TraceId={TraceId}", context.Request.Path, context.TraceIdentifier);
 

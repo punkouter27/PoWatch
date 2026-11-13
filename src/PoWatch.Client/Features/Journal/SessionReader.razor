@@ -1,4 +1,3 @@
-@using System.Globalization
 @inject PoWatchApiClient Api
 
 @* The reader for one session, laid out like a day's: the story (with every chapter, newest first) and its
@@ -34,6 +33,7 @@ else
                     <StatCell Label="Occupancy" Value="@p.Occupancy.ToString("0%", CultureInfo.InvariantCulture)" />
                     <StatCell Label="Peak at once" Value="@p.PeakConcurrency.ToString(CultureInfo.InvariantCulture)" />
                     <StatCell Label="Seen" Value="@(_objects?.Classes.Count.ToString(CultureInfo.InvariantCulture) ?? "0")" Hint="@string.Join(", ", _objects?.Classes.Take(4).Select(c => c.Name) ?? [])" />
+                    <PostureCell Presence="@p" />
                 </div>
             }
         </ChildContent>

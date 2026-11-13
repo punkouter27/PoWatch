@@ -10,15 +10,21 @@
 (function () {
   'use strict';
 
-  const WORKER_URL = new URL('./detector-worker.js', document.currentScript?.src ?? location.href);
-  const CLOCK_URL = new URL('./sample-clock.js', document.currentScript?.src ?? location.href);
+  const rpc = window.powatchWorkerRpc;
+  const CLOCK_URL = rpc.url('sensing/sample-clock.js');
   const CAPTURE_WIDTH = 640;
 
-  const call = window.powatchWorkerRpc(WORKER_URL, 'detector');
+  const call = rpc('sensing/detector-worker.js', 'detector');
   let _clock = null;
   let _busy = false;
   let _device = null;
   let _exports = null;
+  let _pose = false;
+  let _passes = 0;
+
+  // Posture changes slowly and the pose model costs CPU per person, so it looks on every third pass;
+  // the tracker keeps what it last read in between (CentroidTracker.Settle).
+  const POSE_EVERY = 3;
 
   /** The client assembly's [JSExport] methods (the .NET runtime's own API, as Blazor's docs use it). */
   function dotnetExports() {
@@ -28,25 +34,33 @@
     return _exports;
   }
 
-  /** Labels, and per box score, x0, y0, x1, y1, the signature's length and the signature, in one Float64Array. */
+  /**
+   * Labels, and per box score, x0, y0, x1, y1, the signature's length, the signature, the keypoints'
+   * length (0, or 51 for a person whose pose was read) and the keypoints, in one Float64Array.
+   */
   function pack(detections) {
     const labels = [];
     let size = 0;
-    for (const d of detections) size += 6 + (d.signature?.length ?? 0);
+    for (const d of detections) size += 7 + (d.signature?.length ?? 0) + (d.keypoints?.length ?? 0);
     const values = new Float64Array(size);
     let at = 0;
     for (const d of detections) {
       const signature = d.signature ?? [];
+      const keypoints = d.keypoints ?? [];
       labels.push(d.label);
       values.set([d.score, d.x0, d.y0, d.x1, d.y1, signature.length], at);
       values.set(signature, at + 6);
       at += 6 + signature.length;
+      values[at] = keypoints.length;
+      values.set(keypoints, at + 1);
+      at += 1 + keypoints.length;
     }
     return { labels, values };
   }
 
   /** Loads the detector; resolves to { modelId, device, dtype, loadMs }. `device` forces 'webgpu' or 'wasm'. */
   async function load(device) {
+    call.keep();
     let info = await call({ type: 'LOAD', device });
     // ONNX Runtime aborted on one precision and took the worker with it: carry on in a fresh worker
     // from the next candidate (detector-worker.js). Each round skips at least one, so this ends.
@@ -64,13 +78,24 @@
     const height = Math.round(CAPTURE_WIDTH * video.videoHeight / video.videoWidth);
     const bitmap = await createImageBitmap(video, { resizeWidth: CAPTURE_WIDTH, resizeHeight: height });
     // A fresh worker (after a GPU reset) loads the model on its first frame: on wasm once the GPU has failed twice.
-    const result = await call({ type: 'DETECT', bitmap, threshold, device: call.gpuLosses >= 2 ? 'wasm' : undefined }, [bitmap]);
+    const pose = _pose && _passes++ % POSE_EVERY === 0;
+    let result;
+    try {
+      result = await call({ type: 'DETECT', bitmap, threshold, pose, device: call.gpuLosses >= 2 ? 'wasm' : undefined }, [bitmap]);
+    } catch (err) {
+      // A transferred frame is the worker's to close; one that never left (the worker could not start) is ours.
+      bitmap.close();
+      throw err;
+    }
     _device = result.device ?? _device;
     return result;
   }
 
-  async function start(video, dotnetRef, intervalMs, threshold) {
+  /** `pose` also reads people's body keypoints (posture); setPose changes it while running. */
+  async function start(video, dotnetRef, intervalMs, threshold, pose) {
     stop();
+    call.keep();
+    _pose = pose === true;
     _clock = new Worker(CLOCK_URL, { type: 'module' });
     _clock.onmessage = async () => {
       if (_busy) return;
@@ -95,7 +120,11 @@
   function stop() {
     if (_clock) { _clock.terminate(); _clock = null; }
     _busy = false;
+    // The detector stays loaded for a quick restart, then its worker is let go (worker-rpc.js).
+    call.releaseAfter(rpc.IDLE_MS);
   }
 
-  window.powatchDetector = { load, start, stop };
+  function setPose(on) { _pose = on === true; }
+
+  window.powatchDetector = { load, start, stop, setPose };
 })();

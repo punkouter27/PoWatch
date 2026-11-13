@@ -1,4 +1,4 @@
-// Shared set-up for the workers that run transformers.js (inference-worker.js, sensing/detector-worker.js).
+// Shared set-up for the workers that run transformers.js (sensing/inference-worker.js, sensing/detector-worker.js, sensing/audio-worker.js, embed-worker.js).
 //
 // Pinned, self-hosted transformers.js supply chain: the library AND its ONNX Runtime wasm are vendored
 // under wwwroot/lib/transformers-<version>/ and loaded from our own origin. To upgrade: vendor a new

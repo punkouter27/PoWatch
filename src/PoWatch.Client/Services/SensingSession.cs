@@ -82,6 +82,45 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         }
     } = true;
 
+    /// <summary>
+    /// Whether a camera session also reads people's posture (sitting, standing, lying) from body
+    /// keypoints, on this machine, and nudges after <see cref="SitNudgeMinutes"/> of sitting. Applies at once.
+    /// </summary>
+    public bool ReadPosture
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+            field = value;
+            if (IsRunning && _scene is null) _ = js.TryInvokeVoidAsync("powatchDetector.setPose", value);
+            Notify();
+        }
+    } = true;
+
+    /// <summary>The nudge times offered in Settings, in minutes; 0 is never.</summary>
+    public static readonly int[] SitNudgeChoices = [0, 30, 45, 60, 90];
+    public const int DefaultSitNudgeMinutes = 45;
+
+    /// <summary>
+    /// How many minutes someone sits without a break before the "time to stand up" nudge, and between
+    /// nudges after that (one of <see cref="SitNudgeChoices"/>; 0 never nudges). Applies at once, mid-sit too.
+    /// </summary>
+    public int SitNudgeMinutes
+    {
+        get;
+        set
+        {
+            var minutes = SitNudgeChoices.Contains(value) ? value : DefaultSitNudgeMinutes;
+            if (field == minutes) return;
+            field = minutes;
+            _sitting.NudgeAfter = TimeSpan.FromMinutes(minutes);
+            Notify();
+        }
+    } = DefaultSitNudgeMinutes;
+
+    private SittingStreak _sitting = new(TimeSpan.FromMinutes(DefaultSitNudgeMinutes));
+
     /// <summary>Which caption model runs (a <see cref="CaptionModels"/> key); read on every caption, so a change applies at once.</summary>
     public string CaptionModel
     {
@@ -146,6 +185,7 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         _batcher = new TickBatcher(time);
         _vlm = new VlmScheduler(time);
         _highlights = new HighlightRules(time);
+        _sitting = new SittingStreak(TimeSpan.FromMinutes(SitNudgeMinutes));
         _observing.Clear();
         _inFrame = null;
         _scene = demo ? new SyntheticScene() : null;
@@ -207,7 +247,15 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
 
         await KeepAsync(_batcher.Flush(final: true));
         // A send cancelled with the session may still be finishing; then one last pass with the final batch.
-        await _sending;
+        try
+        {
+            await _sending;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // A failed pass must not keep the session from closing; the batches are still in the outbox.
+            Console.Error.WriteLine($"Outbox pass failed: {ex.Message}");
+        }
         await SendOutboxAsync();
         if (Live.Session is { } session)
         {
@@ -247,7 +295,17 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         try
         {
             while (await timer.WaitForNextTickAsync(ct))
-                await step(ct);
+            {
+                try
+                {
+                    await step(ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // One bad pass must not end the loop for the rest of the session.
+                    Console.Error.WriteLine($"Sensing loop step failed: {ex.Message}");
+                }
+            }
         }
         catch (OperationCanceledException)
         {

@@ -4,18 +4,13 @@
 <TerminalPanel Title="Weather" Test="weather-settings" Flush="true">
     <Aside>SAVED WITH YOUR ACCOUNT</Aside>
     <ChildContent>
-        @if (_profile is null)
-        {
-            <p class="term-empty">@(_profileLoaded ? "Could not load your settings — the server did not answer." : "Loading…")</p>
-        }
-        else
-        {
+        <SettingsBody Profile="@Profile" Missing="@ProfileMissing" Message="@ProfileMessage" Context="profile">
             <div class="settings-place" data-test="weather-place">
                 <span>Weather from <i>daily weather beside each day</i></span>
-                @if (_profile.Place is { } place)
+                @if (profile.Place is { } place)
                 {
                     <b>@place.Name.ToUpperInvariant()</b>
-                    <button class="term-icon-button" @onclick="ClearPlaceAsync" disabled="@_saving" aria-label="Stop showing weather" title="Stop showing weather">✕</button>
+                    <button class="term-icon-button" @onclick="ClearPlaceAsync" disabled="@Saving" aria-label="Stop showing weather" title="Stop showing weather">✕</button>
                 }
                 else
                 {
@@ -36,28 +31,20 @@
                 <ul class="settings-results" data-test="place-results">
                     @foreach (var found in places)
                     {
-                        <li><button class="term-menu-item" @onclick="() => SavePlaceAsync(found)" disabled="@_saving"><span>@found.Name <i>@found.Detail</i></span><b>USE</b></button></li>
+                        <li><button class="term-menu-item" @onclick="() => SavePlaceAsync(found)" disabled="@Saving"><span>@found.Name <i>@found.Detail</i></span><b>USE</b></button></li>
                     }
                 </ul>
             }
-            @if (_message is not null)
-            {
-                <p class="term-stat-hint settings-note" role="status">@_message</p>
-            }
-        }
+        </SettingsBody>
     </ChildContent>
 </TerminalPanel>
 
 @code {
-    private ProfileDto? _profile;
-    private bool _profileLoaded;
-    private bool _saving;
-    private string? _message;
     private string? _placeQuery;
     private bool _searching;
     private IReadOnlyList<PlaceDto>? _places;
 
-    protected override async Task OnInitializedAsync() => (_profile, _profileLoaded) = (await Api.GetProfileAsync(), true);
+    protected override Task OnInitializedAsync() => LoadProfileAsync();
 
     private async Task SearchPlacesAsync()
     {
@@ -69,20 +56,9 @@
 
     private async Task SavePlaceAsync(PlaceDto place)
     {
-        await SaveAsync(p => new() { RetentionDays = p.RetentionDays, Place = place, DigestEmail = p.DigestEmail }, $"Weather now comes from {place.Name}.");
+        await SaveProfileAsync(p => new() { RetentionDays = p.RetentionDays, Place = place, DigestEmail = p.DigestEmail }, $"Weather now comes from {place.Name}.");
         (_places, _placeQuery) = (null, null);
     }
 
-    private Task ClearPlaceAsync() => SaveAsync(p => new() { RetentionDays = p.RetentionDays, Place = null, DigestEmail = p.DigestEmail }, "Weather is off.");
-
-    /// <summary>The page shows what the server saved, or keeps the old values.</summary>
-    private async Task SaveAsync(Func<ProfileDto, UpdateProfileDto> change, string done)
-    {
-        if (_profile is null) return;
-        _saving = true;
-        var saved = await SaveProfileAsync(_profile, change);
-        if (saved is not null) _profile = saved;
-        _message = saved is null ? "Could not save — nothing was changed." : done;
-        _saving = false;
-    }
+    private Task ClearPlaceAsync() => SaveProfileAsync(p => new() { RetentionDays = p.RetentionDays, Place = null, DigestEmail = p.DigestEmail }, "Weather is off.");
 }

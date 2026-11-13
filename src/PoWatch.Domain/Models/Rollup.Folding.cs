@@ -27,6 +27,9 @@ public sealed partial record Rollup
             Luminance = RunningStat.Of(tick.LuminanceMean),
             Grid = tick.MotionGrid.Count == SpatialGrid.Cells ? tick.MotionGrid.ToArray() : ReadOnlyMemory<float>.Empty,
             PresenceGrid = tick.PresenceGrid.Count == SpatialGrid.Cells ? tick.PresenceGrid.ToArray() : ReadOnlyMemory<float>.Empty,
+            SittingSeconds = tick.SittingSeconds,
+            StandingSeconds = tick.StandingSeconds,
+            LyingSeconds = tick.LyingSeconds,
             Classes = tick.Classes
                 .Where(kv => kv.Value.Max > 0)
                 .ToDictionary(kv => kv.Key, kv => new ClassTotals(1, kv.Value.Max, kv.Value.Mean), StringComparer.Ordinal),
@@ -99,6 +102,9 @@ public sealed partial record Rollup
             Luminance = a.Luminance.Merge(b.Luminance),
             Grid = MergeGrids(a.Grid, b.Grid),
             PresenceGrid = MergeGrids(a.PresenceGrid, b.PresenceGrid),
+            SittingSeconds = a.SittingSeconds + b.SittingSeconds,
+            StandingSeconds = a.StandingSeconds + b.StandingSeconds,
+            LyingSeconds = a.LyingSeconds + b.LyingSeconds,
             Classes = MergeMaps(a.Classes, b.Classes, (x, y) => x.Merge(y)),
             Palette = MergeMaps(a.Palette, b.Palette, (x, y) => x + y),
             Visits = a.Visits + b.Visits,
