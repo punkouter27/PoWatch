@@ -43,8 +43,10 @@ Session and day recaps (and their PDFs) are written by a template by default. Se
 `AiProvider:Provider` to `AzureOpenAi` to let a model rewrite the
 paragraph; the numbers always come from the stats, and the template takes over on any timeout, error
 or invented number.
-Pushing to `master` deploys to production. Production resource names are shared
-between Bicep and CI in `infra/deployment.json`.
+Pushing to `master` deploys to production through the shared Po workflow
+(`.github/workflows/deploy.yml`); PoWatch's extra gates live in `scripts/ci-checks.ps1`. Bicep reads
+resource names from `infra/deployment.json`; CI reads the app and resource group from the repo
+variables `AZURE_WEBAPP_NAME` and `AZURE_RESOURCE_GROUP`.
 
 ## Documentation
 

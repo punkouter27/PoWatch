@@ -379,7 +379,7 @@ multi-threaded.
 - `scripts/check-hygiene.ps1`: layout, naming, central package versions, shell assets, no
   caregiver-era vocabulary, no unused CSS classes, and no unused components (every `.razor` that is
   not a `@page` must be rendered somewhere as `<Name>`, `typeof(Name)` or `@layout Name`).
-- CI runs all four suites; UI E2E installs Playwright's Chromium and runs with `E2E_LOCAL=1`.
+- CI runs all four suites (Unit in the shared workflow, the rest in `scripts/ci-checks.ps1`); UI E2E installs Playwright's Chromium and runs with `E2E_LOCAL=1`.
   Each UI test disposes its page (and isolated browser context), including each viewport-loop
   iteration. Failed sign-in/startup reports browser exceptions, console errors and failed resource
   requests alongside the original assertion, rather than only a missing navigation bar.
@@ -390,5 +390,10 @@ multi-threaded.
 
 ## Deploy
 
-Pushing to `master` runs `.github/workflows/deploy.yml` and deploys to production. Resource names are
-shared between Bicep and CI in `infra/deployment.json`.
+Pushing to `master` runs `.github/workflows/deploy.yml` (the same file in every Po .NET web repo — never
+edit it here) and deploys to production. It builds, runs the Unit tier, then `scripts/ci-checks.ps1`
+(hygiene, Bicep compile, client trim gate, test caps, `dotnet format`, Integration / API E2E / UI E2E),
+publishes, deploys, and health-gates `/health/live` (this commit) then `/health`, rolling back on failure.
+There is no emergency skip of the gates. Bicep is applied only by the manual `infra.yml` workflow and
+reads resource names from `infra/deployment.json`; CI takes the app name and resource group from the
+repo variables `AZURE_WEBAPP_NAME` and `AZURE_RESOURCE_GROUP`.
