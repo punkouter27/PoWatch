@@ -149,15 +149,7 @@
         {
             do
             {
-                try
-                {
-                    await LoadAsync();
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    // One failed refresh must not freeze the page on stale numbers.
-                    Console.Error.WriteLine($"Diagnostics refresh failed: {ex.Message}");
-                }
+                await LoadAsync();
             }
             while (await timer.WaitForNextTickAsync(ct));
         }

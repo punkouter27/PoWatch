@@ -44,7 +44,7 @@ public sealed partial class SensingSession
         var left = waiting.Count;
         foreach (var entry in waiting)
         {
-            if (!Guid.TryParse(entry.SessionId, out var sessionId) || Read(entry.Json) is not { } batch)
+            if (!Guid.TryParse(entry.SessionId, out var sessionId) || JsonSerializer.Deserialize(entry.Json, Json.IngestBatchDto) is not { } batch)
             {
                 // Unreadable: it can never be sent, so it must not block the queue.
                 await js.TryInvokeVoidAsync("powatchOutbox.remove", entry.Key);
@@ -63,11 +63,6 @@ public sealed partial class SensingSession
                 await js.TryInvokeVoidAsync("powatchOutbox.remove", entry.Key);
                 left--;
             }
-            catch (JsonException)
-            {
-                // The server answered with something unreadable. The batch stays queued for the next pass.
-                break;
-            }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 if (IsRunning && !ct.IsCancellationRequested)
@@ -81,18 +76,5 @@ public sealed partial class SensingSession
 
         Live.PendingBatches = left;
         Notify();
-    }
-
-    /// <summary>The batch an outbox entry holds, or null when the entry is corrupt.</summary>
-    private static IngestBatchDto? Read(string json)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize(json, Json.IngestBatchDto);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
     }
 }

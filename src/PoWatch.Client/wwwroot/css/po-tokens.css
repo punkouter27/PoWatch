@@ -1,6 +1,6 @@
-/* po-tokens.css — the "Terminal" look's tokens: fonts, the --term-* palette, type sizes, and the
-   light theme. One palette for every page; it also points Radzen's --rz-* variables at it, so every
-   Radzen control matches. The rules that use them are in the terminal-*.css files. */
+/* terminal.css — the "Terminal" look: dense, dark glass over deep blue, numbers in mono.
+   The app's only global stylesheet (page-scoped CSS aside). One palette for every page (Live used to
+   wear its own); it also points Radzen's --rz-* variables at it, so every Radzen control matches. */
 
 @font-face {
     font-family: 'JetBrains Mono';
@@ -34,11 +34,12 @@
     --term-red: #f87171;
     --term-font: 'Space Grotesk', 'Inter', system-ui, sans-serif;
     --term-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, ui-monospace, monospace;
-    /* Four sizes: labels and meta, body mono, prose, the brand. */
+    /* Five sizes: labels and meta, body mono, prose, the brand, headline numbers. */
     --fs-xs: 11px;
     --fs-sm: 12px;
     --fs-md: 14px;
     --fs-lg: 16px;
+    --fs-xl: 22px;
     --term-gap: 10px;
     --term-radius: 3px;
     --term-glow: 0 0 10px rgba(120, 200, 255, 0.55);
@@ -116,7 +117,18 @@
     --rz-grid-stripe-background-color: rgba(0, 0, 0, 0.025);
 }
 
-/* Native controls and scrollbars follow the theme. */
-:root { color-scheme: light dark; }
+/* Canonical --po-* tokens bridged to PoWatch theme */
+:root {
+    color-scheme: light dark;
+    --po-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --po-font-display: 'Inter', system-ui, -apple-system, sans-serif;
+    --po-bg-page: var(--term-bg);
+    --po-bg-surface: var(--term-surface);
+    --po-fg-primary: var(--term-text);
+    --po-fg-muted: var(--term-muted);
+    --po-border-subtle: var(--term-line);
+    --po-color-brand-500: var(--term-accent);
+    --po-radius-md: var(--term-radius);
+}
 :root[data-theme="light"] { color-scheme: light; }
 :root:not([data-theme="light"]) { color-scheme: dark; }

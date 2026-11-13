@@ -206,17 +206,7 @@ public sealed partial class Live
         try
         {
             while (await timer.WaitForNextTickAsync(ct))
-            {
-                try
-                {
-                    await RefreshStatsAsync();
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    // One failed refresh must not end the fallback timer.
-                    Console.Error.WriteLine($"Stats refresh failed: {ex.Message}");
-                }
-            }
+                await RefreshStatsAsync();
         }
         catch (OperationCanceledException)
         {

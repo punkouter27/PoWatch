@@ -11,6 +11,8 @@ public sealed class CaptionLayerTests
         var plain = CaptionParser.Parse("<S>A man is typing on a laptop while drinking coffee. The sun is shining.<E>");
         Assert.NotNull(plain);
         Assert.Equal("A man is typing on a laptop while drinking coffee.", plain!.Text);
+        Assert.Equal(["drinking", "typing"], plain.Activities);
+        Assert.Equal("sunny", plain.Weather);
         Assert.False(plain.Notable);
 
         var json = CaptionParser.Parse("""
@@ -20,6 +22,7 @@ public sealed class CaptionLayerTests
             """);
         Assert.NotNull(json);
         Assert.Equal("Two cats wrestle on the rug", json!.Text);
+        Assert.Equal(["playing"], json.Activities);
         Assert.True(json.Notable);
 
         // Half-written JSON falls back to reading it as text rather than failing.

@@ -20,21 +20,6 @@ public sealed class KeyVaultHealthCheck : IHealthCheck
         _logger = logger;
     }
 
-    // /health is anonymous and polled by the deploy gate: one client (and its token cache) for the
-    // process, not a new credential chain per probe.
-    private static readonly Lock s_clientLock = new();
-    private static SecretClient? s_client;
-
-    private static SecretClient ClientFor(Uri vaultUri)
-    {
-        lock (s_clientLock)
-        {
-            if (s_client?.VaultUri != vaultUri)
-                s_client = new SecretClient(vaultUri, new Azure.Identity.DefaultAzureCredential());
-            return s_client;
-        }
-    }
-
     /// <inheritdoc />
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
@@ -56,7 +41,8 @@ public sealed class KeyVaultHealthCheck : IHealthCheck
 
         try
         {
-            var client = ClientFor(vaultUri);
+            var credential = new Azure.Identity.DefaultAzureCredential();
+            var client = new SecretClient(vaultUri, credential);
 
             // List first page of secret names — lightweight connectivity probe
             await foreach (var _ in client.GetPropertiesOfSecretsAsync(cancellationToken)

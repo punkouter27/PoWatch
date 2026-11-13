@@ -28,8 +28,8 @@ public sealed class HighlightRulesTests
         Assert.Null(rules.OnPixel(Motion(0.3)));
 
         // A caption the model marks notable is a moment in its own words; plain ones are not.
-        Assert.Null(rules.OnCaption(new ParsedCaption("A quiet room.", Notable: false)));
-        Assert.Equal("Two cats wrestle", rules.OnCaption(new ParsedCaption("Two cats wrestle", Notable: true))!.Reason);
+        Assert.Null(rules.OnCaption(new ParsedCaption("A quiet room.", [], null, Notable: false)));
+        Assert.Equal("Two cats wrestle", rules.OnCaption(new ParsedCaption("Two cats wrestle", ["playing"], null, Notable: true))!.Reason);
 
         // The hourly budget (3) is now spent, so even a new class waits.
         Assert.Null(rules.OnDetections(tracker.Update(T0.AddSeconds(2), [new Detection("dog", 0.9, 0.5, 0.5, 0.7, 0.7)])));
@@ -43,7 +43,7 @@ public sealed class HighlightRulesTests
     public void A_caption_unlike_every_recent_one_is_a_moment()
     {
         var rules = new HighlightRules(new FakeTimeProvider(T0));
-        static ParsedCaption Plain(string text) => new(text, Notable: false);
+        static ParsedCaption Plain(string text) => new(text, [], null, Notable: false);
 
         // Nothing is novel until there is a full window to compare with.
         for (var i = 0; i < HighlightRules.NoveltyWindow; i++)
