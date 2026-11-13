@@ -28,6 +28,9 @@ public sealed class LiveSensingState
     public IReadOnlyDictionary<string, int> ClassesNow { get; private set; } = new Dictionary<string, int>();
     public IReadOnlyList<TrackState> Tracks { get; private set; } = [];
     public long Visits { get; private set; }
+
+    /// <summary>How long the current sitting stretch has lasted (<see cref="SittingStreak"/>); zero when nobody is in one.</summary>
+    public TimeSpan SittingFor { get; set; }
     public int PeakConcurrency { get; private set; }
     public IReadOnlyDictionary<string, int> ClassesSeen => _classesSeen;
     private readonly Dictionary<string, int> _classesSeen = new(StringComparer.OrdinalIgnoreCase);

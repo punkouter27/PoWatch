@@ -66,5 +66,6 @@ namespace PoWatch.Client.Services;
 [JsonSerializable(typeof(ShareDto))]
 [JsonSerializable(typeof(List<ShareDto>))]
 [JsonSerializable(typeof(ReplayDayDto))]
+[JsonSerializable(typeof(ReelPlan))]
 [JsonSerializable(typeof(JsonElement))]
 internal sealed partial class PoWatchJsonContext : JsonSerializerContext;

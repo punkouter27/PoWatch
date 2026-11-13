@@ -39,6 +39,7 @@
                 <StatCell Label="Peak at once" Value="@_presence.PeakConcurrency.ToString(CultureInfo.InvariantCulture)" />
                 <StatCell Label="Busiest" Value="@(_presence.BusiestStartUtc?.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture) ?? "—")" />
                 <StatCell Label="Longest empty" Value="@DisplayText.Duration(_presence.LongestEmptySeconds)" />
+                <PostureCell Presence="@_presence" />
             </div>
         }
         @if (WeatherOn(Day) is { } weather)

@@ -131,6 +131,7 @@ public sealed class TickBatcher(TimeProvider time)
         private readonly Dictionary<int, int> _colors = [];
         private readonly Dictionary<string, (int Max, int Sum)> _classes = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _tracks = new(StringComparer.Ordinal);
+        private readonly int[] _postures = new int[Enum.GetValues<Posture>().Length];
         private int _pixelSamples, _gridSamples, _detectorSamples, _soundSamples;
         private double _motionSum, _motionMax, _lumaSum, _soundSum, _soundMax;
 
@@ -165,13 +166,27 @@ public sealed class TickBatcher(TimeProvider time)
                 _classes[label] = (Math.Max(current.Max, count), current.Sum + count);
             }
             foreach (var cell in frame.PresenceCells) _presence[cell]++;
-            foreach (var track in frame.Active) _tracks.Add(track.TrackId);
+            foreach (var track in frame.Active)
+            {
+                _tracks.Add(track.TrackId);
+                _postures[(int)track.Posture]++;
+            }
         }
 
-        public TickDto ToTick(DateTimeOffset closedAtUtc) => new()
+        /// <summary>Person-seconds in a posture: how many held it on an average detector pass, over the tick's length.</summary>
+        private double PostureSeconds(Posture posture, double duration) =>
+            _detectorSamples == 0 ? 0 : duration * _postures[(int)posture] / _detectorSamples;
+
+        public TickDto ToTick(DateTimeOffset closedAtUtc) =>
+            ToTick(Math.Clamp((closedAtUtc - observedFromUtc).TotalSeconds, 0.001, WindowSeconds));
+
+        private TickDto ToTick(double duration) => new()
         {
             StartUtc = startUtc,
-            DurationSeconds = Math.Clamp((closedAtUtc - observedFromUtc).TotalSeconds, 0.001, WindowSeconds),
+            DurationSeconds = duration,
+            SittingSeconds = PostureSeconds(Posture.Sitting, duration),
+            StandingSeconds = PostureSeconds(Posture.Standing, duration),
+            LyingSeconds = PostureSeconds(Posture.Lying, duration),
             PixelSamples = _pixelSamples,
             DetectorSamples = _detectorSamples,
             MotionMean = _pixelSamples == 0 ? 0 : _motionSum / _pixelSamples,

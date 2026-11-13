@@ -12,6 +12,7 @@ This page is the source of truth for behavior; the code and tests fill in the de
 camera ──► browser (all sensing on-device)                        server
            L0 pixel layer   4 Hz  motion, light, palette, 16×9 grid
            L1 detector      ~1 Hz RF-DETR Nano → boxes → C# tracker  ──►  POST /api/sessions/{id}/batches
+                            + ViTPose joints → sitting/standing/lying
            L2 VLM caption   adaptive cadence, plain-sentence prompt       every 10 s: ticks + scene events
                             + MiniLM embedding (novelty, search)
            L3 audio         loudness 1 Hz; Whisper words; AudioSet sounds
@@ -51,7 +52,7 @@ camera ──► browser (all sensing on-device)                        server
 
 | Family | What | Where |
 |---|---|---|
-| A · Presence & space | occupancy, visits, dwell percentiles, peak at once, empty/still streaks, busiest minute, heatmaps, entry/exit edges | Live |
+| A · Presence & space | occupancy, visits, dwell percentiles, peak at once, empty/still streaks, busiest minute, heatmaps, entry/exit edges, posture (person-time sitting, standing and lying; the longest sit) | Live |
 | B · Objects & regulars | classes seen, rarest, regulars leaderboard (recognised by look, never by face; by voice in the browser that learned it) | Live, Settings ("Who PoWatch knows"), the stories |
 | C · Patterns & anomalies | hour × weekday, rhythm score, "today vs usual" z-scores, trend, busy-hour forecast | Live (the numbers), the Journal index (the shapes) |
 | D · Environment & captions | light curve, lights on/off, daylight estimate, palette, word cloud, weirdest caption, recaps | Live (odd moment), the Journal |
@@ -74,8 +75,9 @@ shading for how busy each stretch was, a pin per arrival, thing said and ★ tha
 (`Features/Live/LiveNarration.razor`; while recording it is
 the browser's own list in `LiveSensingState.Narration`, after that what the server kept). Two cells on each
 side and a row underneath: key metrics beside your usual day (occupancy, visits an hour, motion, each with
-σ and a trend) top left, In frame top middle (who is tracked and for how long, now · peak · visits, then
-everything seen this session as one line, what is in frame now in bold), Space top right (one 16×9 grid
+σ and a trend) top left, In frame top middle (who is tracked, for how long and in what posture, now · peak · visits, then
+everything seen this session as one line, what is in frame now in bold, and a POSTURE line once any was
+read: sitting · standing · lying · longest sit · sitting now), Space top right (one 16×9 grid
 with a MOTION NOW / PEOPLE TODAY switch, then where motion and people mostly were and the busiest door);
 Pipeline to the right of the camera (the pixel layer's Hz, detector latency, batches sent · queued · lost);
 then Environment (how much light, the last thing heard), ODD MOMENT (the caption least like the rest) and
@@ -113,7 +115,7 @@ the line it is on and scrolls only the list to keep it in view (`replay.js`).
 
 **Header.** One row: brand, two section keys (Live · Journal; a bottom tab bar on a phone),
 then a status chip (state and uptime), Start/Stop, a bell, a dark/light button and a gear. The gear opens
-Settings in a side drawer over any page, in four tabs: Recording (listening, sound cues, the weather place),
+Settings in a side drawer over any page, in four tabs: Recording (listening, posture and its sitting nudge, sound cues, the weather place),
 People (who PoWatch knows: rename, filter, sort, merge, forget voices), Alerts (watch rules, the weekly
 email, shared recaps) and Advanced, where the niche and the dangerous live: this browser
 (the command palette, reset), and your data and account (retention window, System status, CSV export,
@@ -128,7 +130,7 @@ tab over the hub (plus a desktop notification where allowed).
 **One mode.** There is no simple/advanced switch: Ask and "Explain today" on Live, the Export
 menus and share links in the Journal, watch rules, the weather place, the weekly email and shared
 links in Settings are always there. "Reset to defaults" puts this browser's choices back (dark, low
-sound, captions on, MiniCPM-V); rules and the account's server settings stay.
+sound, captions, listening and posture on, a sitting nudge at 45 minutes, MiniCPM-V); rules and the account's server settings stay.
 
 **Downloads that can fail.** PDFs are made on the server, so their links (the Journal's Export menus, the
 "Session saved" line) fetch first and save only a real file (`wwwroot/js/files.js`); a failure says why in a
@@ -213,6 +215,16 @@ the observed minutes only.
 **Time-lapse ↓** (the Journal, under a day's replay) encodes the time-lapse this browser kept for the day to WebM
 (MediaRecorder) and downloads it. The frames live only in the browser that recorded them, so anywhere
 else the button is not shown.
+
+**Highlight reel ↓** (beside it) is the same frames cut to about half a minute (`ReelPlanner` in
+`PoWatch.Shared/Services` decides, `js/timelapse.js` paints): a title card, then the frames of the
+liveliest minutes in order, twelve a second, each with its time, the caption of that time and a strip
+along the bottom showing how busy every shot's minute was; a frame that shows a notable moment (at most
+eight of them) is starred, named and held a second and a half; then a closing card of the numbers
+(minutes watched, visits and the most at once, the liveliest minute, lines said, notable moments). A
+recording too short to need cutting keeps every frame and holds each up to half a second. On a session's
+page the reel is of that session only. It is made in the browser from the replay already on the page and
+the browser's own frames, so nothing is uploaded.
 
 **Interop.** Replay's 16×9 grids reach JS as raw bytes through `[JSImport]` (`Services/ReplayGrids.cs`,
 `js/replay-grids.js`), and detector boxes reach the C# tracker as typed arrays through `[JSExport]`
@@ -359,6 +371,31 @@ unlike the last 10 — in meaning when both have embeddings, else in words — b
 capped at 20,000; replayed days are added too), and typing three letters into Ctrl+K offers
 "Search captions" by meaning; a result opens the Journal's replay on that minute
 (`/journal/{day}?at={ms}`).
+
+**Posture.** On every third detector pass, up to three people (the largest boxes) are each cut out of
+the frame and given to a pose model, ViTPose+ small (Apache-2.0, int8, 42 MB, downloaded the first time
+a person is seen), in the detector's worker. It runs on WASM only: nothing for the GPU the detector and
+the captions share, and no fp16 path that could abort the worker. transformers.js 3.8.1's own ViTPose
+pre- and post-processing ignore the box, so `js/sensing/pose-math.js` cuts the person out (3:4, a
+quarter wider than the box) and reads the heatmaps. `PostureRules` (`PoWatch.Shared/Services`) reads the
+17 joints: a trunk leaning more than 55° from upright is lying; upright, a thigh that drops less than
+0.55 of the trunk's length (level seen from the side, pointing at the lens seen from the front) is
+sitting, else standing. Only shoulders, hips and knees count, each at confidence 0.35 or more, so a
+camera that sees someone from the chest up says nothing rather than guess. A track's posture is what two
+or more of its last five readings agree on, and is forgotten 20 seconds after the last reading. Each
+tick carries the person-seconds in each posture (`SittingSeconds`, `StandingSeconds`, `LyingSeconds`:
+two people sitting for ten seconds is twenty); rollups sum them, and "longest sit" is the longest run of
+buckets sat through for at least half their length and for longer than anyone stood. The nudge is the
+browser's (`SittingStreak`): after 45 minutes of sitting, and again each 45 after, an alert goes to the
+bell, the open tabs and a desktop notification; standing for a minute, or two minutes out of the frame,
+is a break. Settings → Recording → Sitting nudge sets the time (off · 30 · 45 · 60 · 90 minutes,
+remembered per browser, applied to a sit already under way). Keypoints never leave the browser.
+Settings → Recording → Posture turns it all off (on by default, remembered per browser); the demo's
+walker is always standing. In the Journal a day's and a session's numbers gain a Sitting cell (standing,
+lying and the longest sit under it, `Components/Terminal/PostureCell.razor`), the recap and its PDF gain
+Sitting, Standing and Longest sit (and a "Longest sit" highlight from half an hour), and the story's
+telemetry paragraph says how the time in frame was mostly spent ("sitting down", "on foot", "lying
+down", or split), in words only; all of it only where posture was read.
 
 **Detector.** RF-DETR Nano in fp16 on WebGPU and int8 on WASM, each with fp32 behind it; the grey
 calibration frame rejects a precision that produces out-of-frame boxes, and one that makes ONNX

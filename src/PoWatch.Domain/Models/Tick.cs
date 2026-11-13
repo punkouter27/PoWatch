@@ -54,6 +54,13 @@ public sealed record Tick
 
     public double SoundMax { get; init; }
 
+    /// <summary>Person-seconds spent sitting, standing and lying down; zero when posture was not read.</summary>
+    public double SittingSeconds { get; init; }
+
+    public double StandingSeconds { get; init; }
+
+    public double LyingSeconds { get; init; }
+
     /// <summary>Up to five dominant colours as 0xRRGGBB.</summary>
     public IReadOnlyList<int> Palette { get; init; } = [];
 
@@ -88,6 +95,9 @@ public sealed record Tick
         RequireFraction(errors, nameof(LuminanceMean), LuminanceMean);
         RequireFraction(errors, nameof(SoundMean), SoundMean);
         RequireFraction(errors, nameof(SoundMax), SoundMax);
+        RequirePersonSeconds(errors, nameof(SittingSeconds), SittingSeconds);
+        RequirePersonSeconds(errors, nameof(StandingSeconds), StandingSeconds);
+        RequirePersonSeconds(errors, nameof(LyingSeconds), LyingSeconds);
 
         if (Palette.Count > 5 || Palette.Any(c => c is < 0 or > 0xFFFFFF))
             errors.Add($"{nameof(Palette)} holds at most five 0xRRGGBB colours.");
@@ -103,6 +113,15 @@ public sealed record Tick
         }
 
         return errors;
+    }
+
+    /// <summary>The most people whose posture one tick may count: more than a webcam frame ever holds.</summary>
+    public const int MaxPosturePeople = 50;
+
+    private static void RequirePersonSeconds(List<string> errors, string name, double value)
+    {
+        if (value is < 0 or > MaxDurationSeconds * MaxPosturePeople || double.IsNaN(value))
+            errors.Add($"{name} must be in [0, {MaxDurationSeconds * MaxPosturePeople}].");
     }
 
     private static void RequireFraction(List<string> errors, string name, double value)

@@ -116,8 +116,8 @@ public static class SceneNarrator
 
     /// <summary>
     /// The feel of the window from its telemetry, in words: the light and its colour, the liveliest
-    /// moment and the longest still stretch, where in the frame things moved, how many were in view at
-    /// once and who stayed longest. Null when there are no ticks.
+    /// moment and the longest still stretch, where in the frame things moved, how people held themselves
+    /// (where posture was read), how many were in view at once and who stayed longest. Null when there are no ticks.
     /// </summary>
     public static string? Atmosphere(IReadOnlyList<Tick> ticks, IEnumerable<SceneEvent> events, TimeZoneInfo zone, IReadOnlyDictionary<string, string> names)
     {
@@ -159,6 +159,9 @@ public static class SceneNarrator
             if (loudest.SoundMax >= 0.6) sentences.Add($"The loudest moment was at {Clock(loudest.StartUtc, zone)}.");
         }
 
+        // Posture: how the time in frame was mostly spent, once there is a minute of it to go on.
+        if (Posture(ordered) is { } posture) sentences.Add(posture);
+
         // Company: the most in view at once, and the longest stay.
         var together = ordered.Max(t => t.Classes.Where(c => Movers.Contains(c.Key)).Sum(c => c.Value.Max));
         if (together >= 2) sentences.Add($"At the busiest, {Count(together)} were in view together.");
@@ -170,6 +173,22 @@ public static class SceneNarrator
         }
 
         return string.Join(' ', sentences);
+    }
+
+    /// <summary>A posture held for this share of the time someone's posture was read is how the time was "mostly" spent.</summary>
+    private const double MostlyShare = 0.7;
+
+    private static string? Posture(IReadOnlyList<Tick> ticks)
+    {
+        var (sitting, standing, lying) = (ticks.Sum(t => t.SittingSeconds), ticks.Sum(t => t.StandingSeconds), ticks.Sum(t => t.LyingSeconds));
+        var read = sitting + standing + lying;
+        if (read < 60) return null;
+        if (sitting >= read * MostlyShare) return "Most of the time in frame was spent sitting down.";
+        if (standing >= read * MostlyShare) return "Most of the time in frame was spent on foot.";
+        if (lying >= read * MostlyShare) return "Most of the time in frame was spent lying down.";
+        return lying > Math.Max(sitting, standing)
+            ? "The time in frame was split between lying down and being up."
+            : "The time in frame was split between sitting and being on foot.";
     }
 
     private static (DateTimeOffset From, DateTimeOffset To)? LongestStill(IReadOnlyList<Tick> ordered)

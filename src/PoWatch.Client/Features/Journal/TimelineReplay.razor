@@ -4,6 +4,7 @@
    covers only the session's own minutes and lines. *@
 @using System.Globalization
 @using System.Text.Json
+@using PoWatch.Shared.Services
 @implements IAsyncDisposable
 @inject PoWatchApiClient Api
 @inject IJSRuntime JS
@@ -58,6 +59,8 @@
                 {
                     <button class="term-button" disabled="@(_saving || !_canRecord)" title="@(_canRecord ? "Download this browser's time-lapse of the day as a WebM" : "This browser cannot record video.")"
                             @onclick="SaveVideoAsync" data-test="replay-save-video">@(_saving ? "Saving…" : "Time-lapse ↓")</button>
+                    <button class="term-button" disabled="@(_saving || _cutting || !_canRecord)" title="@(_canRecord ? "Download about half a minute of this browser's time-lapse: the liveliest minutes, the notable moments and their captions, as a WebM" : "This browser cannot record video.")"
+                            @onclick="SaveReelAsync" data-test="replay-save-reel">@(_cutting ? "Cutting…" : "Highlight reel ↓")</button>
                 }
             </div>
         }
@@ -129,6 +132,7 @@
     private int _frames;
     private bool _canRecord;
     private bool _saving;
+    private bool _cutting;
 
     private string DayKey => Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
@@ -205,6 +209,36 @@
         _saving = true;
         await JS.TryInvokeAsync<bool>("powatchTimelapse.saveVideo", DayKey, VideoFps);
         _saving = false;
+    }
+
+    /// <summary>
+    /// Cuts the time-lapse to its highlights (<see cref="ReelPlanner"/>, from the replay already loaded:
+    /// a session's reel covers only the session) and has timelapse.js paint and download it.
+    /// </summary>
+    private async Task SaveReelAsync()
+    {
+        if (_data is null) return;
+        _cutting = true;
+        try
+        {
+            var times = JsonSerializer.Deserialize(await JS.TryInvokeAsync<string>("powatchTimelapse.times", DayKey) ?? "[]", Json.ListDouble) ?? [];
+            var (from, to) = (_data.Window.FromUtc.ToUnixTimeMilliseconds(), _data.Window.ToUtc.ToUnixTimeMilliseconds());
+            var plan = ReelPlanner.Plan(
+                times.Select(t => (long)t).Where(t => From is null || (t >= from && t < to)),
+                _data,
+                TranscriptTitle.Replace("PoWatch · ", string.Empty, StringComparison.Ordinal),
+                TimeZoneInfo.Local);
+            if (plan.Shots.Count > 0)
+                await JS.TryInvokeAsync<bool>("powatchTimelapse.saveReel", DayKey, JsonSerializer.Serialize(plan, Json.ReelPlan));
+        }
+        catch (JsonException)
+        {
+            // The frame list could not be read: nothing to cut.
+        }
+        finally
+        {
+            _cutting = false;
+        }
     }
 
     public async ValueTask DisposeAsync() => await JS.TryInvokeVoidAsync("powatchReplay.unmount", _root);

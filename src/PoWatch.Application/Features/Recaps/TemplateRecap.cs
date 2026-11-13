@@ -54,10 +54,21 @@ public static class TemplateRecap
                 new() { Label = "Longest empty", Value = Duration(TimeSpan.FromSeconds(p.LongestEmptySeconds)) },
                 new() { Label = "Things seen", Value = facts.Objects.Classes.Count.ToString(CultureInfo.InvariantCulture) },
                 new() { Label = "Captions", Value = facts.Environment.CaptionCount.ToString(CultureInfo.InvariantCulture) },
+                .. PostureNumbers(p),
             ],
             Moments = [.. facts.Moments.Take(6)],
             Source = "template"
         };
+    }
+
+    /// <summary>Time sitting and standing, and the longest sit: only for a window in which posture was read.</summary>
+    private static IEnumerable<RecapNumberDto> PostureNumbers(PresenceStatsDto p)
+    {
+        if (p.SittingSeconds + p.StandingSeconds + p.LyingSeconds < 1) yield break;
+        yield return new() { Label = "Sitting", Value = Duration(TimeSpan.FromSeconds(p.SittingSeconds)) };
+        yield return new() { Label = "Standing", Value = Duration(TimeSpan.FromSeconds(p.StandingSeconds)) };
+        if (p.LongestSittingSeconds >= 60)
+            yield return new() { Label = "Longest sit", Value = Duration(TimeSpan.FromSeconds(p.LongestSittingSeconds)) };
     }
 
     private static string Summary(RecapFacts facts)
@@ -114,6 +125,8 @@ public static class TemplateRecap
             highlights.Add($"The model kept mentioning: {string.Join(", ", facts.Environment.Words.Take(4).Select(w => w.Word))}.");
         if (facts.Environment.WeirdestCaption is { } weird)
             highlights.Add($"Weirdest caption: “{weird}”");
+        if (facts.Presence.LongestSittingSeconds >= 1800)
+            highlights.Add($"Longest sit: {Duration(TimeSpan.FromSeconds(facts.Presence.LongestSittingSeconds))} without a break.");
         if (facts.Presence.LongestStillSeconds >= 600)
             highlights.Add($"Stillest stretch: {Duration(TimeSpan.FromSeconds(facts.Presence.LongestStillSeconds))} without anything moving.");
         return highlights;

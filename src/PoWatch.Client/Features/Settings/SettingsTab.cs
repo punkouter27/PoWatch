@@ -33,6 +33,20 @@ public abstract class SettingsTab : ComponentBase, IDisposable
         await JS.TryInvokeVoidAsync("localStorage.setItem", MainLayout.ListeningKey, on ? "on" : "off");
     }
 
+    /// <summary>Turns posture reading (and the sitting nudge) on or off for this browser.</summary>
+    protected async Task SetPostureAsync(bool on)
+    {
+        Sensing.ReadPosture = on;
+        await JS.TryInvokeVoidAsync("localStorage.setItem", MainLayout.PostureKey, on ? "on" : "off");
+    }
+
+    /// <summary>Sets how long a sit lasts before the nudge (minutes, 0 for never) for this browser.</summary>
+    protected async Task SetSitNudgeAsync(int minutes)
+    {
+        Sensing.SitNudgeMinutes = minutes;
+        await JS.TryInvokeVoidAsync("localStorage.setItem", MainLayout.SitNudgeKey, Sensing.SitNudgeMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     /// <summary>Turns captions on or off for this browser.</summary>
     protected async Task SetCaptionsAsync(bool on)
     {

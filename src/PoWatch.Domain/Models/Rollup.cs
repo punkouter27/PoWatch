@@ -36,6 +36,13 @@ public sealed partial record Rollup
     /// <summary>Summed presence sightings per <see cref="SpatialGrid"/> cell — where people and animals hang out.</summary>
     public ReadOnlyMemory<float> PresenceGrid { get; init; } = ReadOnlyMemory<float>.Empty;
 
+    /// <summary>Person-seconds spent sitting, standing and lying down, where posture was read.</summary>
+    public double SittingSeconds { get; init; }
+
+    public double StandingSeconds { get; init; }
+
+    public double LyingSeconds { get; init; }
+
     public IReadOnlyDictionary<string, ClassTotals> Classes { get; init; } = new Dictionary<string, ClassTotals>();
 
     /// <summary>People and animals that entered the frame.</summary>

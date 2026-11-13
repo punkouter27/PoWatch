@@ -180,6 +180,39 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
     }
 
     [Fact]
+    public async Task Posture_read_in_the_browser_comes_back_as_person_time_in_the_presence_numbers()
+    {
+        using var client = ClientFor($"sitter-{Guid.NewGuid():N}");
+        var session = (await (await client.PostAsJsonAsync("/api/sessions", new StartSessionRequestDto { TimeZoneId = "UTC" }))
+            .Content.ReadFromJsonAsync<SessionDto>())!;
+        var start = session.StartedUtc.AddSeconds(2);
+        var ingest = await client.PostAsJsonAsync($"/api/sessions/{session.Id}/batches", new IngestBatchDto
+        {
+            BatchKey = Guid.NewGuid(),
+            Ticks =
+            [
+                new() { StartUtc = start, PixelSamples = 40, DetectorSamples = 10, SittingSeconds = 10, StandingSeconds = 0.5 },
+                new() { StartUtc = start.AddSeconds(10), PixelSamples = 40, DetectorSamples = 10, SittingSeconds = 7.5, LyingSeconds = 2 },
+            ]
+        });
+        Assert.Equal(HttpStatusCode.OK, ingest.StatusCode);
+
+        var presence = (await client.GetFromJsonAsync<PresenceStatsDto>("/api/stats/presence?range=today&tz=UTC"))!;
+        Assert.Equal(17.5, presence.SittingSeconds, 6);
+        Assert.Equal(0.5, presence.StandingSeconds, 6);
+        Assert.Equal(2, presence.LyingSeconds, 6);
+        Assert.True(presence.LongestSittingSeconds > 0);
+
+        // More person-time than a frame could hold is refused like any other impossible tick.
+        var absurd = await client.PostAsJsonAsync($"/api/sessions/{session.Id}/batches", new IngestBatchDto
+        {
+            BatchKey = Guid.NewGuid(),
+            Ticks = [new() { StartUtc = start.AddSeconds(20), SittingSeconds = 100_000 }]
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, absurd.StatusCode);
+    }
+
+    [Fact]
     public async Task A_shared_recap_reads_without_signing_in_until_it_is_taken_down()
     {
         var owner = $"sharer-{Guid.NewGuid():N}";

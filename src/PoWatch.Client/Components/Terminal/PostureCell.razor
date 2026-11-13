@@ -1,0 +1,19 @@
+@* A day's or a session's time spent sitting, with standing, lying and the longest sit under it. Renders
+   nothing when no posture was read (posture off, a demo of animals, or a camera that never saw hips and knees). *@
+@if (Presence is { } p && p.SittingSeconds + p.StandingSeconds + p.LyingSeconds >= 1)
+{
+    <StatCell Label="Sitting" Value="@DisplayText.Duration(p.SittingSeconds)" Hint="@Hint(p)" Test="posture-cell" />
+}
+
+@code {
+    /// <summary>The window's presence numbers; null before they have loaded.</summary>
+    [Parameter, EditorRequired] public PresenceStatsDto? Presence { get; set; }
+
+    private static string Hint(PresenceStatsDto p)
+    {
+        var parts = new List<string> { $"standing {DisplayText.Duration(p.StandingSeconds)}" };
+        if (p.LyingSeconds >= 1) parts.Add($"lying {DisplayText.Duration(p.LyingSeconds)}");
+        if (p.LongestSittingSeconds >= 60) parts.Add($"longest sit {DisplayText.Duration(p.LongestSittingSeconds)}");
+        return string.Join(" · ", parts);
+    }
+}

@@ -7,6 +7,12 @@
             <button class="term-menu-item" role="switch" aria-checked="@(Sensing.Listening ? "true" : "false")" @onclick="() => SetListeningAsync(!Sensing.Listening)" data-test="listening-toggle">
                 <span>Listening <i>the microphone, heard on this machine: words, sounds, loudness (never the audio itself)</i></span><b>@(Sensing.Listening ? "ON" : "OFF")</b>
             </button>
+            <button class="term-menu-item" role="switch" aria-checked="@(Sensing.ReadPosture ? "true" : "false")" @onclick="() => SetPostureAsync(!Sensing.ReadPosture)" data-test="posture-toggle">
+                <span>Posture <i>sitting, standing or lying, read from body joints on this machine (never a face)</i></span><b>@(Sensing.ReadPosture ? "ON" : "OFF")</b>
+            </button>
+            <button class="term-menu-item" disabled="@(!Sensing.ReadPosture)" @onclick="CycleSitNudgeAsync" data-test="sit-nudge-toggle">
+                <span>Sitting nudge <i>"time to stand up" after this long sitting without a break: off · 30 · 45 · 60 · 90 minutes</i></span><b>@(Sensing.SitNudgeMinutes == 0 ? "OFF" : $"{Sensing.SitNudgeMinutes} MIN")</b>
+            </button>
             <button class="term-menu-item" @onclick="CycleSoundAsync" data-test="sound-toggle">
                 <span>Sound cues <i>off · low · mid · high</i></span><b>@_sound.ToUpperInvariant()</b>
             </button>
@@ -47,6 +53,12 @@
 
     private async Task SelectCameraAsync(ChangeEventArgs e) =>
         _camera = await JS.TryInvokeAsync<string>("powatchCamera.select", e.Value?.ToString() ?? string.Empty) ?? string.Empty;
+
+    private Task CycleSitNudgeAsync()
+    {
+        var choices = SensingSession.SitNudgeChoices;
+        return SetSitNudgeAsync(choices[(Array.IndexOf(choices, Sensing.SitNudgeMinutes) + 1) % choices.Length]);
+    }
 
     private async Task CycleSoundAsync() => _sound = await JS.TryInvokeAsync<string>("powatchCues.cycle") ?? _sound;
 }
