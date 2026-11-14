@@ -1,0 +1,54 @@
+@implements IDisposable
+@inject SensingSession Sensing
+
+<span class="term-status @(Sensing.IsRunning ? (Sensing.Live.Demo ? "term-status--demo" : "term-status--live") : string.Empty)"
+      data-test="session-status" title="@(Sensing.Live.Demo ? "Scripted demo, not a real camera" : null)">
+    <span aria-hidden="true">● </span><span role="status">@(Sensing.IsRunning ? "OBSERVING" : "STANDBY")</span>
+    @if (Sensing.IsRunning)
+    {
+        <span class="term-status-detail"> · @Uptime</span>
+    }
+</span>
+@if (Sensing.IsRunning)
+{
+    <RadzenButton Text="Stop" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+                  Click="@Sensing.StopAsync" data-test="header-stop" />
+}
+else if (StartActions is not null)
+{
+    @StartActions
+}
+else
+{
+    <a class="term-button term-button--primary" href="?start=camera" data-test="header-start">Start</a>
+}
+
+@code {
+    [Parameter] public RenderFragment? StartActions { get; set; }
+
+    private Timer? _clock;
+    private bool _running;
+    private string Uptime => Sensing.Live.StartedUtc is { } started
+        ? (DateTimeOffset.UtcNow - started).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
+        : "--:--:--";
+
+    protected override void OnInitialized()
+    {
+        _running = Sensing.IsRunning;
+        Sensing.Changed += OnChanged;
+        _clock = new Timer(_ => { if (Sensing.IsRunning) InvokeAsync(StateHasChanged); }, null, 1000, 1000);
+    }
+
+    private void OnChanged()
+    {
+        if (_running == Sensing.IsRunning) return;
+        _running = Sensing.IsRunning;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _clock?.Dispose();
+        Sensing.Changed -= OnChanged;
+    }
+}

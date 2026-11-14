@@ -22,6 +22,7 @@ uniform vec2 u_size;
 uniform float u_time;
 uniform vec3 u_hot;
 uniform vec3 u_cold;
+uniform float u_quality;
 in vec2 v_uv;
 out vec4 o_color;
 
@@ -37,6 +38,7 @@ float heat(vec2 uv) {
 // A soft glow: the average of two rings of taps, about one and two cells out, the far ring weaker,
 // so heat bleeds into its neighbours like light through fog.
 float glow(vec2 uv) {
+  if (u_quality < 0.55) return heat(uv);
   vec2 cell = 1.0 / u_grid;
   float near = 0.0;
   float far = 0.0;
@@ -57,7 +59,9 @@ void main() {
   vec3 hot = mix(u_hot, vec3(1.0, 0.96, 0.82), smoothstep(0.82, 1.0, v) * 0.55);
   vec3 color = mix(u_cold, hot, smoothstep(0.02, 1.0, v));
   color += u_hot * smoothstep(0.05, 0.9, g) * 0.14;
-  color += hot * v * 0.07 * sin(u_time * 2.2 + v_uv.x * 18.0 + v_uv.y * 7.0);
+  float band = abs(fract(h * 6.0) - 0.5);
+  float contour = (1.0 - smoothstep(0.025, 0.065, band)) * smoothstep(0.08, 0.25, h);
+  color += hot * contour * 0.16;
 
   vec2 cell = abs(fract(v_uv * u_grid) - 0.5);
   color = mix(color, color * 0.8 + 0.02, smoothstep(0.47, 0.5, max(cell.x, cell.y)) * 0.2);
@@ -96,7 +100,7 @@ void main() {
             gl.texParameteri(gl.TEXTURE_2D, name, value);
 
         const uniform = (name) => gl.getUniformLocation(program, name);
-        return { grid: uniform('u_grid'), size: uniform('u_size'), time: uniform('u_time'), hot: uniform('u_hot'), cold: uniform('u_cold') };
+        return { grid: uniform('u_grid'), size: uniform('u_size'), time: uniform('u_time'), hot: uniform('u_hot'), cold: uniform('u_cold'), quality: uniform('u_quality') };
     }
 
     function create(canvas, cols, rows) {
@@ -108,6 +112,7 @@ void main() {
             target: new Float32Array(cols * rows),
             pixels: new Uint8Array(cols * rows),
             u: initGl(gl),
+            previous: 0, velocity: new Float32Array(cols * rows), observer: null, resize: null, resume: null,
             onLost: null, onRestored: null,
         };
         state.onLost = (e) => {
@@ -122,12 +127,28 @@ void main() {
                 state.lost = false;
                 if (reduced.matches) render(canvas, state);
                 else if (!state.raf) loop(canvas, state);
-            } catch {
+            } catch (error) {
+                console.warn('Heatmap context restoration failed.', error);
                 release(canvas);
             }
         };
         canvas.addEventListener('webglcontextlost', state.onLost);
         canvas.addEventListener('webglcontextrestored', state.onRestored);
+        state.resume = () => {
+            state.previous = 0;
+            if (!state.raf && !state.lost && window.powatchVisual.visible(canvas)) {
+                state.previous = 0;
+                loop(canvas, state);
+            }
+        };
+        state.observer = new IntersectionObserver(state.resume);
+        state.observer.observe(canvas);
+        state.resize = new ResizeObserver(state.resume);
+        state.resize.observe(canvas);
+        document.addEventListener('visibilitychange', state.resume);
+        reduced.addEventListener('change', state.resume);
+        state.themeObserver = new MutationObserver(state.resume);
+        state.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
         return state;
     }
 
@@ -148,16 +169,21 @@ void main() {
         return state.colors;
     }
 
-    function render(canvas, state) {
+    function render(canvas, state, dt = 1 / 60) {
         if (state.lost) return;
         const { gl, shown, target, pixels, u } = state;
-        const ease = reduced.matches ? 1 : 0.12;
+        let moving = false;
         for (let i = 0; i < shown.length; i++) {
-            shown[i] += (target[i] - shown[i]) * ease;
+            if (reduced.matches) { shown[i] = target[i]; state.velocity[i] = 0; }
+            else {
+                [shown[i], state.velocity[i]] = window.powatchVisual.spring(shown[i], state.velocity[i], target[i], dt);
+                if (Math.abs(target[i] - shown[i]) > 0.001 || Math.abs(state.velocity[i]) > 0.01) moving = true;
+                else { shown[i] = target[i]; state.velocity[i] = 0; }
+            }
             pixels[i] = Math.round(shown[i] * 255);
         }
 
-        const dpr = Math.min(devicePixelRatio || 1, 2);
+        const dpr = Math.min(devicePixelRatio || 1, 2) * window.powatchVisual.quality;
         const width = Math.max(1, Math.round(canvas.clientWidth * dpr));
         const height = Math.max(1, Math.round(canvas.clientHeight * dpr));
         if (canvas.width !== width || canvas.height !== height) {
@@ -172,7 +198,9 @@ void main() {
         gl.uniform1f(u.time, reduced.matches ? 0 : performance.now() / 1000);
         gl.uniform3fv(u.hot, c.hot);
         gl.uniform3fv(u.cold, c.cold);
+        gl.uniform1f(u.quality, window.powatchVisual.quality);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        return moving;
     }
 
     function release(canvas) {
@@ -182,19 +210,28 @@ void main() {
         state.raf = 0;
         if (state.onLost) canvas.removeEventListener('webglcontextlost', state.onLost);
         if (state.onRestored) canvas.removeEventListener('webglcontextrestored', state.onRestored);
+        state.observer?.disconnect();
+        state.resize?.disconnect();
+        state.themeObserver?.disconnect();
+        document.removeEventListener('visibilitychange', state.resume);
+        reduced.removeEventListener('change', state.resume);
         state.gl.getExtension('WEBGL_lose_context')?.loseContext();
         states.delete(canvas);
     }
 
-    function loop(canvas, state) {
+    function loop(canvas, state, now = performance.now()) {
+        state.raf = 0;
         // The page that owned the canvas is gone: stop, and let the context be collected.
         // Releasing the context now matters: Chrome keeps ~16 alive and drops the oldest past that.
         if (!canvas.isConnected) {
             release(canvas);
             return;
         }
-        render(canvas, state);
-        state.raf = requestAnimationFrame(() => loop(canvas, state));
+        if (!window.powatchVisual.visible(canvas) || state.lost) return;
+        const elapsed = state.previous ? now - state.previous : 16.7;
+        window.powatchVisual.budget(now, elapsed);
+        state.previous = now;
+        if (render(canvas, state, Math.min(elapsed / 1000, 0.05))) state.raf = requestAnimationFrame(time => loop(canvas, state, time));
     }
 
     /** Sets the grid's values (row-major, any non-negative scale) and draws. False when WebGL2 is unavailable. */
@@ -202,7 +239,7 @@ void main() {
         if (!canvas) return false;
         let state = states.get(canvas);
         if (state === undefined) {
-            try { state = create(canvas, cols, rows); } catch { state = null; }
+            try { state = create(canvas, cols, rows); } catch (error) { console.warn('Heatmap shader unavailable; using the plain grid.', error); state = null; }
             states.set(canvas, state);
         }
         if (!state) return false;
@@ -212,8 +249,7 @@ void main() {
         for (const v of values) if (v > max) max = v;
         for (let i = 0; i < state.target.length; i++) state.target[i] = max > 0 ? (values[i] || 0) / max : 0;
 
-        if (reduced.matches) render(canvas, state);
-        else if (!state.raf && !state.lost) loop(canvas, state);
+        if (!state.raf && !state.lost && window.powatchVisual.visible(canvas)) loop(canvas, state);
         return true;
     }
 

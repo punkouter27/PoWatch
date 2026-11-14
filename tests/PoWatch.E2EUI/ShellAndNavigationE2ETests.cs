@@ -91,7 +91,15 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
+        await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeHiddenAsync();
+        await page.GetByTestId("ask-toggle").ClickAsync();
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeVisibleAsync();
+        await page.GetByTestId("ask-toggle").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeHiddenAsync();
+        await Assertions.Expect(page.GetByTestId("session-health")).ToHaveAttributeAsync("href", "system");
+        await Assertions.Expect(page.GetByTestId("live-metrics").Locator("table")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("live-pipeline")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("metric-motion")).ToContainTextAsync("Available while observing");
 
         // Weather sits with Recording, rules and shared links under Alerts, the rest under Advanced; there is no mode to switch.
         await page.OpenSettingsAsync("recording");

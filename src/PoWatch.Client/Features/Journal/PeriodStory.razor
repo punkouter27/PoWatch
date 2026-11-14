@@ -1,15 +1,8 @@
 @inject PoWatchApiClient Api
-@inject NavigationManager Navigation
 
 @* The story of a whole week or month (PeriodStoryService), with the days it was told from under it,
    newest first. ◀ ▶ step back and forth a week or a month at a time. *@
 <TerminalPanel Title="@Heading" Class="reader story-card" Test="period-story">
-    <Aside>
-        <span class="history-nav">
-            <button class="term-button" @onclick="() => MoveAsync(-1)" aria-label="@($"Previous {Kind}")" data-test="period-prev">◀</button>
-            <button class="term-button" @onclick="() => MoveAsync(1)" disabled="@(_story is { } s && s.To >= Today)" aria-label="@($"Next {Kind}")" data-test="period-next">▶</button>
-        </span>
-    </Aside>
     <ChildContent>
         @if (_loading)
         {
@@ -52,7 +45,6 @@
 
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
 
-    private DateOnly _day = Today;
     private (string, DateOnly)? _shown;
     private bool _loading = true;
     private PeriodStoryDto? _story;
@@ -69,24 +61,16 @@
     {
         var day = Day is { } d && d <= Today ? d : Today;
         if ((Kind, day) == _shown) return;
-        (_shown, _day) = ((Kind, day), day);
-        await LoadAsync();
+        _shown = (Kind, day);
+        await LoadAsync(day);
     }
 
-    // The period lives in the address, so reload, Back and a shared link keep it.
-    private Task MoveAsync(int step)
-    {
-        var day = Month ? _day.AddMonths(step) : _day.AddDays(7 * step);
-        Navigation.NavigateTo(StoryLinks.Period(Kind, day));
-        return Task.CompletedTask;
-    }
-
-    private async Task LoadAsync()
+    private async Task LoadAsync(DateOnly day)
     {
         (_loading, _story) = (true, null);
-        var (kind, day) = (Kind, _day);
+        var kind = Kind;
         var story = await Api.GetPeriodStoryAsync(Month, day, TimeZoneInfo.Local.Id);
-        if ((kind, day) != (Kind, _day)) return;
+        if ((kind, day) != _shown) return;
         (_story, _loading) = (story, false);
     }
 }

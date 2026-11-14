@@ -17,8 +17,12 @@ public sealed partial class Live
     private string? _question;
     private string? _answer;
     private bool _asking;
+    private bool _askOpen;
 
     private ElementReference _slot;
+    private ElementReference _demoCanvas;
+    private bool _demoEffects;
+    private bool _effectsMounted;
     private bool _peopleHeat;
     private IReadOnlyList<double> _occupancyTrend = [];
     private IReadOnlyList<double> _visitsTrend = [];
@@ -104,12 +108,20 @@ public sealed partial class Live
 
     private Task ExplainAsync()
     {
+        _askOpen = true;
         _question = "Which of today's numbers are unusual against my usual day, and what stands out about today?";
         return AskAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        var showEffects = _demoEffects && (!Sensing.IsRunning || L.Demo);
+        if (showEffects != _effectsMounted)
+        {
+            _effectsMounted = showEffects;
+            if (showEffects) await JS.TryInvokeVoidAsync("powatchDemo.mount", _demoCanvas);
+            else await JS.TryInvokeVoidAsync("powatchDemo.release");
+        }
         if (firstRender)
         {
             _self = DotNetObjectReference.Create(this);
@@ -122,6 +134,8 @@ public sealed partial class Live
         Navigation.NavigateTo("", replace: true);
         await StartAsync(demo: mode == "demo");
     }
+
+    private void ToggleDemoEffects() => _demoEffects = !_demoEffects;
 
     private async Task StartAsync(bool demo)
     {
@@ -259,6 +273,7 @@ public sealed partial class Live
 
     public async ValueTask DisposeAsync()
     {
+        await JS.TryInvokeVoidAsync("powatchDemo.release");
         Sensing.Changed -= OnSensingChanged;
         Feed.Changed -= OnStatsChanged;
         await JS.TryInvokeVoidAsync("powatchFeed.undock");

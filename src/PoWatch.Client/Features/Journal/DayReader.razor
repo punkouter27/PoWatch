@@ -4,20 +4,9 @@
    keys step a day (menus.js); the calendar button jumps to any day. *@
 @using PoWatch.Shared.Services
 @inject PoWatchApiClient Api
-@inject NavigationManager Navigation
 @inject IJSRuntime JS
 
 <TerminalPanel Title="The day" Class="reader" Test="history-day-stats">
-    <Aside>
-        <span class="history-nav" data-test="history-toolbar">
-            <button class="term-button" @onclick="() => Move(-1)" aria-label="Previous day" title="Previous day (←)" data-test="history-prev">◀</button>
-            <span class="history-day" data-test="history-day">@Day.ToString("ddd d MMM yyyy", CultureInfo.CurrentCulture)</span>
-            <RadzenDatePicker TValue="DateOnly" Value="@Day" ValueChanged="@((DateOnly d) => Go(d))" ShowInput="false"
-                              Max="@Today.ToDateTime(TimeOnly.MinValue)" class="history-pick" aria-label="Pick a day" title="Pick a day" />
-            <button class="term-button" @onclick="() => Move(1)" disabled="@(Day >= Today)" aria-label="Next day" title="Next day (→)" data-test="history-next">▶</button>
-            <button class="term-button" @onclick="() => Go(Today)" disabled="@(Day == Today)" aria-label="Go to today">Today</button>
-        </span>
-    </Aside>
     <ChildContent>
         @if (!_loaded)
         {
@@ -102,8 +91,6 @@
 </TerminalPanel>
 
 @code {
-    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
-
     [Parameter, EditorRequired] public DateOnly Day { get; set; }
 
     /// <summary>The minute to open the replay on (Unix ms), from a caption search.</summary>
@@ -132,11 +119,6 @@
         var points = Math.Round((now - before) * 100);
         return points == 0 ? "same as the week before" : $"{(points > 0 ? "+" : "−")}{Math.Abs(points)} pts on the week before";
     }
-
-    private void Move(int days) => Go(Day.AddDays(days) > Today ? Today : Day.AddDays(days));
-
-    // Every day, today included, has its own address.
-    private void Go(DateOnly day) => Navigation.NavigateTo(StoryLinks.Day(day));
 
     protected override async Task OnParametersSetAsync()
     {

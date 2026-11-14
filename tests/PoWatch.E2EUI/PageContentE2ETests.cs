@@ -36,6 +36,10 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         // The narration saves as plain text, a line per thing that happened.
         await Assertions.Expect(page.GetByTestId("live-narration").GetByTestId("transcript-download"))
             .ToHaveAttributeAsync("href", new System.Text.RegularExpressions.Regex("^data:text/plain;charset=utf-8,PoWatch.*came%20in"));
+        await page.GetByTestId("narration-filter-said").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("live-narration").Locator("[data-kind=enter]")).ToHaveCountAsync(0);
+        await page.GetByTestId("narration-filter-all").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("narration-lines").Locator("[data-kind=enter]").First).ToBeVisibleAsync();
 
         await page.GetByTestId("header-stop").ClickAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("STANDBY");
@@ -83,6 +87,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.GetByTestId("header-stop").ClickAsync();
         // Leaving Live leaves the "session saved" line behind: nothing covers the Journal's controls.
         await page.GetByTestId("nav-journal").ClickAsync();
+        await page.GetByTestId("journal-explore").Locator("summary").ClickAsync();
         await Assertions.Expect(page.Locator("[data-test=stats-patterns] .rz-chart svg").First).ToBeVisibleAsync(new() { Timeout = 30_000 });
         await Assertions.Expect(page.GetByTestId("away-card")).ToHaveCountAsync(0);
         await page.GetByTestId("history-prev").ClickAsync(new() { Timeout = 5_000 });
@@ -116,12 +121,34 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
 
         // Bob is recognised by name in frame, and listed in Settings' "Who PoWatch knows"; the cat stays unnamed.
         await Assertions.Expect(page.GetByTestId("live-tracks")).ToContainTextAsync("Bob", new() { Timeout = 25_000 });
+        await page.Keyboard.PressAsync("Escape");
         await page.GetByTestId("header-stop").ClickAsync();
         await page.OpenSettingsAsync("people");
         await Assertions.Expect(page.GetByTestId("regulars-table")).ToBeVisibleAsync();
         ILocator NameBox(string who) => page.Locator(".regular-name").Filter(new() { HasText = $"Name for {who}" }).Locator("input");
         await Assertions.Expect(NameBox("Bob")).ToHaveValueAsync("Bob");
         await Assertions.Expect(NameBox("Cat 1")).ToHaveValueAsync("");
+        var bob = page.Locator(".regular-card").Filter(new() { Has = NameBox("Bob") });
+        await NameBox("Bob").FillAsync("Robert");
+        await Assertions.Expect(bob.GetByTestId("regular-save")).ToBeEnabledAsync();
+        // A draft is not saved by blur; an explicit save survives reopening People.
+        await NameBox("Bob").BlurAsync();
+        await Assertions.Expect(bob.Locator(".regular-first")).ToBeVisibleAsync();
+        await page.RouteAsync("**/api/regulars/*", async route =>
+        {
+            if (route.Request.Method == "PATCH") await route.FulfillAsync(new() { Status = 503 });
+            else await route.ContinueAsync();
+        });
+        await bob.GetByTestId("regular-save").ClickAsync();
+        await Assertions.Expect(bob.GetByRole(AriaRole.Alert)).ToContainTextAsync("Your draft is still here");
+        await Assertions.Expect(NameBox("Bob")).ToHaveValueAsync("Robert");
+        await page.UnrouteAsync("**/api/regulars/*");
+        page.ClearErrors();
+        await bob.GetByTestId("regular-save").ClickAsync();
+        await Assertions.Expect(NameBox("Robert")).ToHaveValueAsync("Robert");
+        await page.GetByTestId("settings-tab-recording").ClickAsync();
+        await page.GetByTestId("settings-tab-people").ClickAsync();
+        await Assertions.Expect(NameBox("Robert")).ToHaveValueAsync("Robert");
         await page.AssertNoBlazorErrorAsync();
     }
 
@@ -164,6 +191,8 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
 
         // The day opens in the same reader.
         await page.GetByTestId("journal-day").First.ClickAsync();
+        await Assertions.Expect(page.GetByTestId("history-calendar")).ToBeHiddenAsync();
+        await page.GetByTestId("journal-explore").Locator("summary").ClickAsync();
         await Assertions.Expect(page.GetByTestId("history-calendar")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("history-occupancy")).ToContainTextAsync("%", new() { Timeout = 30_000 });
 
@@ -200,6 +229,17 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("history-empty")).ToBeVisibleAsync(new() { Timeout = 30_000 });
         await page.GetByRole(AriaRole.Button, new() { Name = "Go to today" }).ClickAsync();
         await Assertions.Expect(page.GetByTestId("history-day")).ToHaveTextAsync(today!);
+        await page.SetViewportSizeAsync(360, 640);
+        await Assertions.Expect(page.Locator(".journal-browse-link")).ToBeVisibleAsync();
+        await page.Locator(".journal-browse-link").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("journal-days")).ToBeInViewportAsync();
+        await page.GetByTestId("journal-period").GetByText("Week", new() { Exact = true }).ClickAsync();
+        await Assertions.Expect(page.GetByTestId("period-story")).ToBeVisibleAsync();
+        Assert.Contains("view=week", page.Url, StringComparison.Ordinal);
+        await page.GetByTestId("period-prev").ClickAsync();
+        Assert.Contains("date=", page.Url, StringComparison.Ordinal);
+        await page.GoBackAsync();
+        await Assertions.Expect(page.GetByTestId("history-day")).ToHaveTextAsync(today!);
         await page.AssertNoBlazorErrorAsync();
     }
 
@@ -231,6 +271,52 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.GetByTestId("sign-out").ClickAsync();
 
         await Assertions.Expect(page.GetByTestId("login-shell")).ToBeVisibleAsync(new() { Timeout = 60000 });
+    }
+
+    [Fact]
+    public async Task Narration_keeps_the_reading_position_and_new_events_return_to_the_latest_line()
+    {
+        if (PlaywrightFixture.BaseUrl is null) return;
+        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
+        await page.EvaluateAsync("""
+            () => {
+                const root = document.createElement('section');
+                root.id = 'narration-scroll-test';
+                root.innerHTML = '<button data-narration-new hidden>New events</button><ol style="height:120px;overflow:auto;overflow-anchor:none"></ol>';
+                document.querySelector('main').prepend(root);
+                const list = root.querySelector('ol');
+                for (let i = 0; i < 30; i++) {
+                    const line = document.createElement('li');
+                    line.style.height = '30px';
+                    line.textContent = `Event ${i}`;
+                    list.append(line);
+                }
+                window.powatchMenus.watchNarration(list);
+                list.scrollTop = 300;
+                list.dispatchEvent(new Event('scroll'));
+                const line = document.createElement('li');
+                line.style.height = '30px';
+                line.textContent = 'New arrival';
+                list.prepend(line);
+            }
+            """);
+        var root = page.Locator("#narration-scroll-test");
+        await Assertions.Expect(root.Locator("button")).ToBeVisibleAsync();
+        Assert.Equal(330, await root.Locator("ol").EvaluateAsync<int>("list => list.scrollTop"));
+        await root.Locator("ol").EvaluateAsync("""
+            list => {
+                const line = list.firstElementChild.cloneNode(true);
+                line.textContent = 'Another arrival';
+                list.prepend(line);
+                list.lastElementChild.remove();
+            }
+            """);
+        await page.WaitForFunctionAsync("() => document.querySelector('#narration-scroll-test ol').scrollTop === 360");
+        await root.Locator("button").ClickAsync();
+        Assert.Equal(0, await root.Locator("ol").EvaluateAsync<int>("list => list.scrollTop"));
+        await Assertions.Expect(root.Locator("button")).ToBeHiddenAsync();
+        await root.EvaluateAsync("root => { window.powatchMenus.releaseNarration(root.querySelector('ol')); root.remove(); }");
+        await page.AssertNoBlazorErrorAsync();
     }
 
 }

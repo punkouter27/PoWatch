@@ -4,27 +4,8 @@
 @inject PoWatchApiClient Api
 @inject NavigationManager Navigation
 
-<div class="journal-index">
-    <TerminalPanel Title="The year" Test="history-calendar">
-        <Aside>
-            @(Patterns?.Calendar.Count ?? 0) DAYS
-        </Aside>
-        <ChildContent>
-            <HeatGrid Values="@_calendarCells" Columns="53" Rows="7" Label="Daily occupancy over the last year"
-                      Selected="@CellFor(Day)" OnCellClick="@(i => Open(DayFor(i)))"
-                      CellTitle="@((i, v) => CellLabel(i, v))" />
-            @if (Weather?.Insight is { } insight)
-            {
-                <p class="history-insight" data-test="weather-insight">@insight.Sentence</p>
-            }
-        </ChildContent>
-    </TerminalPanel>
-
+<div class="journal-index" id="journal-browse" tabindex="-1">
     <TerminalPanel Title="Days" Class="journal-days" Test="journal-days" Flush="true">
-        <Aside>
-            <a class="term-link @(View == "week" ? "journal-on" : null)" href="@StoryLinks.Period("week")" data-test="story-view-week">Week story</a>
-            <a class="term-link @(View == "month" ? "journal-on" : null)" href="@StoryLinks.Period("month")" data-test="story-view-month">Month story</a>
-        </Aside>
         <ChildContent>
             @if (_sessions is null)
             {
@@ -44,19 +25,16 @@
                                 <span>@day.ToString("ddd d MMM", CultureInfo.CurrentCulture)</span>
                                 <span class="term-stat-hint">@DisplayText.Duration(sessions.Sum(s => s.DurationSeconds))</span>
                             </a>
-                            <ul>
-                                @foreach (var s in sessions)
-                                {
-                                    <li>
-                                        <a class="journal-session @(SessionId == s.Id ? "journal-on" : null)" href="@StoryLinks.Session(s.Id)" aria-current="@(SessionId == s.Id ? "page" : null)"
-                                           title="This session's story, replay and timeline" data-test="story-open">
-                                            <span class="num">@Time(s.StartedUtc)–@(s.EndedUtc is { } end ? Time(end) : "now")</span>
-                                            <span>@SessionDto.Tag(s.Id)</span>
-                                            <span class="term-stat-hint">@(s.IsRunning ? "RECORDING" : DisplayText.Duration(s.DurationSeconds))</span>
-                                        </a>
-                                    </li>
-                                }
-                            </ul>
+                            <RadzenDataList Data="@sessions" TItem="SessionDto" AllowPaging="false" ShowPagingSummary="false" class="journal-session-cards">
+                                <Template Context="s">
+                                    <a class="journal-session @(SessionId == s.Id ? "journal-on" : null)" href="@StoryLinks.Session(s.Id)" aria-current="@(SessionId == s.Id ? "page" : null)"
+                                       title="Open story, replay and timeline" data-test="story-open">
+                                        <span class="num">@Time(s.StartedUtc)–@(s.EndedUtc is { } end ? Time(end) : "now")</span>
+                                        <span class="term-stat-hint">@(s.IsRunning ? "Recording" : DisplayText.Duration(s.DurationSeconds))</span>
+                                        <small>Session @SessionDto.Tag(s.Id)</small>
+                                    </a>
+                                </Template>
+                            </RadzenDataList>
                         </li>
                     }
                 </ol>
@@ -68,7 +46,22 @@
         </ChildContent>
     </TerminalPanel>
 
-    <PatternsTab Query="@PatternsQuery" />
+    <details class="journal-explore" data-test="journal-explore">
+        <summary>Explore patterns · year overview</summary>
+        <TerminalPanel Title="The year" Test="history-calendar">
+            <Aside>@(Patterns?.Calendar.Count ?? 0) DAYS</Aside>
+            <ChildContent>
+                <HeatGrid Values="@_calendarCells" Columns="53" Rows="7" Label="Daily occupancy over the last year"
+                          Selected="@CellFor(Day)" OnCellClick="@(i => Open(DayFor(i)))"
+                          CellTitle="@((i, v) => CellLabel(i, v))" />
+                @if (Weather?.Insight is { } insight)
+                {
+                    <p class="history-insight" data-test="weather-insight">@insight.Sentence</p>
+                }
+            </ChildContent>
+        </TerminalPanel>
+        <PatternsTab Query="@PatternsQuery" />
+    </details>
 </div>
 
 @code {

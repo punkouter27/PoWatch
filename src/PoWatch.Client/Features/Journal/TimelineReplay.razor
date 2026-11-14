@@ -53,28 +53,24 @@
             <div class="replay-actions">
                 <button class="term-button term-button--primary" data-replay="play" data-test="replay-play">▶ Play</button>
                 <span class="term-stat-hint">@_data.Minutes.Count OBSERVED MINUTES · DRAG, OR ← → A MINUTE · CLICK A LINE TO JUMP</span>
-                @* The time-lapse lives only in the browser that recorded it: elsewhere there is nothing to offer. *@
-                @if (_frames > 0)
-                {
-                    <button class="term-button" disabled="@(_saving || !_canRecord)" title="@(_canRecord ? "Download this browser's time-lapse of the day as a WebM" : "This browser cannot record video.")"
-                            @onclick="SaveVideoAsync" data-test="replay-save-video">@(_saving ? "Saving…" : "Time-lapse ↓")</button>
-                    <button class="term-button" disabled="@(_saving || _cutting || !_canRecord)" title="@(_canRecord ? "Download about half a minute of this browser's time-lapse: the liveliest minutes, the notable moments and their captions, as a WebM" : "This browser cannot record video.")"
-                            @onclick="SaveReelAsync" data-test="replay-save-reel">@(_cutting ? "Cutting…" : "Highlight reel ↓")</button>
-                }
             </div>
         }
 
         <h3 class="history-sub">Timeline · @_lines.Count @(_lines.Count == 1 ? "line" : "lines")</h3>
         var shown = _lines.Where(e => TimelineEntry.Passes(e, _filter)).ToList();
-        <div class="moment-filters" role="group" aria-label="Show only">
-            @foreach (var (key, label, _) in TimelineEntry.Filters)
-            {
-                <button type="button" class="term-button @(_filter == key ? "term-button--on" : null)" aria-pressed="@(_filter == key ? "true" : "false")"
-                        @onclick="() => _filter = key" data-test="@($"timeline-filter-{key}")">@label</button>
-            }
+        <TimelineFilters @bind-Value="_filter">
             @* What is shown, filter and all. *@
-            <TranscriptLink Entries="@shown" Title="@TranscriptTitle" FileName="@TranscriptFile" />
-        </div>
+            <ExportMenu Test="timeline-export">
+                <TranscriptLink Entries="@shown" Title="@TranscriptTitle" FileName="@TranscriptFile" />
+                @if (_frames > 0)
+                {
+                    <button class="term-menu-item" disabled="@(_saving || !_canRecord)" title="@(_canRecord ? "Download this browser's time-lapse as WebM" : "This browser cannot record video.")"
+                            @onclick="SaveVideoAsync" data-test="replay-save-video">@(_saving ? "Saving…" : "Time-lapse")</button>
+                    <button class="term-menu-item" disabled="@(_saving || _cutting || !_canRecord)" title="@(_canRecord ? "Download this browser's highlight reel as WebM" : "This browser cannot record video.")"
+                            @onclick="SaveReelAsync" data-test="replay-save-reel">@(_cutting ? "Cutting…" : "Highlight reel")</button>
+                }
+            </ExportMenu>
+        </TimelineFilters>
         @if (shown.Count == 0)
         {
             <p class="term-empty">@(_lines.Count == 0 ? "Nothing was written down: no captions, words or sounds were kept." : "Nothing of that kind.")</p>

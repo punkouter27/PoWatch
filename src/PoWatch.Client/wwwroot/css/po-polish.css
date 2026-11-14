@@ -1,0 +1,55 @@
+/* Keep effects composited and separate from the camera's measured pixels. */
+.term-panel, :root:not([data-theme="light"]) .term-panel {
+    background: linear-gradient(145deg, color-mix(in srgb, var(--term-accent) 5%, var(--term-surface)), var(--term-surface) 65%);
+    box-shadow: inset 0 1px color-mix(in srgb, var(--term-text) 7%, transparent), 0 4px 16px #00000014;
+}
+.term-stat-value { font-variant-numeric: tabular-nums; min-height: 1.2em; border-radius: 3px; }
+.term-button:focus-visible, .term-key:focus-visible, .term-icon-button:focus-visible, .rz-button:focus-visible, summary:focus-visible, .journal-session:focus-visible {
+    outline: 2px solid var(--term-accent);
+    outline-offset: 3px;
+}
+.term-button:disabled { cursor: not-allowed; }
+.term-button, .term-key, .term-icon-button, .rz-button { transition: transform 140ms ease-out, border-color 120ms, background-color 120ms; }
+.term-button:active:not(:disabled), .term-key:active, .term-icon-button:active, .rz-button:active:not(:disabled) { transform: translateY(1px); transition-duration: 55ms; }
+.term-panel-head { letter-spacing: 0.04em; text-shadow: none; }
+.term-panel-head::after { display: none; }
+.term-key.active { box-shadow: inset 0 -3px 0 var(--term-text); }
+.term-header .term-keys { margin-right: auto; }
+.term-header .term-keys + .term-status { margin-right: 0; }
+.rz-button { min-height: 36px; border-radius: var(--term-radius); font-family: var(--term-font); }
+.term-toast { border-radius: 10px; box-shadow: 0 8px 24px #00000028; }
+@media (pointer: coarse) {
+    .rz-button, .ai-config-summary { min-height: 44px; }
+}
+.term-drawer {
+    animation: none;
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 180ms, transform 240ms var(--spring-soft), display 240ms allow-discrete;
+}
+.term-drawer[hidden] { display: none; opacity: 0; transform: translateX(28px); pointer-events: none; }
+@starting-style {
+    .term-drawer:not([hidden]) { opacity: 0; transform: translateX(28px); }
+}
+details > :not(summary) { animation: fx-pop 180ms var(--spring-soft); }
+.live-box {
+    transition: left 240ms var(--spring-soft), top 240ms var(--spring-soft), width 240ms var(--spring-soft), height 240ms var(--spring-soft);
+    animation: fx-pop 180ms ease-out;
+    box-shadow: 0 0 8px #8fdcff20;
+}
+.live-box[data-uncertain="true"] { border-style: dashed; box-shadow: none; }
+.live-box > span { transition: background-color 160ms; }
+.demo-flow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.65; }
+.demo-effects { position: absolute; right: 8px; top: 8px; z-index: 4; }
+.live-standby > p { text-shadow: 0 1px 5px #000, 0 0 12px #000; }
+.dash { animation: none; }
+::view-transition-old(root) { animation: polish-out 100ms ease-in both; }
+::view-transition-new(root) { animation: polish-in 180ms ease-out both; }
+@keyframes polish-out { to { opacity: 0; } }
+@keyframes polish-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) {
+    .term-drawer, .live-box, .term-button, .term-key, .term-icon-button, .rz-button { transition: none; animation: none; }
+    details > :not(summary) { animation: none; }
+    .term-button:active:not(:disabled), .term-key:active, .term-icon-button:active, .rz-button:active:not(:disabled) { transform: none; }
+    ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}

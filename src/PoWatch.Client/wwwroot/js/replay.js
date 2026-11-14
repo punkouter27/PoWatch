@@ -187,9 +187,19 @@
         }
 
         function seek(at, fromSlider) {
+            const previous = state.at;
             state.at = Math.min(Math.max(at, from), to - 60000);
             if (!fromSlider) scrub.value = String(Math.round((state.at - from) / 60000));
             render();
+            if (state.at !== previous && !state.timer) {
+                window.powatchVisual?.animate(heat, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }], { duration: 180, easing: 'ease-out' });
+                const moment = moments.find(e => e.at >= state.at && e.at < state.at + 60000);
+                if (moment) {
+                    const seed = `${day}:${moment.at}:${moment.text}`;
+                    window.powatchFx?.burst(0, seed, heat);
+                    window.powatchCues?.play('regular', 0, 0.5, 0.4, { seed, room: true });
+                }
+            }
         }
 
         function stop() {

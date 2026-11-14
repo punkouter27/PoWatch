@@ -14,8 +14,10 @@ else if (_session is null)
 else
 {
     var tag = SessionDto.Tag(_session.Id);
+    <JournalToolbar Day="@DateOnly.FromDateTime(_session.StartedUtc.LocalDateTime)" Session="@_session" />
     <TerminalPanel Title="@Heading(_session)" Class="reader story-card" Test="session-page">
         <Aside>
+            <div class="reader-actions">
             <span class="story-meta">@tag · @(_session.IsRunning ? "RECORDING" : DisplayText.Duration(_session.DurationSeconds))</span>
             <a class="term-link" href="@($"?session={_session.Id}")" title="This session on Live">Live view →</a>
             <a class="term-link" href="@StoryLinks.DayOf(_session)" title="That day's recap, replay and timeline">Day →</a>
@@ -23,6 +25,7 @@ else
                 <a class="term-menu-item" href="@PoWatchApiClient.SessionRecapPdfUrl(_session.Id)" download="PoWatch-session-@(tag[1..]).pdf" onclick="return powatchFiles.save(event, this)" data-test="session-pdf"><span>Recap <i>the session, as a PDF</i></span><b>PDF</b></a>
                 <a class="term-menu-item" href="@PoWatchApiClient.AllStatsUrl(StatsQuery.For("session", _session.Id))" download="PoWatch-session-@(tag[1..]).json" data-test="session-json"><span>Everything stored <i>every tick, event and stat of the session</i></span><b>JSON</b></a>
             </ExportMenu>
+            </div>
         </Aside>
         <ChildContent>
             <SessionStory SessionId="@_session.Id" NewestFirst="true" />

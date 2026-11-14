@@ -131,7 +131,7 @@
 
         // Escape closes an open drawer (Settings, the bell) from anywhere, typing included.
         if (e.key === 'Escape' && !palette?.open) {
-            const close = document.querySelector('.term-drawer [data-drawer-close]');
+            const close = document.querySelector('.term-drawer:not([hidden]) [data-drawer-close]');
             if (close) {
                 e.preventDefault();
                 close.click();
@@ -148,7 +148,10 @@
         // The day arrows work straight after clicking ◀ ▶ (focus is on the button), but a tab strip
         // keeps its own arrow keys.
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-            if (!target.closest?.('[role="tab"], [role="tablist"]')) click(e.key === 'ArrowLeft' ? 'history-prev' : 'history-next');
+            if (!target.closest?.('[role="tab"], [role="tablist"], .rz-selectbar')) {
+                click(e.key === 'ArrowLeft' ? 'history-prev' : 'history-next')
+                    || click(e.key === 'ArrowLeft' ? 'period-prev' : 'period-next');
+            }
             return;
         }
 
@@ -177,8 +180,63 @@
         const line = list?.children[index];
         if (!line) return;
         const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        list.scrollTo({ top: line.offsetTop, behavior: smooth ? 'smooth' : 'auto' });
+        list.scrollTo({ top: line.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop, behavior: smooth ? 'smooth' : 'auto' });
     }
 
-    window.powatchMenus = { setup, openPalette, showLine };
+    const narrationWatches = new WeakMap();
+
+    function releaseNarration(list) {
+        narrationWatches.get(list)?.();
+        if (list) narrationWatches.delete(list);
+    }
+
+    function watchNarration(list) {
+        if (!(list instanceof HTMLElement)) return;
+        releaseNarration(list);
+        const button = list.parentElement.querySelector('[data-narration-new]');
+        if (!button) return;
+        let following = list.scrollTop < 24;
+        let height = list.scrollHeight;
+        let anchor = null;
+        let anchorOffset = 0;
+        const rememberAnchor = () => {
+            const top = list.getBoundingClientRect().top;
+            anchor = [...list.children].find(line => line.getBoundingClientRect().bottom > top) ?? null;
+            anchorOffset = anchor ? anchor.getBoundingClientRect().top - top : 0;
+        };
+        const onScroll = () => {
+            following = list.scrollTop < 24;
+            if (following) button.hidden = true;
+            rememberAnchor();
+        };
+        const onNew = () => {
+            list.scrollTop = 0;
+            following = true;
+            button.hidden = true;
+        };
+        const observer = new MutationObserver(records => {
+            const added = records.some(r => r.type === 'childList' && [...r.addedNodes].some(n => n instanceof HTMLElement && n.matches('li')));
+            if (following) list.scrollTop = 0;
+            else if (added) {
+                // Anchor a visible line, even when the bounded feed also removes its oldest entry.
+                list.scrollTop += anchor?.isConnected
+                    ? anchor.getBoundingClientRect().top - list.getBoundingClientRect().top - anchorOffset
+                    : Math.max(0, list.scrollHeight - height);
+                button.hidden = false;
+            }
+            height = list.scrollHeight;
+            rememberAnchor();
+        });
+        rememberAnchor();
+        observer.observe(list, { childList: true, subtree: true, characterData: true });
+        list.addEventListener('scroll', onScroll, { passive: true });
+        button.addEventListener('click', onNew);
+        narrationWatches.set(list, () => {
+            observer.disconnect();
+            list.removeEventListener('scroll', onScroll);
+            button.removeEventListener('click', onNew);
+        });
+    }
+
+    window.powatchMenus = { setup, openPalette, showLine, watchNarration, releaseNarration };
 })();

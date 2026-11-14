@@ -1,0 +1,17 @@
+<div class="moment-filters" role="group" aria-label="@Label">
+    @foreach (var (key, label, _) in TimelineEntry.Filters)
+    {
+        <button type="button" class="term-button @(Value == key ? "term-button--on" : null)"
+                aria-pressed="@(Value == key ? "true" : "false")" @onclick="() => ValueChanged.InvokeAsync(key)"
+                data-test="@($"{TestPrefix}-filter-{key}")">@label</button>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = "all";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Label { get; set; } = "Show only";
+    [Parameter] public string TestPrefix { get; set; } = "timeline";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

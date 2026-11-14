@@ -12,9 +12,8 @@
     transition: filter 1.2s ease;
 }
 
-/* Nothing new has been seen for a while (feed-dock.js): dim the picture so the captions stay readable,
-   and never hide it — you must still be able to see that the camera is live. */
-.term-feed.is-still { filter: saturate(0.4) brightness(0.86); }
+/* A quiet scene must not change the camera's color or brightness. */
+.term-feed.is-still { filter: none; }
 
 /* Particle burst (fx.js): above the feed and below the header, never in the way of a click. */
 .fx-burst {
@@ -73,7 +72,6 @@
     font-size: var(--fs-md);
 }
 
-.live-actions { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
 .live-error { color: var(--term-red); font: 12px var(--term-mono); margin: 6px 0 0; }
 
 .live-demo-note {

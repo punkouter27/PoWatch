@@ -8,27 +8,41 @@
 
 <PageTitle>Live · PoWatch</PageTitle>
 
-@* Everything on one screen, always about one session: the one recording now, else the latest (or the
-   one a Journal link names, ?session=). One bar (which session and the question box), the models strip
-   (what sees, hears and writes, each a dropdown), a "session saved" line after a Stop, then nine cells
-   around the camera: key metrics, who is in frame and the room's heat above and beside it; narration,
-   the pipeline's rates and the environment below it; the odd moment and the regulars along the bottom.
-   Patterns over days live in the Journal, and so does the JSON of every number. *@
-<div class="dash">
+@* One session, one toolbar; configuration folds away, diagnostics live on System.
+   The desktop grid stays three columns, with page scrolling instead of scrollable cards. *@
+<div class="dash" data-inference-ms="@L.DetectorLatencyMs.ToString(CultureInfo.InvariantCulture)">
     <div class="stats-toolbar" data-test="stats-toolbar">
         <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
+        <SessionControls>
+            <StartActions>
+                <RadzenButton Text="@(_starting ? "Starting..." : "Start camera")" Icon="videocam"
+                              Disabled="@_starting" Click="@(() => StartAsync(demo: false))" data-test="start-camera" />
+                <RadzenButton Text="Try demo" ButtonStyle="ButtonStyle.Light" Disabled="@_starting"
+                              Click="@(() => StartAsync(demo: true))" data-test="start-demo" />
+            </StartActions>
+        </SessionControls>
+        <RadzenButton Text="Ask" Icon="chat_bubble_outline" ButtonStyle="ButtonStyle.Light"
+                      Click="@(() => _askOpen = !_askOpen)" aria-expanded="@(_askOpen ? "true" : "false")"
+                      aria-controls="session-ask" data-test="ask-toggle" />
+        <a href="system" class="term-button session-health" data-test="session-health">
+            @(L.LastError is not null || L.LostTicks > 0 ? "Needs attention" : L.PendingBatches > 0 ? "Saving queued" : Sensing.IsRunning ? "Sensing active" : "System status")
+        </a>
         @if (_sessionMissing)
         {
             <span class="live-error" role="status" data-test="session-missing">That session was not found, so this is your latest one.</span>
         }
 
-        <div class="stats-ask-row">
-            <form class="stats-ask" @onsubmit="AskAsync" data-test="stats-ask">
+        <div class="stats-ask-row" id="session-ask" hidden="@(!_askOpen)">
+            <form class="stats-ask" @onsubmit="AskAsync" @onsubmit:preventDefault data-test="stats-ask">
                 <label class="visually-hidden" for="ask">Ask a question about your stats</label>
                 <input id="ask" @bind="_question" @bind:event="oninput" maxlength="300" autocomplete="off" placeholder="Ask: when is it usually busiest?" disabled="@_asking" />
                 <button type="submit" class="term-button" disabled="@(_asking || string.IsNullOrWhiteSpace(_question))">@(_asking ? "…" : "Ask")</button>
             </form>
         </div>
+        @if (_error is not null)
+        {
+            <p class="live-error" role="alert" data-test="live-error">@_error</p>
+        }
     </div>
 
     @* Which models see, hear and write, each switchable right here. *@
@@ -50,11 +64,20 @@
                 @* The camera element itself lives in the layout and is docked over this slot. *@
                 <div class="live-stage">
                     <div class="live-feed" @ref="_slot">
+                        @if (!Sensing.IsRunning || L.Demo)
+                        {
+                            <canvas class="demo-flow" @ref="_demoCanvas" aria-hidden="true"></canvas>
+                            <button type="button" class="term-button demo-effects" aria-pressed="@(_demoEffects ? "true" : "false")"
+                                    @onclick="ToggleDemoEffects" data-test="demo-effects" title="Decorative simulation, not measured motion">
+                                Effects @(_demoEffects ? "on" : "off")
+                            </button>
+                        }
                         @foreach (var track in Sensing.IsRunning ? L.Tracks : [])
                         {
-                            <div class="live-box @(track.Label == "person" ? "live-box--person" : string.Empty)"
+                            <div @key="track.TrackId" class="live-box @(track.Label == "person" ? "live-box--person" : string.Empty)"
+                                 data-uncertain="@(track.Box.Score < 0.6 ? "true" : "false")"
                                  style="left: @Pct(track.Box.X0 * 100)%; top: @Pct(track.Box.Y0 * 100)%; width: @Pct((track.Box.X1 - track.Box.X0) * 100)%; height: @Pct((track.Box.Y1 - track.Box.Y0) * 100)%;">
-                                <span>@(L.RegularFor(track.TrackId)?.DisplayName ?? track.Label) @track.Box.Score.ToString("0.00", CultureInfo.InvariantCulture) · #@track.TrackId</span>
+                                <span title="@($"Confidence {track.Box.Score:P0} · Track {track.TrackId}")">@(L.RegularFor(track.TrackId)?.DisplayName ?? track.Label)@(track.Box.Score < 0.6 ? " · uncertain" : null)</span>
                             </div>
                         }
 
@@ -62,14 +85,7 @@
                         {
                             <div class="live-standby" data-test="live-standby">
                                 <p>Point a camera at anything, press Start, walk away.</p>
-                                <div class="live-actions">
-                                    <button class="term-button term-button--primary" @onclick="() => StartAsync(demo: false)" disabled="@_starting" data-test="start-camera">Start camera</button>
-                                    <button class="term-button" @onclick="() => StartAsync(demo: true)" disabled="@_starting" data-test="start-demo">No camera? Try the demo</button>
-                                </div>
-                                @if (_error is not null)
-                                {
-                                    <p class="live-error" role="alert" data-test="live-error">@_error</p>
-                                }
+                                <p class="term-stat-hint">Use Start camera above, or try a private, scripted demo.</p>
                             </div>
                         }
                         else if (Sensing.Live.Demo)
@@ -122,16 +138,7 @@
             </ChildContent>
         </TerminalPanel>
 
-        <LivePipeline />
-        <LiveEnvironment />
-
-        @* The one caption least like the rest, and the regulars PoWatch knows. *@
-        <TerminalPanel Title="Moment" Class="cell-moment" Test="live-moment" Flush="true">
-            <Aside>LEAST LIKE THE REST</Aside>
-            <ChildContent>
-                <OddMoment Query="@_query" />
-            </ChildContent>
-        </TerminalPanel>
+        <LiveEnvironment Query="@_query" />
 
         <LiveRegulars />
     </div>

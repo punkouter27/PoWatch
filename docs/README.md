@@ -66,31 +66,37 @@ says so and shows your latest). Leaving or reloading the page ends a recording; 
 minutes shows it as saved, unless that was dismissed. After any Stop, Live shows one "Session saved" line
 under its bar, in the page's own flow (never over anything, and only on Live): the session's visits,
 occupancy and peak, "Open in Journal →", its PDF and ✕; showing it also writes the session's last chapter
-and story. Starting a new session clears it. One bar names the session ("Recording session #2444 · New York") with an "Ask" box; the JSON of every
-number is in the Journal's Export menus. Under it the MODELS strip, then a nine-cell grid with the camera in the middle (one
-Start button; a synthetic demo whenever stopped) and, beside the picture, its narration: every caption
+and story. Starting a new session clears it. One toolbar names the session ("Recording session #2444 · New York"),
+shows state and uptime, Start camera / Try demo or Stop, an Ask button that expands the question box,
+and a health link to System. The JSON of every number is in the Journal's Export menus.
+Under it, AI & listening expands the model choices; loading and failure states remain visible when collapsed.
+The three-column desktop grid keeps the camera prominent (natural color, without scanlines or dimming)
+and, beside the picture, its narration: every caption
 (SAW), line of speech (SAID), recognised sound (HEARD), coming and going (IN/OUT) and notable moment,
-newest first, a few lines tall and scrolling, under a minimap of the whole session (`Layout/Components/SessionMinimap.razor`:
+newest first, filterable by kind, under a minimap of the whole session (`Layout/Components/SessionMinimap.razor`:
 shading for how busy each stretch was, a pin per arrival, thing said and ★ that scrolls to and lights its line)
 (`Features/Live/LiveNarration.razor`; while recording it is
-the browser's own list in `LiveSensingState.Narration`, after that what the server kept). Two cells on each
-side and a row underneath: key metrics beside your usual day (occupancy, visits an hour, motion, each with
-σ and a trend) top left, In frame top middle (who is tracked, for how long and in what posture, now · peak · visits, then
+the browser's own list in `LiveSensingState.Narration`, after that what the server kept).
+New narration follows only while at the top; reading older entries preserves the scroll position and
+offers New events to return to the latest. KPI cards show occupancy, visits per hour and activity level,
+with usual values, plain-language comparisons (exact sigma values on hover), and trends.
+In frame is top middle (who is tracked, for how long and in what posture, now · peak · visits, then
 everything seen this session as one line, what is in frame now in bold, and a POSTURE line once any was
 read: sitting · standing · lying · longest sit · sitting now), Space top right (one 16×9 grid
 with a MOTION NOW / PEOPLE TODAY switch, then where motion and people mostly were and the busiest door);
-Pipeline to the right of the camera (the pixel layer's Hz, detector latency, batches sent · queued · lost);
-then Environment (how much light, the last thing heard), ODD MOMENT (the caption least like the rest) and
-the session's REGULARS, with whether they are in the frame now, along the bottom.
+pipeline counters live only in System, leaving the camera the middle and right slots.
+Room insights spans the two former Environment / Moment slots, showing available live light and sound
+readings and the session's unusual caption without empty sub-sections; the session's REGULARS remains beside it.
 Detector boxes and the head counts show only while recording, and visits an
-hour only once ten minutes have been observed. A desktop holds the whole grid in the viewport (the camera
-keeps 16:9); narrower screens stack it in one column.
+hour only once ten minutes have been observed. Content scrolls in the main page rather than inside each
+panel; only long event lists keep bounded scrolling. The camera keeps 16:9; narrower screens stack panels.
 Patterns over days are the Journal's, not Live's ·
-`/journal` the Journal, everything that happened: on the left the index (the year, with the weather's
-effect once a place is set; links to the week's and month's stories;
-every day that has sessions, newest first, with its sessions inside it; "Older sessions" pages back
-through the latest hundred; then your usual as shapes: today's curve against the usual day and the last
-28 days by hour and weekday), on the right the reader, laid out the same for a day and a session: the
+`/journal` the Journal, everything that happened: on the left the index (recent days with responsive
+session cards showing time and duration ahead of the session id; "Older sessions" pages back through the
+latest hundred; Explore patterns folds away the annual heatmap, weather insight and usual-day charts).
+The reader has shared breadcrumbs, a Day / Week / Month selector, date picker and previous/next controls;
+on phones a Choose day or session link above the story jumps to the index.
+On the right the reader is laid out the same for a day and a session: the
 story first, then the replay with the timeline of every line under it · `/journal/{yyyy-MM-dd}` a day
 (`/journal` opens on today): the recap (an "Export ▾" menu with its PDF and JSON, and a share link), the day's numbers in
 one row, its weather, the week against the week before and the caption words folded under them, the
@@ -100,7 +106,7 @@ its day and an "Export ▾" with its PDF and JSON, and the replay of just its mi
 (with `&date=` for the period ◀ ▶ moved to) one story of the whole Monday-to-Sunday week or calendar
 month, with the days it was told from · `/settings` the Settings drawer as a page, for links (`?section=`
 opens a tab). Session, view and day live in the URL, so
-reloads, links and Back/Forward keep their place. On a desktop each Journal column scrolls on its own;
+reloads, links and Back/Forward keep their place. Journal columns share the main page scroll;
 on a phone the reader comes first. Every page needs a sign-in.
 
 **Lines of what happened** (`Services/TimelineEntry.cs`, `Layout/Components/MomentLine.razor`). Live's
@@ -114,9 +120,11 @@ In a replay each line is a button that moves the playhead to it, and the playhea
 the line it is on and scrolls only the list to keep it in view (`replay.js`).
 
 **Header.** One row: brand, two section keys (Live · Journal; a bottom tab bar on a phone),
-then a status chip (state and uptime), Start/Stop, a bell, a dark/light button and a gear. The gear opens
+then a bell, a dark/light button and a gear. State, uptime and Start/Stop belong to Live's session toolbar;
+on other pages the same shared controls stay in the header so recording remains controllable. The gear opens
 Settings in a side drawer over any page, in four tabs: Recording (listening, posture and its sitting nudge, sound cues, the weather place),
-People (who PoWatch knows: rename, filter, sort, merge, forget voices), Alerts (watch rules, the weekly
+People (who PoWatch knows: edit then explicitly Save name or Cancel, filter, sort, merge, forget voices;
+failed renames retain the draft with an error and successful saves update the card), Alerts (watch rules, the weekly
 email, shared recaps) and Advanced, where the niche and the dangerous live: this browser
 (the command palette, reset), and your data and account (retention window, System status, CSV export,
 sign out, delete everything; keeping less and deleting ask first). Old `?section=` names still land:
@@ -138,11 +146,12 @@ toast instead of saving an error as a `.pdf`. The bell's "Watch rules" and "Name
 Settings on the Alerts and People tabs.
 
 **Saving the words.** Live's narration and every timeline in the Journal (a day's or a session's, as
-filtered) have a "Text ↓" link: the lines as a plain-text file, oldest first, one per line ("2026-11-01
+filtered) have a "Text ↓" link (inside Export for Journal timelines, beside any available local video downloads):
+the lines as a plain-text file, oldest first, one per line ("2026-11-01
 21:53:06  SAW   A person walks across the room."). The text rides in the link as a `data:` URL
 (`Layout/Components/TranscriptLink.razor`, `TimelineEntry.Transcript`), so saving needs no script or request.
 
-**AI models** (the MODELS strip on Live, under the Ask bar). Three dropdowns. SEES (camera captions)
+**AI models** (the expandable AI & listening section on Live). Three dropdowns. SEES (camera captions)
 chooses MiniCPM-V, Qwen3-VL 8B, Qwen2.5-VL 7B, or captions off; its status reports whether Ollama
 answered or the in-browser Florence-2 stood in (WebGPU/CPU), and says "NOT IN OLLAMA" in amber when Ollama
 answered without the chosen model (the hover names the `ollama pull`), plus loading/failure or a pending
@@ -405,6 +414,47 @@ model share one GPU, so a WebGPU detector skips its ticks while a caption is bei
 (`window.powatchGpu`). COOP
 `same-origin` + COEP `credentialless` make the page cross-origin isolated, so the WASM backend runs
 multi-threaded.
+
+## Sensory effects
+
+The terminal UI shares tactile press feedback, keyboard focus rings, changed-number highlights and
+short sparkline crossfades (`wwwroot/js/visuals.js`, `css/po-polish.css`). Drawers retain their DOM after
+their first opening so opening and closing can reverse smoothly; hidden drawers are inert, and Escape
+targets only the open drawer. Supported browsers crossfade in-app link navigation with View Transitions;
+other browsers keep normal Blazor navigation. Detector overlays keep track identity through updates;
+scores below 0.60 use dashed borders to distinguish uncertain detections.
+
+The Journal's WebGL2 heatmap adds intensity contours and glow, driven by a time-based critically damped
+spring. It stops drawing when settled or hidden/offscreen, resumes for new data, size or theme changes,
+and retains the plain-grid fallback. Manual replay seeks get a short heatmap wipe; notable minutes
+have repeatable seeded particles and optional room-acoustic cues. Particle bursts use time-based drag,
+gravity and boundary collisions, capped at 140 particles; their idle frame loop stops entirely.
+
+Live's **Effects off/on** button enables a decorative flow backdrop in standby or demo only (off by
+default, reset on leaving Live). WebGPU runs a bounded 512-particle curl-field simulation with procedural
+ribbon lighting and additive particle glow; unsupported devices use a bounded 96-particle Canvas flow.
+It is a visualization, not measured optical flow or reconstructed room lighting. Camera sessions
+release it. Reduced motion uses a static Canvas image instead of the animated simulation.
+
+The effects budget samples animation frame intervals and the displayed detector latency; repeated
+frames above 24 ms, detector latency above 500 ms or active caption inference lower decorative resolution,
+particle counts and shader glow work. Sustained healthy frames restore quality gradually. This is a
+protective heuristic, not a claim that every device meets 60 FPS; benchmark the 16.7 ms/60 Hz target on
+the intended hardware with sensing active. The old continuous ambient background drift is disabled.
+
+Sound remains off/low/mid/high in Recording settings. `js/cues.js` uses AudioWorklet modal/noise synthesis
+(`js/audio-worklet.js`), with seeded oscillator/noise fallback, smoothed HRTF trajectories, approximate
+depth filtering, at most eight voices, alert-priority ducking and master compression. Optional replay
+room acoustics use generated impulse responses and early reflections, not inferred real geometry.
+Own-cue playback (including its short room tail) suppresses microphone chunks, clears speech/pre-roll
+and does not enter loudness stats or recognition. Simultaneous real speech during a cue is intentionally
+discarded too; sound off avoids that trade-off. No captured microphone audio is used to synthesize cues.
+Reduced motion does not change the independently controlled sound setting.
+
+Run focused procedural regressions with
+`node --test scripts/sensory-visual.test.cjs scripts/sensory-audio.test.cjs`; browser rendering, cleanup,
+reduced motion, drawer and settled-shader checks are `SensoryE2ETests` in the UI suite.
+The annotated before/after mockup is `SCREENSHOTS/261113-sensory-polish.html` (with its combined PNG).
 
 ## Quality gates
 

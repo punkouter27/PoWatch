@@ -1,0 +1,60 @@
+@inject NavigationManager Navigation
+
+<div class="journal-toolbar">
+    <RadzenBreadCrumb>
+        <RadzenBreadCrumbItem Path="journal" Text="Journal" />
+        @if (Session is not null)
+        {
+            <RadzenBreadCrumbItem Path="@StoryLinks.Day(Day)" Text="@Day.ToString("d MMM yyyy", CultureInfo.CurrentCulture)" />
+            <RadzenBreadCrumbItem Text="@($"Session {SessionDto.Tag(Session.Id)}")" />
+        }
+        else
+        {
+            <RadzenBreadCrumbItem Text="@(Kind is null ? Day.ToString("d MMM yyyy", CultureInfo.CurrentCulture) : $"{Kind} of {Day.ToString("d MMM yyyy", CultureInfo.CurrentCulture)}")" />
+        }
+    </RadzenBreadCrumb>
+    <div class="journal-controls" data-test="history-toolbar">
+        <RadzenSelectBar TValue="string" Value="@(Kind ?? "day")" Change="@ChangeKind" aria-label="Journal period" data-test="journal-period">
+            <Items>
+                <RadzenSelectBarItem Text="Day" Value="@("day")" />
+                <RadzenSelectBarItem Text="Week" Value="@("week")" />
+                <RadzenSelectBarItem Text="Month" Value="@("month")" />
+            </Items>
+        </RadzenSelectBar>
+        <span class="history-nav">
+            <button type="button" class="term-button" @onclick="() => Move(-1)"
+                    aria-label="@($"Previous {Kind ?? "day"}")" data-test="@(Kind is null ? "history-prev" : "period-prev")">◀</button>
+            <span class="history-day" data-test="history-day">@Day.ToString("d MMM yyyy", CultureInfo.CurrentCulture)</span>
+            <RadzenDatePicker TValue="DateOnly" Value="@Day" ValueChanged="@Go" ShowInput="false"
+                              Max="@Today.ToDateTime(TimeOnly.MinValue)" class="history-pick" aria-label="Pick a date" />
+            <button type="button" class="term-button" @onclick="() => Move(1)" disabled="@AtCurrentPeriod"
+                    aria-label="@($"Next {Kind ?? "day"}")" data-test="@(Kind is null ? "history-next" : "period-next")">▶</button>
+            <button type="button" class="term-button" @onclick="() => Go(Today)" disabled="@(Day == Today && Session is null)" aria-label="Go to today">Today</button>
+        </span>
+        <a href="@($"{Navigation.ToBaseRelativePath(Navigation.Uri).Split('#')[0]}#journal-browse")"
+           class="term-button journal-browse-link">Choose day or session ↓</a>
+    </div>
+</div>
+
+@code {
+    [Parameter] public DateOnly Day { get; set; }
+    [Parameter] public string? Kind { get; set; }
+    [Parameter] public SessionDto? Session { get; set; }
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
+    private bool AtCurrentPeriod => Kind switch
+    {
+        "month" => Day.Year == Today.Year && Day.Month == Today.Month,
+        "week" => Day.AddDays(6 - (((int)Day.DayOfWeek + 6) % 7)) >= Today,
+        _ => Day >= Today
+    };
+
+    private void ChangeKind(string kind) => Navigation.NavigateTo(kind == "day" ? StoryLinks.Day(Day) : StoryLinks.Period(kind, Day));
+    private void Go(DateOnly day) => Navigation.NavigateTo(Kind is null ? StoryLinks.Day(day) : StoryLinks.Period(Kind, day));
+    private void Move(int step) => Go(Kind switch
+    {
+        "month" => Day.AddMonths(step) > Today ? Today : Day.AddMonths(step),
+        "week" => Day.AddDays(step * 7) > Today ? Today : Day.AddDays(step * 7),
+        _ => Day.AddDays(step) > Today ? Today : Day.AddDays(step)
+    });
+}

@@ -1,8 +1,16 @@
 @* How far today sits from your usual, in standard deviations. Flagged at |z| ≥ 2. *@
-<span class="@CssClass" title="@Tooltip">@Text</span>
+<span class="@CssClass" title="@Tooltip">@Summary</span>
 
 @code {
     [Parameter] public double? Z { get; set; }
+
+    private string Summary => Z switch
+    {
+        null => "Building history",
+        >= 2 => "Higher than usual",
+        <= -2 => "Lower than usual",
+        _ => "Within usual range"
+    };
 
     // Round first: a value like -0.04 would otherwise format as "-+0.0" (the sign survives rounding).
     private string Text => Z is { } z

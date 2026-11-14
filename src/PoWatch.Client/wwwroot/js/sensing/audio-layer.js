@@ -63,6 +63,14 @@
     const s = state;
     if (!s) return;
     const now = Date.now();
+    // Drop contaminated buffers (including pre-roll) rather than classify our own speakers as a room event.
+    // This also drops simultaneous real speech: headphones or sound off avoid that deliberate trade-off.
+    if (window.powatchCues?.isPlaying?.()) {
+      s.speech = null;
+      s.recent = [];
+      s.recentSamples = 0;
+      return;
+    }
     let sum = 0;
     for (let i = 0; i < chunk.length; i++) sum += chunk[i] * chunk[i];
     const loud = level(Math.sqrt(sum / chunk.length));

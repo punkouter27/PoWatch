@@ -11,18 +11,20 @@
 
 /* ── The Journal: the index beside the reader ───────────────────── */
 
-/* A phone reads first (the reader), then the index; a desktop puts the index on the left and lets each
-   column scroll on its own. The reader is the same for a day, a session and a period: panels of prose
-   first, then the replay with its timeline. */
+/* A phone reads first with a jump to the index; desktop columns share the main scroll. */
 .journal { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); align-content: start; }
 .journal-reader, .journal-index { display: grid; grid-auto-rows: max-content; gap: var(--term-gap); min-width: 0; align-content: start; }
 .journal-days .term-panel-meta .term-link + .term-link { margin-left: 10px; }
 .journal-list { list-style: none; margin: 0; padding: 0; }
 .journal-list > li { padding: 4px 0 6px; border-bottom: 1px solid var(--term-line); }
-.journal-list ul { list-style: none; margin: 0; padding: 0 0 0 10px; }
 .journal-day, .journal-session { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; text-decoration: none; color: var(--term-muted); font: 12px var(--term-mono); }
 .journal-day { justify-content: space-between; color: var(--term-text); font-weight: 600; }
-.journal-session .term-stat-hint { margin-left: auto; }
+.journal-session .term-stat-hint { margin-left: 0; }
+.journal-session-cards.rz-datalist { border: 0; background: transparent; padding: 8px; }
+.journal-session-cards .rz-datalist-data { gap: 8px; padding: 0; }
+.journal-session-cards .rz-datalist-data > li { padding: 0; border: 0; background: transparent; flex-basis: 100%; }
+.journal-session { display: grid; grid-template-columns: 1fr auto; padding: 12px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-panel-2); }
+.journal-session small { grid-column: 1 / -1; color: var(--term-dim); }
 .journal-session .num { color: var(--term-text); font-variant-numeric: tabular-nums; }
 .journal-day:hover, .journal-session:hover { color: var(--term-accent); }
 .journal-on, .journal-on .num { color: var(--term-accent); }
@@ -46,9 +48,19 @@
 .history-sub--first { margin-top: 0; padding-top: 0; border-top: 0; }
 
 @media (min-width: 960px) {
-    .journal { height: 100%; grid-template-columns: minmax(260px, 1fr) minmax(0, 2.6fr); grid-template-rows: minmax(0, 1fr); }
+    .journal { grid-template-columns: minmax(260px, 1fr) minmax(0, 2.6fr); align-items: start; }
     .journal-index { order: -1; }
-    .journal-reader, .journal-index { min-height: 0; overflow-y: auto; }
+}
+.journal-toolbar { display: grid; gap: 12px; padding: 14px; background: var(--term-surface); border: 1px solid var(--term-line); border-radius: var(--term-radius); }
+.journal-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.journal-browse-link { display: none !important; }
+.journal-explore > summary { cursor: pointer; padding: 14px; border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-muted); }
+.journal-explore[open] { display: grid; gap: var(--term-gap); }
+.reader-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+@media (max-width: 959.98px) {
+    .journal-browse-link { display: inline-flex !important; }
+    .journal-controls .history-nav { flex-wrap: wrap; }
+    .journal-toolbar .rz-breadcrumb { flex-wrap: wrap; overflow-wrap: anywhere; }
 }
 
 /* ── Regulars grid, Settings ───────────────────────────────── */
@@ -76,6 +88,8 @@
 .regular-voice { margin-right: auto; font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; padding: 2px 6px; border-radius: 2px; color: var(--term-bg); background: var(--term-accent); }
 .regular-card input[type="checkbox"] { width: 24px; height: 24px; margin: 0; accent-color: var(--term-accent); }
 .regular-name input { box-sizing: border-box; width: 100%; min-height: 34px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: 600 var(--fs-md) var(--term-font); padding: 0 8px; }
+.regular-name { display: grid; gap: 8px; }
+.regular-edit-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .regular-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 0; }
 .regular-stats dt { font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-dim); }
 .regular-stats dd { margin: 0; font: 600 var(--fs-md) var(--term-mono); font-variant-numeric: tabular-nums; color: var(--term-text); }

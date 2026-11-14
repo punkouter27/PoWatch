@@ -12,6 +12,8 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"ai-selectors-{Guid.NewGuid():N}");
         // The model choices are a strip on Live.
         await page.GetByTestId("nav-live").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("ai-caption-model")).ToBeHiddenAsync();
+        await page.GetByTestId("ai-config-toggle").ClickAsync();
         var captions = page.GetByTestId("ai-caption-model");
         var chat = page.GetByTestId("ai-chat-model");
         await Assertions.Expect(chat).ToBeEnabledAsync();
@@ -21,6 +23,7 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
         await page.GetByTestId("ai-hearing").SelectOptionAsync("off");
         await page.ReloadAsync();
         await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await page.GetByTestId("ai-config-toggle").ClickAsync();
         await Assertions.Expect(page.GetByTestId("ai-hearing")).ToHaveValueAsync("off", new() { Timeout = 60_000 });
         await page.GetByTestId("ai-hearing").SelectOptionAsync("on");
         await Assertions.Expect(captions).ToHaveValueAsync("qwen2.5vl:7b", new() { Timeout = 60_000 });
@@ -65,6 +68,9 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
         // The detector's load shows as it goes: a download with its bytes, then where it runs.
         var detectorStatus = page.GetByTestId("ai-detector-status");
         await Assertions.Expect(detectorStatus).ToContainTextAsync("RF-DETR NANO · LOADING 50% · 50/100 MB");
+        await page.GetByTestId("ai-config-toggle").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("ai-config-toggle")).ToContainTextAsync("LOADING 50%");
+        await page.GetByTestId("ai-config-toggle").ClickAsync();
         await page.EvaluateAsync("() => detectorReady()");
         await Assertions.Expect(detectorStatus).ToContainTextAsync("READY · WEBGPU FP16");
         await Assertions.Expect(detectorStatus).ToHaveAttributeAsync("data-phase", "ready");
@@ -84,6 +90,7 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
         await page.GetByTestId("header-stop").ClickAsync();
 
         await page.GotoAsync($"{PlaywrightFixture.BaseUrl}/");
+        await page.GetByTestId("ai-config-toggle").ClickAsync();
         await Assertions.Expect(captions).ToHaveValueAsync("qwen3-vl:8b-instruct", new() { Timeout = 60_000 });
 
         await page.SetViewportSizeAsync(375, 812);

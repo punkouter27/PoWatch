@@ -3,26 +3,29 @@
    has stopped it is what the server kept of it (the replay's events). *@
 @inject SensingSession Sensing
 @inject PoWatchApiClient Api
-@implements IDisposable
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <div class="live-lines" data-test="live-narration">
-    @{ var lines = Lines().ToList(); }
+    @{ var all = Lines().ToList(); var lines = all.Where(e => TimelineEntry.Passes(e, _filter)).ToList(); }
     <div class="live-lines-head">
         <span class="term-stat-hint">@Status</span>
         <TranscriptLink Entries="@lines" Title="@TranscriptTitle" FileName="@TranscriptFile" />
     </div>
+    <TimelineFilters @bind-Value="_filter" TestPrefix="narration" Label="Filter narration" />
     @if (Sensing.Live.LastError is { } error && Recording)
     {
         <p class="live-error" role="status">@error</p>
     }
     @if (lines.Count == 0)
     {
-        <p class="term-empty" data-test="narration-empty">@Empty</p>
+        <p class="term-empty" data-test="narration-empty">@(all.Count > 0 ? "No events of this kind yet." : Empty)</p>
     }
     else
     {
         <SessionMinimap Lines="@lines" List="@_list" Start="@(Started ?? lines[^1].AtUtc)" End="@(Recording ? DateTimeOffset.UtcNow : _endedUtc ?? lines[0].AtUtc)" Live="@Recording" OnPick="@LightAsync" />
-        <ol class="moment-list" aria-live="polite" data-test="narration-lines" @ref="_list">
+        <button type="button" class="term-button narration-new" data-narration-new hidden>New events ↑</button>
+        <ol class="moment-list" data-test="narration-lines" @ref="_list" @key="_filter">
             @foreach (var entry in lines)
             {
                 <MomentLine @key="entry" Entry="@entry" Lit="@(ReferenceEquals(entry, _lit))" />
@@ -43,6 +46,8 @@
     private List<TimelineEntry> _kept = [];
     private bool _wasRecording;
     private DateTimeOffset _lastRender;
+    private string _filter = "all";
+    private ElementReference _watchedList;
 
     private LiveSensingState L => Sensing.Live;
 
@@ -95,7 +100,19 @@
         if (ReferenceEquals(_lit, entry)) _lit = null;
     }
 
-    public void Dispose() => Sensing.Changed -= OnSensingChanged;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_list.Equals(_watchedList)) return;
+        await JS.TryInvokeVoidAsync("powatchMenus.releaseNarration", _watchedList);
+        _watchedList = _list;
+        await JS.TryInvokeVoidAsync("powatchMenus.watchNarration", _list);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Sensing.Changed -= OnSensingChanged;
+        await JS.TryInvokeVoidAsync("powatchMenus.releaseNarration", _watchedList);
+    }
 
     protected override async Task OnParametersSetAsync()
     {

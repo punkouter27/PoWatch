@@ -3,8 +3,8 @@
 @inject DrawerState Drawers
 @inject NavigationManager Navigation
 
-@* One row: brand, section keys, then status, Start/Stop, bell and Settings at the right. The AI model
-   choices are a strip on Live; section keys become the phone's bottom tab bar. *@
+@* Recording controls belong to Live's toolbar, or this header on other pages.
+   Section keys become the phone's bottom tab bar. *@
 <header class="term-header" data-test="term-header">
     <a class="term-brand" href="" aria-label="PoWatch home">
         PoWatch
@@ -12,24 +12,9 @@
 
     <NavBar />
 
-    @* Only the state word is a live region: the uptime ticks every second and would otherwise be
-       read out every second. *@
-    <span class="term-status @(Sensing.IsRunning ? (Sensing.Live.Demo ? "term-status--demo" : "term-status--live") : string.Empty)"
-          data-test="session-status"
-          title="@(Sensing.Live.Demo ? "Numbers come from a scripted demo scene, not a real camera" : null)">
-        <span aria-hidden="true">● </span><span role="status">@(Sensing.IsRunning ? "OBSERVING" : "STANDBY")</span>@if (Sensing.IsRunning)
-        {
-            <span class="term-status-detail"> · @Uptime</span>
-        }
-    </span>
-
-    @if (Sensing.IsRunning)
+    @if (ShowStart)
     {
-        <button class="term-button term-button--danger" @onclick="Sensing.StopAsync" data-test="header-stop">Stop</button>
-    }
-    else if (ShowStart)
-    {
-        <a class="term-button term-button--primary" href="?start=camera" data-test="header-start">Start</a>
+        <SessionControls />
     }
 
     <Tray />
@@ -69,8 +54,6 @@
 </header>
 
 @code {
-    private Timer? _clock;
-
     /// <summary>False on Live, where the camera panel has its own start controls.</summary>
     [Parameter] public bool ShowStart { get; set; } = true;
 
@@ -84,10 +67,6 @@
         if (!OnSettingsPage) Drawers.Toggle(DrawerState.Settings);
     }
 
-    private string Uptime => Sensing.Live.StartedUtc is { } started
-        ? (DateTimeOffset.UtcNow - started).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
-        : "--:--:--";
-
     /// <summary>Send whatever is waiting instead of waiting for the next automatic pass.</summary>
     private Task FlushOutboxAsync() => Sensing.SendOutboxAsync();
 
@@ -96,8 +75,6 @@
         Sensing.Changed += OnSensingChanged;
         Drawers.Changed += OnChanged;
         Navigation.LocationChanged += OnNavigated;
-        // Only the uptime ticks, so only a running session needs a per-second render.
-        _clock = new Timer(_ => { if (Sensing.IsRunning) InvokeAsync(StateHasChanged); }, null, 1000, 1000);
     }
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
@@ -120,6 +97,5 @@
         Sensing.Changed -= OnSensingChanged;
         Drawers.Changed -= OnChanged;
         Navigation.LocationChanged -= OnNavigated;
-        _clock?.Dispose();
     }
 }

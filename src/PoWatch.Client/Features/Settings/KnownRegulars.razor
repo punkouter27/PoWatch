@@ -2,8 +2,8 @@
 @inject SensingSession Sensing
 
 @* Who PoWatch recognises (by look, never by face), so the stories can say "Sam came in" instead of
-   "a person". One card per regular: filter by name, sort, rename in place (Enter or leaving the box
-   saves), and tick two or more of the same kind to merge them — a change of clothes can make someone
+   "a person". One card per regular: filter by name, sort, explicitly save a new name,
+   and tick two or more of the same kind to merge them — a change of clothes can make someone
    new. New ones are offered for naming from the bell as they are first seen. *@
 <TerminalPanel Title="Who PoWatch knows" Test="regulars-board" Flush="true">
     <Aside>@_regulars.Count KNOWN · @_regulars.Count(r => r.IsNamed) NAMED</Aside>
@@ -75,11 +75,25 @@
                             <input type="checkbox" checked="@_selected.Contains(regular.Id)" @onchange="e => Select(regular, e.Value is true)"
                                    aria-label="@($"Select {regular.DisplayName} to merge")" title="Tick two or more of the same kind to merge them" data-test="regular-select" />
                         </div>
-                        <div class="regular-name" data-test="regular-row">
+                        <form class="regular-name" data-test="regular-row" @onsubmit="() => RenameAsync(regular)" @onsubmit:preventDefault>
                             <label class="visually-hidden" for="rename-@regular.Id">Name for @regular.DisplayName</label>
-                            <input id="rename-@regular.Id" @bind="_edits[regular.Id]" @bind:after="() => RenameAsync(regular)"
+                            <input id="rename-@regular.Id" @bind="_edits[regular.Id]" @bind:event="oninput"
                                    placeholder="@regular.DisplayName" maxlength="40" autocomplete="off" disabled="@_busy" />
-                        </div>
+                            <div class="regular-edit-actions">
+                                <RadzenButton Text="@(_busy && _savingId == regular.Id ? "Saving..." : "Save name")"
+                                              ButtonType="ButtonType.Submit" Size="ButtonSize.Small"
+                                              Disabled="@(_busy || !IsDirty(regular))" data-test="regular-save" />
+                                @if (IsDirty(regular))
+                                {
+                                    <button type="button" class="term-button" disabled="@_busy"
+                                            @onclick="() => _edits[regular.Id] = regular.IsNamed ? regular.DisplayName : null">Cancel</button>
+                                }
+                            </div>
+                            @if (_savingId == regular.Id && _message is not null)
+                            {
+                                <span class="@(_failed ? "live-error" : "term-stat-hint")" role="@(_failed ? "alert" : "status")">@_message</span>
+                            }
+                        </form>
                         <dl class="regular-stats">
                             <div><dt>Visits</dt><dd>@regular.Visits.ToString(CultureInfo.InvariantCulture)</dd></div>
                             <div><dt>In frame</dt><dd>@DisplayText.Duration(regular.DwellSeconds)</dd></div>
@@ -110,6 +124,11 @@
     private bool _busy;
     private bool _loaded;
     private string _sort = "recent";
+    private string? _savingId;
+
+    private bool IsDirty(RegularDto regular) =>
+        (string.IsNullOrWhiteSpace(_edits.GetValueOrDefault(regular.Id)) ? null : _edits[regular.Id]!.Trim())
+        != (regular.IsNamed ? regular.DisplayName : null);
 
     private IEnumerable<RegularDto> Shown
     {
@@ -180,19 +199,19 @@
         if (_busy || name == (regular.IsNamed ? regular.DisplayName : null)) return;
 
         _busy = true;
+        (_savingId, _message) = (regular.Id, null);
         try
         {
             if (await Api.RenameRegularAsync(regular.Id, name) is { } renamed)
             {
                 Sensing.Live.Rename(renamed);
                 Say($"SAVED “{renamed.DisplayName}”");
-                await LoadAsync();
+                _regulars[_regulars.FindIndex(r => r.Id == regular.Id)] = renamed;
+                _edits[regular.Id] = renamed.IsNamed ? renamed.DisplayName : null;
             }
             else
             {
-                // Put the box back: showing a name that was not saved is worse than losing the typing.
-                _edits[regular.Id] = regular.IsNamed ? regular.DisplayName : null;
-                Say($"COULD NOT RENAME {regular.DisplayName.ToUpperInvariant()} — NOTHING WAS CHANGED", failed: true);
+                Say($"Could not save {regular.DisplayName}. Your draft is still here; try again.", failed: true);
             }
         }
         finally

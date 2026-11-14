@@ -5,33 +5,32 @@
 <TerminalPanel Title="Key metrics" Class="cell-metrics" Test="live-metrics" Flush="true">
     <Aside>@Range.ToUpperInvariant() vs USUAL</Aside>
     <ChildContent>
-        <table class="term-table">
-            <thead><tr><th>Metric</th><th class="r">Value</th><th class="r">Usual</th><th class="live-trend">Trend</th></tr></thead>
-            <tbody>
-                <tr data-test="metric-occupancy">
-                    <td>OCCUPANCY</td>
-                    <td class="r live-metric"><span data-test="stats-occupancy">@DisplayText.Percent(Presence?.Occupancy)</span> <ZChip Z="@Anomaly("occupancy")?.Z" /></td>
-                    <td class="r">@DisplayText.Percent(Anomaly("occupancy")?.Mean)</td>
-                    <td><Sparkline Values="@OccupancyTrend" Max="1" Label="Occupancy over the range" /></td>
-                </tr>
-                @* Visits an hour from a few minutes says nothing: the row waits for ten. *@
-                @if (!RateTooEarly)
-                {
-                    <tr>
-                        <td>VISITS/HR</td>
-                        <td class="r live-metric">@DisplayText.Number(Presence?.VisitsPerHour, "0.0") <ZChip Z="@Anomaly("visits/hour")?.Z" /></td>
-                        <td class="r">@DisplayText.Number(Anomaly("visits/hour")?.Mean, "0.0")</td>
-                        <td><Sparkline Values="@VisitsTrend" Cyan="true" Label="Visits over the range" /></td>
-                    </tr>
-                }
-                <tr>
-                    <td title="Motion right now; usual is your daily mean">MOTION</td>
-                    <td class="r live-metric"><span data-test="metric-motion">@L.Motion.ToString("0.000", CultureInfo.InvariantCulture)</span> <ZChip Z="@Anomaly("motion")?.Z" /></td>
-                    <td class="r">@DisplayText.Number(Anomaly("motion")?.Mean, "0.000")</td>
-                    <td><Sparkline Values="@L.MotionHistory" Label="Motion, last minute" /></td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="metric-cards">
+            <RadzenCard class="metric-card" data-test="metric-occupancy">
+                <StatCell Label="Occupancy" Value="@DisplayText.Percent(Presence?.Occupancy)"
+                          Hint="@($"Usual {DisplayText.Percent(Anomaly("occupancy")?.Mean)}")" Test="stats-occupancy">
+                    <ZChip Z="@Anomaly("occupancy")?.Z" />
+                </StatCell>
+                <Sparkline Values="@OccupancyTrend" Max="1" Label="Occupancy over the session" />
+            </RadzenCard>
+            @if (!RateTooEarly)
+            {
+                <RadzenCard class="metric-card">
+                    <StatCell Label="Visits per hour" Value="@DisplayText.Number(Presence?.VisitsPerHour, "0.0")"
+                              Hint="@($"Usual {DisplayText.Number(Anomaly("visits/hour")?.Mean, "0.0")}")">
+                        <ZChip Z="@Anomaly("visits/hour")?.Z" />
+                    </StatCell>
+                    <Sparkline Values="@VisitsTrend" Cyan="true" Label="Visits over the session" />
+                </RadzenCard>
+            }
+            <RadzenCard class="metric-card">
+                <StatCell Label="Activity level" Value="@(Sensing.IsRunning ? L.Motion.ToString("P1", CultureInfo.InvariantCulture) : "—")"
+                          Hint="@(Sensing.IsRunning ? $"Now · usual daily mean {DisplayText.Percent(Anomaly("motion")?.Mean)}" : "Available while observing")" Test="metric-motion">
+                    <ZChip Z="@Anomaly("motion")?.Z" />
+                </StatCell>
+                <Sparkline Values="@L.MotionHistory" Label="Activity over the last minute" />
+            </RadzenCard>
+        </div>
         @if (OnExplain.HasDelegate && Patterns?.Anomalies.Any(a => a.Flagged) == true)
         {
             @* The σ chips say how unusual today is; the model says what stands out, from the same tools Ask uses. *@

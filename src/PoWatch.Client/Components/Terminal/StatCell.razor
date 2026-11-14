@@ -1,7 +1,7 @@
 @* One headline number: label, mono value with unit, optional hint line. *@
 <div class="term-stat" data-test="@Test" title="@Hint">
     <div class="term-stat-label">@Label</div>
-    <div class="term-stat-value">@Value<span class="term-stat-unit">@Unit</span></div>
+    <div class="term-stat-value" data-metric="@Value">@Value<span class="term-stat-unit">@Unit</span></div>
     @if (!string.IsNullOrEmpty(Hint) || ChildContent is not null)
     {
         <div class="term-stat-hint">@Hint @ChildContent</div>

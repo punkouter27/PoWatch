@@ -11,9 +11,13 @@
    and a session: the story at the top, then the replay with the timeline of everything seen, said and
    heard under it (each line moves the playhead; the playhead lights its line). The choice is in the
    address (/journal/2026-10-03, /journal/s/{id}, ?view=week), so reloads, links and Back/Forward keep it.
-   On a desktop each column scrolls on its own; on a phone the reader comes first. *@
+   Both columns share the main scroll; on a phone the reader starts with a link to the index. *@
 <div class="journal">
     <div class="journal-reader">
+        @if (Id is null)
+        {
+            <JournalToolbar Day="@(View is null ? _day : PeriodDay ?? Today)" Kind="@View" />
+        }
         @if (Id is { } id)
         {
             <SessionReader Id="@id" />
@@ -57,7 +61,7 @@
     private string? View => ViewParameter is "week" or "month" ? ViewParameter : null;
 
     private DateOnly? PeriodDay =>
-        DateOnly.TryParseExact(DateParameter, DayFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? day : null;
+        DateOnly.TryParseExact(DateParameter, DayFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) && day <= Today ? day : null;
 
     protected override async Task OnInitializedAsync()
     {

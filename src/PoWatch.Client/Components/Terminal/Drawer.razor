@@ -1,9 +1,9 @@
 @* A side drawer under the header: the bell's notifications and Settings open here instead of in a
    popup, so forms have room and the page stays usable beside them (it is not modal). Escape or ✕
    closes it (menus.js clicks the [data-drawer-close] button); focus moves in when it opens. *@
-@if (Open)
+@if (Open || _wasOpened)
 {
-    <aside class="term-drawer" role="dialog" aria-modal="false" aria-labelledby="@_headingId" tabindex="-1" data-test="@Test" @ref="_root">
+    <aside class="term-drawer" hidden="@(!Open)" inert="@(!Open)" role="dialog" aria-modal="false" aria-labelledby="@_headingId" tabindex="-1" data-test="@Test" @ref="_root">
         <header class="term-drawer-head">
             <h2 id="@_headingId">@Title</h2>
             @if (Aside is not null)
@@ -24,6 +24,7 @@
     private readonly string _headingId = $"drawer-{Guid.NewGuid():N}";
     private ElementReference _root;
     private bool _wasOpen;
+    private bool _wasOpened;
 
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
     [Parameter] public bool Open { get; set; }
@@ -34,6 +35,8 @@
 
     /// <summary>False when the drawer opened by itself (an alert): it must not pull focus from what you were doing.</summary>
     [Parameter] public bool TakeFocus { get; set; } = true;
+
+    protected override void OnParametersSet() => _wasOpened |= Open;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

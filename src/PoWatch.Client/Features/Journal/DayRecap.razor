@@ -29,7 +29,7 @@ else
                 }
             </ul>
         }
-        <div class="history-recap-foot">
+        <div class="history-recap-foot reader-actions">
             <span class="term-stat-hint">WRITTEN BY @Recap.Source.ToUpperInvariant()@(Rewriting ? " · A MODEL IS REWORDING IT…" : string.Empty)</span>
             <ExportMenu Test="day-export">
                 <a class="term-menu-item" href="@PoWatchApiClient.DayRecapPdfUrl(Day, TimeZoneInfo.Local.Id)" download="PoWatch-@(DayKey).pdf" onclick="return powatchFiles.save(event, this)" data-test="history-recap-pdf"><span>Recap <i>this page, as a PDF</i></span><b>PDF</b></a>

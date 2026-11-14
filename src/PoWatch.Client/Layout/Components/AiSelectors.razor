@@ -7,7 +7,17 @@
    camera into words, what turns the microphone into words, and what writes the stories and answers Ask.
    Each status says what is really running (Ollama on this PC, or the browser's own model standing in),
    and a browser model shows its load as it happens (ModelLoad): download, first run, then WebGPU or CPU. *@
-<div class="ai-models" data-test="ai-models" role="group" aria-label="AI models">
+<details class="ai-config" data-test="ai-config">
+    <summary class="ai-config-summary" data-test="ai-config-toggle">
+        <span>AI &amp; listening</span>
+        <span class="term-stat-hint">Captions @(Sensing.Captions ? "on" : "off") · Listening @(Sensing.Listening ? "on" : "off")</span>
+        @foreach (var pending in _loads.Where(s => s.Phase is "downloading" or "warming" or "lost" or "failed"))
+        {
+            <ModelLoad Status="@pending" Prefix="@(pending.Name == "detector" ? "Camera" : "Listening")" />
+        }
+        <span class="term-stat-hint">Configure</span>
+    </summary>
+    <div class="ai-models" data-test="ai-models" role="group" aria-label="AI models">
     <span class="ai-models-title" aria-hidden="true">MODELS</span>
     <div class="ai-model">
         <span class="ai-model-label" title="Finds people, pets and things in each frame, about once a second, on this machine.">DETECTS</span>
@@ -82,15 +92,18 @@
             @(_saving ? "SAVING..." : _models?.SelectedId switch { "Template" => "TEMPLATE", "Ollama" => "SERVER · OLLAMA", "Auto" => "SERVER · AUTO", null => "SERVER", _ => "SERVER · CLOUD" })
         </span>
     </div>
-    @if (_error is not null)
-    {
-        <span class="ai-models-error" role="alert">@_error</span>
-    }
+</div>
+</details>
+@if (_error is not null || _loadFailed || CaptionWarn)
+{
+    <div class="ai-models-error" role="alert">
+        @(_error ?? (_loadFailed ? "Could not load the AI choices." : CaptionHint))
     @if (_loadFailed)
     {
         <button class="term-button" @onclick="LoadModelsAsync">Retry AI</button>
     }
-</div>
+    </div>
+}
 @* A GPU model that ended up on the CPU says so once per page, with why: otherwise it only looks slow. *@
 @if (_cpuNotice is not null)
 {
