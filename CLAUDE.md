@@ -13,7 +13,7 @@ storage); read it before changing behavior.
 docker compose up -d                                   # Azurite; storage is required, the app will not start without it
 dotnet build PoWatch.slnx                              # warnings are errors
 dotnet run --project src/PoWatch.Api --launch-profile http   # http://localhost (port 80); steps to the next free port if taken
-dotnet format PoWatch.slnx --verify-no-changes         # the CI formatting gate
+dotnet format PoWatch.slnx --verify-no-changes         # a CI gate (scripts/ci-checks.ps1 runs it)
 ./scripts/check-hygiene.ps1                            # layout, naming, package versions, vocabulary, dead CSS + components
 ./scripts/check-test-caps.ps1                          # after a build: 100 unit / 50 integration / 25 API E2E / 25 UI E2E
 ./scripts/caption-eval.ps1 -Count 10                   # score the caption models (Node; first run downloads ~1 GB)
@@ -68,4 +68,6 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
 - **PDFs fail on Windows on ARM.** QuestPDF ships no `win-arm64` native library, so on an ARM machine every
   PDF endpoint answers 503 (the client shows why in a toast). Production is x64 and unaffected; to make PDFs
   locally, install the x64 .NET 10 SDK and run with `-r win-x64`.
-- **Pushing to `master` deploys to production.** The deploy gate is `GET /health` returning 200.
+- **Pushing to `master` deploys to production.** `.github/workflows/deploy.yml` is the shared Po workflow (never
+  edit it here); PoWatch's extra build gates go in `scripts/ci-checks.ps1`. The deploy gate is `/health/live`
+  serving this commit, then `GET /health` returning 200; a failure rolls back.
