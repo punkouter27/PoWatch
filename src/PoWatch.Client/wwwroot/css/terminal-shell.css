@@ -200,6 +200,28 @@
     .ai-model select { flex: 1; max-width: none; min-height: 44px; }
     .ai-model-status, .model-load { white-space: normal; flex-wrap: wrap; min-width: 0; }
 }
+/* The caption model in the header, next to the section keys: a label and the same compact dropdown as
+   the AI strip. Phones keep it in the AI strip, where a full-width dropdown fits. */
+.term-nav-model { flex: 0 1 auto; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.term-nav-model > span { color: var(--term-dim); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; }
+.term-nav-model select {
+    min-width: 0;
+    max-width: 280px;
+    min-height: 30px;
+    border: 1px solid var(--term-line);
+    border-radius: var(--term-radius);
+    padding: 2px 6px;
+    color: var(--term-text);
+    background: var(--term-surface);
+    font: 600 var(--fs-xs) var(--term-mono);
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+.term-nav-model select:hover, .term-nav-model select:focus-visible { border-color: var(--term-accent); outline: none; }
+@media (max-width: 719.98px) {
+    .term-nav-model { display: none; }
+}
+
 /* The status chip starts the right-hand group: Start/Stop, bell, gear. */
 .term-header .term-status { margin-left: auto; }
 

@@ -56,7 +56,7 @@
     });
   }
 
-  // Shared with detector-bridge.js: how many caption generations are in flight.
+  // How many captions are in flight; visuals.js lowers its effects' quality while one runs.
   const gpu = (window.powatchGpu ??= { captioning: 0 });
 
   const unavailable = (status) => ({ isAvailable: false, status, activity: 'Unavailable', caption: '' });
@@ -84,11 +84,11 @@
       if (model === _lastCaptionModel && diff < 0.015) return unavailable('Frame unchanged: skipped');
 
       const frame = await captureFrame(videoElement);
-      // The detector yields the GPU while this runs (detector-bridge.js).
       gpu.captioning++;
       try {
-        // After two GPU resets the in-browser model reloads on wasm instead (worker-rpc.js counts them).
-        const res = await call({ type: 'RUN_INFERENCE', payload: { frame, prompt, maxNewTokens: maxInferenceTokens, model, avoidGpu: call.gpuLosses >= 2 } }, [frame]);
+        // Waits for the detector's turn on the GPU to end (worker-rpc.js), and holds the GPU while it
+        // loads and generates. After two GPU resets the in-browser model reloads on wasm instead.
+        const res = await rpc.gpu.run(() => call({ type: 'RUN_INFERENCE', payload: { frame, prompt, maxNewTokens: maxInferenceTokens, model, avoidGpu: call.gpuLosses >= 2 } }, [frame]));
         _lastCaptionModel = model;
         // Searchable by meaning from the command palette (caption-index.js); the vector stays on this device.
         if (res.result?.isAvailable && res.result.embedding) window.powatchCaptionIndex?.put(Date.now(), res.result.activity, res.result.embedding);

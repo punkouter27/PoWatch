@@ -12,6 +12,12 @@
 
     <NavBar />
 
+    @* The camera's caption model, one pick away on every page (the same dropdown as Live's AI strip). *@
+    <label class="term-nav-model" title="Which model describes what the camera sees">
+        <span aria-hidden="true">SEES</span>
+        <CaptionModelSelect Test="nav-caption-model" />
+    </label>
+
     @if (ShowStart)
     {
         <SessionControls />

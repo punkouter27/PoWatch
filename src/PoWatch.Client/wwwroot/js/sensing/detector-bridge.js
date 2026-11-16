@@ -3,10 +3,10 @@
 // [JSExport] (SensingSession.OnDetectorBoxes), not JSON. A frame is skipped while the previous one is
 // still being detected, so a slow device lowers the rate instead of queueing.
 //
-// The detector and the caption model live in separate workers but share one GPU. A WebGPU detector
-// therefore sits out the ticks while a caption is being generated (powatchGpu, set by
-// inference-bridge.js): a skipped second costs the tracker nothing, while two models fighting for
-// the GPU made both of them several times slower.
+// The detector and the caption model live in separate workers but share one GPU, so every load and
+// every WebGPU detection takes a turn on it (powatchWorkerRpc.gpu). A tick that finds the GPU taken is
+// skipped rather than queued: a skipped second costs the tracker nothing, while two models on the GPU
+// at once made both several times slower and could make the browser reset the GPU.
 (function () {
   'use strict';
 
@@ -61,12 +61,25 @@
   /** Loads the detector; resolves to { modelId, device, dtype, loadMs }. `device` forces 'webgpu' or 'wasm'. */
   async function load(device) {
     call.keep();
-    let info = await call({ type: 'LOAD', device });
-    // ONNX Runtime aborted on one precision and took the worker with it: carry on in a fresh worker
-    // from the next candidate (detector-worker.js). Each round skips at least one, so this ends.
-    while (info?.type === 'POISONED') {
-      call.restart();
-      info = await call({ type: 'LOAD', device, from: info.next, rejected: info.rejected });
+    const loadOnce = async () => {
+      // After two GPU resets the GPU is not asked again (worker-rpc.js counts them).
+      const want = device ?? (call.gpuLosses >= 2 ? 'wasm' : undefined);
+      let info = await call({ type: 'LOAD', device: want });
+      // ONNX Runtime aborted on one precision and took the worker with it: carry on in a fresh worker
+      // from the next candidate (detector-worker.js). Each round skips at least one, so this ends.
+      while (info?.type === 'POISONED') {
+        call.restart();
+        info = await call({ type: 'LOAD', device: want, from: info.next, rejected: info.rejected });
+      }
+      return info;
+    };
+    let info;
+    try {
+      info = await rpc.gpu.run(loadOnce);
+    } catch (err) {
+      // A GPU reset during the load drops the worker (worker-rpc.js); a fresh one gets one more try.
+      if (call.gpuLosses === 0) throw err;
+      info = await rpc.gpu.run(loadOnce);
     }
     _device = info?.device ?? null;
     return info;
@@ -81,7 +94,9 @@
     const pose = _pose && _passes++ % POSE_EVERY === 0;
     let result;
     try {
-      result = await call({ type: 'DETECT', bitmap, threshold, pose, device: call.gpuLosses >= 2 ? 'wasm' : undefined }, [bitmap]);
+      const run = () => call({ type: 'DETECT', bitmap, threshold, pose, device: call.gpuLosses >= 2 ? 'wasm' : undefined }, [bitmap]);
+      // On the CPU it needs no turn; anything else (WebGPU, or a fresh worker about to load) does.
+      result = await (_device === 'wasm' ? run() : rpc.gpu.run(run));
     } catch (err) {
       // A transferred frame is the worker's to close; one that never left (the worker could not start) is ours.
       bitmap.close();
@@ -99,7 +114,7 @@
     _clock = new Worker(CLOCK_URL, { type: 'module' });
     _clock.onmessage = async () => {
       if (_busy) return;
-      if (_device === 'webgpu' && window.powatchGpu?.captioning) return;
+      if (_device !== 'wasm' && rpc.gpu.busy) return;
       _busy = true;
       try {
         const result = await detect(video, threshold ?? 0.5);

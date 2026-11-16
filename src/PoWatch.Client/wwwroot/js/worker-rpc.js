@@ -125,4 +125,21 @@
 
   /** How long a model worker outlives the session that used it (a quick Stop and Start keeps the model). */
   window.powatchWorkerRpc.IDLE_MS = 5 * 60 * 1000;
+
+  // The detector and the caption model live in separate workers but share one GPU. Two WebGPU models
+  // loading or running at once is what makes the browser reset the GPU (the video freezes, every
+  // session dies), so each load and each run takes a turn here, one at a time, in call order.
+  let gpuTail = Promise.resolve();
+  let gpuWanted = 0;
+  window.powatchWorkerRpc.gpu = {
+    /** Something holds or waits for the GPU: a detector tick skips instead of queueing behind it. */
+    get busy() { return gpuWanted > 0; },
+    /** Runs `task` (returns a promise) once the GPU is free; resolves or rejects as the task does. */
+    run(task) {
+      gpuWanted++;
+      const turn = gpuTail.then(task).finally(() => { gpuWanted--; });
+      gpuTail = turn.catch(() => { });
+      return turn;
+    },
+  };
 })();

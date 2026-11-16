@@ -1,0 +1,61 @@
+@implements IDisposable
+@inject SensingSession Sensing
+
+@* The camera's caption model, or captions off: one dropdown, rendered in the header (every page) and in
+   Live's AI strip. Both read and write SensingSession, so a pick in one shows in the other at once, and
+   the choice is kept in this browser (it depends on this device's GPU, not the account). *@
+<select id="@Id" class="@Class" @key="_revision" value="@(Sensing.Captions ? Sensing.CaptionModel : "off")"
+        @onchange="SelectAsync" data-test="@Test" aria-label="@(Id is null ? "Camera caption model" : null)"
+        aria-describedby="@DescribedBy" title="Describes what the camera sees. Ollama models run on this PC's Ollama server; WebGPU models run in this browser. Captions off saves the GPU.">
+    <option value="off">Captions off</option>
+    @foreach (var model in CaptionModels.All)
+    {
+        <option value="@model.Key">@model.Label</option>
+    }
+</select>
+
+@code {
+    /// <summary>The element id, for a visible &lt;label for&gt;; without one the select names itself.</summary>
+    [Parameter] public string? Id { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Test { get; set; }
+
+    [Parameter] public string? DescribedBy { get; set; }
+
+    /// <summary>Told why a choice was refused, or null once one is taken.</summary>
+    [Parameter] public EventCallback<string?> OnError { get; set; }
+
+    // Re-keyed after a refused choice, so the dropdown snaps back to what is really in use.
+    private int _revision;
+
+    private object? _shown;
+
+    protected override void OnInitialized() => Sensing.Changed += OnSensingChanged;
+
+    /// <summary>The session changes several times a second; this only redraws when the choice does.</summary>
+    private void OnSensingChanged()
+    {
+        var now = (Sensing.Captions, Sensing.CaptionModel);
+        if (now.Equals(_shown)) return;
+        _shown = now;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SelectAsync(ChangeEventArgs args)
+    {
+        var model = args.Value?.ToString();
+        if (model is null || (model != "off" && !CaptionModels.All.Any(m => m.Key == model)))
+        {
+            _revision++;
+            await OnError.InvokeAsync("Choose one of the offered camera models.");
+            return;
+        }
+        if (model != "off") await Sensing.SetCaptionModelAsync(model);
+        await Sensing.SetCaptionsAsync(model != "off");
+        await OnError.InvokeAsync(null);
+    }
+
+    public void Dispose() => Sensing.Changed -= OnSensingChanged;
+}

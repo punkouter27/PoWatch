@@ -9,15 +9,21 @@ public static class CaptionModels
     public const string Key = "powatch:caption-model";
 
     /// <summary>
-    /// Key (an Ollama tag) and the label Settings shows, default first. MiniCPM-V was the best value when
-    /// the same frames were captioned on an RTX 5070 Ti laptop (2026-10-17): nearly Qwen3-VL's accuracy
-    /// at a third of the time. Without an Ollama server the worker captions with in-browser Florence-2.
+    /// Key and the label Settings shows, default first. The Ollama tags run on this PC's own Ollama server:
+    /// MiniCPM-V was the best value when the same frames were captioned on an RTX 5070 Ti laptop
+    /// (2026-10-17), nearly Qwen3-VL's accuracy at a third of the time. Ollama is optional; without it an
+    /// Ollama pick captions with in-browser Florence-2. The browser keys run in this browser on WebGPU
+    /// (else the CPU): Florence-2 came closest to human captions on scripts/caption-eval, and SmolVLM
+    /// 500M is the one that reads the detector's hint.
     /// </summary>
     public static readonly IReadOnlyList<(string Key, string Label)> All =
     [
-        ("minicpm-v", "MINICPM-V"),
-        ("qwen3-vl:8b-instruct", "QWEN3-VL 8B · MOST DETAIL"),
-        ("qwen2.5vl:7b", "QWEN2.5-VL 7B"),
+        ("minicpm-v", "MINICPM-V · OLLAMA"),
+        ("qwen3-vl:8b-instruct", "QWEN3-VL 8B · OLLAMA · MOST DETAIL"),
+        ("qwen2.5vl:7b", "QWEN2.5-VL 7B · OLLAMA"),
+        ("florence-2", "FLORENCE-2 · WEBGPU"),
+        ("smolvlm-500m", "SMOLVLM 500M · WEBGPU · USES DETECTOR"),
+        ("smolvlm-256m", "SMOLVLM 256M · WEBGPU"),
     ];
 
     public static string Default => All[0].Key;
