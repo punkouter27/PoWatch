@@ -481,6 +481,6 @@ Pushing to `master` runs `.github/workflows/deploy.yml` (the same file in every 
 edit it here) and deploys to production. It builds, runs the Unit tier, then `scripts/ci-checks.ps1`
 (hygiene, Bicep compile, client trim gate, test caps, `dotnet format`, Integration / API E2E / UI E2E),
 publishes, deploys, and health-gates `/health/live` (this commit) then `/health`, rolling back on failure.
-There is no emergency skip of the gates. Bicep is applied only by the manual `infra.yml` workflow and
+There is no emergency skip of the gates. Bicep is applied only by a manual run of `deploy.yml` with `infra` = what-if, then apply and
 reads resource names from `infra/deployment.json`; CI takes the app name and resource group from the
 repo variables `AZURE_WEBAPP_NAME` and `AZURE_RESOURCE_GROUP`.

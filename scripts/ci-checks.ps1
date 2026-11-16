@@ -16,7 +16,7 @@ function Invoke-Native([string]$What, [scriptblock]$Command) {
 # Naming, layout, package versions, shell assets, vocabulary, unused CSS and components.
 ./scripts/check-hygiene.ps1
 
-# Bicep is never applied from here (infra.yml is manual), but a broken template still fails the build.
+# Bicep is never applied from here (deploy.yml applies it only on a manual run with infra=apply), but a broken template still fails the build.
 $template = Join-Path ([IO.Path]::GetTempPath()) 'powatch-template.json'
 Invoke-Native 'Compile infrastructure' { az bicep build --file infra/main.bicep --outfile $template }
 
