@@ -94,10 +94,13 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(captions).ToHaveValueAsync("qwen3-vl:8b-instruct", new() { Timeout = 60_000 });
 
         await page.SetViewportSizeAsync(375, 812);
+        // An opened <details> body pops in from scale(0.94) (po-polish.css); measure the settled box, not a frame of the pop.
+        await page.GetByTestId("ai-models").EvaluateAsync("el => Promise.all(el.getAnimations({ subtree: true }).map(a => a.finished))");
         var ai = await page.GetByTestId("ai-models").BoundingBoxAsync();
         Assert.NotNull(ai);
         Assert.True(ai.X >= 0 && ai.X + ai.Width <= 375);
-        Assert.True((await captions.BoundingBoxAsync())!.Height >= 44);
+        var captionBox = (await captions.BoundingBoxAsync())!;
+        Assert.True(captionBox.Height >= 44, $"caption picker is {captionBox.Height}px tall at 375px wide; touch targets need 44px");
         await page.AssertNoBlazorErrorAsync();
     }
 }
