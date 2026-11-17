@@ -8,7 +8,6 @@ public sealed class SensoryE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Demo_flow_renders_and_releases_without_leaving_a_canvas_or_animation_running()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
         await page.GetByTestId("demo-effects").ClickAsync();
         await page.WaitForFunctionAsync("""
@@ -32,7 +31,6 @@ public sealed class SensoryE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Reduced_motion_uses_a_static_canvas_and_drawers_close_without_trapping_focus()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
         await page.EmulateMediaAsync(new() { ReducedMotion = ReducedMotion.Reduce });
         await page.GetByTestId("demo-effects").ClickAsync();
@@ -61,7 +59,6 @@ public sealed class SensoryE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Heat_shader_settles_without_a_permanent_render_loop_and_resumes_for_new_data()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
         var supported = await page.EvaluateAsync<bool>("""
             () => {
@@ -99,7 +96,6 @@ public sealed class SensoryE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Procedural_worklet_registers_and_cue_tails_finish()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
         await page.EvaluateAsync("""
             () => {
@@ -121,7 +117,6 @@ public sealed class SensoryE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Seeking_back_to_a_notable_minute_reuses_the_same_particle_and_audio_seed()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
         var seeds = await page.EvaluateAsync<string[]>("""
             () => {

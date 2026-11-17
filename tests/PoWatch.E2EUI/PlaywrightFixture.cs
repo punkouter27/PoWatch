@@ -14,10 +14,14 @@ namespace PoWatch.E2EUI;
 public sealed class PlaywrightFixture : IAsyncLifetime, IAsyncDisposable
 {
     /// <summary>
-    /// Set to the deployed base URL (e.g. https://localhost:5001). When null the entire
-    /// collection is skipped so headless builds without a live server still succeed.
+    /// The app under test. <c>E2E_BASE_URL</c> points the suite at an already-running instance; otherwise
+    /// (the default since 2026-11-17) the fixture hosts the app itself in-process against an Azurite
+    /// Testcontainer. There is no silent skip: a run that cannot host the app or launch Chromium fails
+    /// every test with the reason, instead of reporting 25 passes in under a second.
     /// </summary>
-    public static string? BaseUrl => Environment.GetEnvironmentVariable("E2E_BASE_URL") ?? _localBaseUrl;
+    public static string BaseUrl => Environment.GetEnvironmentVariable("E2E_BASE_URL") is { Length: > 0 } url
+        ? url.TrimEnd('/')
+        : _localBaseUrl ?? throw new InvalidOperationException("The E2EUI fixture has not started the app.");
     private static string? _localBaseUrl;
     private AzuriteContainer? _azurite;
     private LocalUiApplicationFactory? _localFactory;
@@ -31,30 +35,46 @@ public sealed class PlaywrightFixture : IAsyncLifetime, IAsyncDisposable
     private IBrowser? _browser;
 
     public IBrowser Browser => _browser
-        ?? throw new InvalidOperationException("Browser not initialized — did the fixture skip?");
+        ?? throw new InvalidOperationException("Browser not initialized.");
 
     public async Task InitializeAsync()
     {
-        if (BaseUrl is null && Environment.GetEnvironmentVariable("E2E_LOCAL") == "1")
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("E2E_BASE_URL")))
         {
-            _azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest").WithCommand("--skipApiVersionCheck").Build();
-            await _azurite.StartAsync();
+            try
+            {
+                _azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest").WithCommand("--skipApiVersionCheck").Build();
+                await _azurite.StartAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    "E2EUI hosts the app against an Azurite Testcontainer, so Docker must be running " +
+                    "(or set E2E_BASE_URL to test a running instance).", ex);
+            }
             _localFactory = new LocalUiApplicationFactory(_azurite.GetConnectionString());
             _localFactory.UseKestrel(0);
             using var client = _localFactory.CreateClient();
             _localBaseUrl = client.BaseAddress!.ToString().TrimEnd('/');
         }
-        if (BaseUrl is null) return;
         _playwright = await Playwright.CreateAsync();
         // The app's stable selectors use data-test (see MainLayout/NavMenu), not Playwright's
         // default data-testid — align GetByTestId with the markup.
         _playwright.Selectors.SetTestIdAttribute("data-test");
-        _browser = await _playwright.Chromium.LaunchAsync(new()
+        try
         {
-            // E2E_HEADED=1 opens a visible browser window (demo/debug); default stays headless for CI.
-            Headless = Environment.GetEnvironmentVariable("E2E_HEADED") != "1",
-            Args = LaunchArgs
-        });
+            _browser = await _playwright.Chromium.LaunchAsync(new()
+            {
+                // E2E_HEADED=1 opens a visible browser window (demo/debug); default stays headless for CI.
+                Headless = Environment.GetEnvironmentVariable("E2E_HEADED") != "1",
+                Args = LaunchArgs
+            });
+        }
+        catch (PlaywrightException ex)
+        {
+            throw new InvalidOperationException(
+                "Playwright's Chromium is missing: run tests/PoWatch.E2EUI/bin/<config>/net10.0/playwright.ps1 install chromium.", ex);
+        }
     }
 
     public async Task DisposeAsync()

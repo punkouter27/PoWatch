@@ -11,7 +11,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task The_terminal_shell_renders_header_and_keys_and_the_keys_navigate()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         await Assertions.Expect(page.GetByTestId("term-header")).ToBeVisibleAsync();
@@ -31,7 +30,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Going_back_and_forth_between_pages_does_not_grow_the_js_heap()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
         var cdp = await page.Context.NewCDPSessionAsync(page);
 
@@ -77,7 +75,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
             ("/journal?view=week", "JOURNAL"),
         })
         {
-            if (PlaywrightFixture.BaseUrl is null) return;
             await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
             await page.GoToAsync(route, heading);
@@ -88,7 +85,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Ask_downloads_and_watch_rules_are_there_from_the_start()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeHiddenAsync();
@@ -119,7 +115,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task An_unknown_route_offers_a_way_back_instead_of_dead_ending()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         await page.GotoAsync($"{PlaywrightFixture.BaseUrl}/no-such-page");
@@ -133,7 +128,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task The_theme_toggle_switches_and_persists_across_a_reload()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         var before = await page.GetAttributeAsync("html", "data-theme");
@@ -151,7 +145,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task The_skip_link_is_the_first_thing_a_keyboard_user_reaches()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         // Blazor's FocusOnNavigate moves focus into <main> once the page renders; on a slow host that lands
@@ -172,7 +165,6 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Every_link_and_button_works_without_errors_or_layout_jumps()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
         await page.AddInitScriptAsync("""
             window.__cls = 0;
@@ -192,11 +184,23 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
             await page.WaitForTimeoutAsync(3_000);
             var cls = await page.EvaluateAsync<double>("() => window.__cls");
             Assert.True(cls < 0.25, $"{route} shifted its layout by {cls:0.000} while loading (CLS)");
+            // Journal redirects to today's page; that is the page whose buttons are pressed.
+            var home = page.Url;
 
-            var buttons = page.Locator("main button:visible");
-            var count = await buttons.CountAsync();
-            for (var i = 0; i < count; i++)
+            // Some buttons navigate (Journal's ◀ / Today / period keys move to another day's page). Pressing by
+            // index on the page that comes next pointed past its shorter button list, and the click waited out
+            // its 5 s for a button that would never appear. Each press therefore starts from this route's page,
+            // and the list is counted afresh every time.
+            for (var i = 0; ; i++)
             {
+                if (page.Url != home)
+                {
+                    await page.GotoAsync(home);
+                    await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+                    await page.WaitForTimeoutAsync(1_000);
+                }
+                var buttons = page.Locator("main button:visible");
+                if (i >= await buttons.CountAsync()) break;
                 var button = buttons.Nth(i);
                 if (!await button.IsVisibleAsync() || !await button.IsEnabledAsync()) continue;
                 var label = $"{await button.InnerTextAsync()} {await button.GetAttributeAsync("aria-label")} {await button.GetAttributeAsync("title")}";

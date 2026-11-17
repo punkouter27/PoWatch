@@ -6,8 +6,8 @@
     <TestCaseLimit>25</TestCaseLimit>
   </PropertyGroup>
 
-  <!-- E2EUI: C# Playwright automated UI tests. Drives a running instance via E2E_BASE_URL;
-       skips when the variable is unset, so it never blocks a headless build. -->
+  <!-- E2EUI: C# Playwright automated UI tests. Hosts the app in-process against an Azurite Testcontainer
+       (Docker) by default, or drives a running instance named by E2E_BASE_URL. Never skips silently. -->
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

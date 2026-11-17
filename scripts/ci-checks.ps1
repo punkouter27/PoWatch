@@ -33,7 +33,7 @@ Invoke-Native 'Trim gate (client publish)' {
 Invoke-Native 'dotnet format' { dotnet format PoWatch.slnx --verify-no-changes --verbosity minimal }
 
 # Integration, API E2E and UI E2E run against Azurite via Testcontainers (Docker); UI E2E drives
-# Playwright's Chromium against an in-process host (E2E_LOCAL=1). Unit already ran in deploy.yml.
+# Playwright's Chromium against an in-process host (its default). Unit already ran in deploy.yml.
 $playwright = './tests/PoWatch.E2EUI/bin/Release/net10.0/playwright.ps1'
 if ($IsLinux) {
     Invoke-Native 'Install Playwright Chromium' { & $playwright install --with-deps chromium }
@@ -41,7 +41,6 @@ if ($IsLinux) {
 else {
     Invoke-Native 'Install Playwright Chromium' { & $playwright install chromium }
 }
-$env:E2E_LOCAL = '1'
 foreach ($suite in 'Integration', 'E2EAPI', 'E2EUI') {
     Invoke-Native "$suite tests" { dotnet test "tests/PoWatch.$suite/PoWatch.$suite.csproj" -c Release --no-build }
 }

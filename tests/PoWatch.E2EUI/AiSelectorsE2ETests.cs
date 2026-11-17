@@ -8,7 +8,6 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Model_choices_on_Live_persist_switch_during_a_session_and_fit_on_a_phone()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"ai-selectors-{Guid.NewGuid():N}");
         // The model choices are a strip on Live.
         await page.GetByTestId("nav-live").ClickAsync();

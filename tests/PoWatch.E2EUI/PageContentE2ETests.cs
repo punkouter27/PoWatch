@@ -12,7 +12,6 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task The_live_page_shows_every_panel_around_the_camera_and_its_narration()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         foreach (var panel in new[] { "live-camera", "live-narration", "live-metrics", "live-tracks", "live-motion-grid" })
@@ -24,7 +23,6 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task A_demo_session_fills_the_counters_and_stops_cleanly()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"demo-{Guid.NewGuid():N}");
 
         await page.GetByTestId("start-demo").ClickAsync();
@@ -58,7 +56,6 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Live_renders_every_stat_family_with_real_numbers_for_the_recording_session()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         // Its own user: the seed runs once per user, so on the shared guest it would land on whatever earlier tests left.
         var user = $"month-{Guid.NewGuid():N}";
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: user);
@@ -100,7 +97,6 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task New_people_can_be_named_from_a_passive_prompt_or_left_unnamed()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         // A fresh user: storage persists (Azurite), so a reused guest already knows the walker and the cat.
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"names-{Guid.NewGuid():N}");
 
@@ -155,7 +151,6 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task History_walks_back_day_by_day_through_real_sessions()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         var user = $"history-{Guid.NewGuid():N}";
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: user);
 
@@ -246,7 +241,6 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task The_system_page_reports_inference_state_and_every_connection_with_a_verdict()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
         await page.GoToSystemAsync();
 
@@ -264,7 +258,6 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Signing_out_returns_the_operator_to_the_login_page()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
         await page.OpenSettingsAsync("advanced");
@@ -276,7 +269,6 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     [Fact]
     public async Task Narration_keeps_the_reading_position_and_new_events_return_to_the_latest_line()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
         await page.EvaluateAsync("""
             () => {
