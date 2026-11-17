@@ -46,16 +46,19 @@
                     {
                         <img src="@image" alt="The new @prompt.Regular.Class" />
                     }
-                    <form @onsubmit="() => Sensing.NameAsync(prompt.Regular.Id, _names.GetValueOrDefault(prompt.Regular.Id))">
+                    @{ var draft = Draft(prompt.Regular.Id); }
+                    <RadzenTemplateForm TItem="RenameRegularRequestDto" Data="@draft" Submit="@(_ => SaveNameAsync(prompt.Regular.Id))">
+                        <FluentValidationValidator TModel="RenameRegularRequestDto" Validator="@NameRules" />
                         <label for="name-@prompt.Regular.Id">New @prompt.Regular.Class spotted — name them?</label>
-                        <input id="name-@prompt.Regular.Id" data-test="name-input" autocomplete="off" maxlength="40"
-                               placeholder="@prompt.Regular.DisplayName" @bind="_names[prompt.Regular.Id]" />
+                        <RadzenTextBox id="@($"name-{prompt.Regular.Id}")" Name="Name" data-test="name-input" autocomplete="off" MaxLength="@RenameRegularRequestDto.MaxLength"
+                                       Placeholder="@prompt.Regular.DisplayName" @bind-Value="draft.Name" Immediate="true" Disabled="@_naming.Contains(prompt.Regular.Id)" />
+                        <ValidationMessage For="@(() => draft.Name)" class="form-error" />
                         <div class="name-prompt-actions">
-                            <button type="submit" class="term-button term-button--primary" data-test="name-save">Save</button>
+                            <button type="submit" class="term-button term-button--primary" disabled="@_naming.Contains(prompt.Regular.Id)" data-test="name-save">@(_naming.Contains(prompt.Regular.Id) ? "Saving…" : "Save")</button>
                             <button type="button" class="term-button" @onclick="() => Sensing.NameAsync(prompt.Regular.Id, null)" data-test="name-skip">Not now</button>
                             <span class="term-stat-hint">stays “@prompt.Regular.DisplayName” if you skip</span>
                         </div>
-                    </form>
+                    </RadzenTemplateForm>
                 </section>
             }
 
@@ -88,7 +91,27 @@
 @code {
     private const int Kept = 5;
     private readonly List<AlertDto> _alerts = [];
-    private readonly Dictionary<string, string?> _names = new(StringComparer.Ordinal);
+    // One form model per newcomer; a name is required here (skipping is the "Not now" button).
+    private static readonly RenameRegularRequestValidator NameRules = new(requireName: true);
+    private readonly Dictionary<string, RenameRegularRequestDto> _names = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _naming = new(StringComparer.Ordinal);
+
+    private RenameRegularRequestDto Draft(string regularId) =>
+        _names.TryGetValue(regularId, out var draft) ? draft : _names[regularId] = new();
+
+    /// <summary>Saves once: the button is disabled until the server answers, so a double press sends one rename.</summary>
+    private async Task SaveNameAsync(string regularId)
+    {
+        if (!_naming.Add(regularId)) return;
+        try
+        {
+            await Sensing.NameAsync(regularId, Draft(regularId).Name?.Trim());
+        }
+        finally
+        {
+            _naming.Remove(regularId);
+        }
+    }
     private Timer? _expiry;
     private bool _takeFocus = true;
     private int _prompts;
@@ -183,7 +206,7 @@
         (_prompts, _lastError) = (prompts, error);
         InvokeAsync(() =>
         {
-            foreach (var prompt in Sensing.Live.Prompts) _names.TryAdd(prompt.Regular.Id, null);
+            foreach (var prompt in Sensing.Live.Prompts) _names.TryAdd(prompt.Regular.Id, new());
             if (announce is not null) _announce = announce;
             // A problem opens the tray; a newcomer only raises the count.
             if (newError) OpenByItself();

@@ -2,7 +2,9 @@ namespace PoWatch.Shared.Models;
 
 public sealed class AskRequestDto
 {
-    public string Question { get; init; } = string.Empty;
+    public const int MaxLength = 300;
+
+    public string Question { get; set; } = string.Empty;
 
     /// <summary>The browser's IANA time zone, so "today" means the asker's today.</summary>
     public string? TimeZoneId { get; init; }
@@ -27,7 +29,19 @@ public sealed class RuleDraftRequestDto
 {
     public const int MaxLength = 200;
 
-    public string Text { get; init; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+}
+
+/// <summary>The Add-rule form: what to watch for and between which local hours (kept in the browser, not posted).</summary>
+public sealed class WatchRuleInputDto
+{
+    /// <summary>"Anything": a rule that fires on every detector label.</summary>
+    public const string Any = "*";
+
+    /// <summary>A detector label (<see cref="Services.DetectorLabels.Coco"/>) or <see cref="Any"/>.</summary>
+    public string Class { get; set; } = "person";
+    public int FromHour { get; set; } = 22;
+    public int ToHour { get; set; } = 6;
 }
 
 /// <summary>A watch rule a model drafted from a sentence; the user still confirms it before it is kept.</summary>

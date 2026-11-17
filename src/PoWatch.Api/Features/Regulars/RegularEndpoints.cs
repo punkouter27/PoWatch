@@ -4,11 +4,14 @@ using PoWatch.Application.Features.Regulars;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 using PoWatch.Shared.Models;
+using PoWatch.Shared.Validation;
 
 namespace PoWatch.Api.Features.Regulars;
 
 internal static class RegularEndpoints
 {
+    private static readonly RenameRegularRequestValidator RenameRules = new();
+
     internal static RegularDto ToDto(this Regular regular) => new()
     {
         Id = regular.Id,
@@ -47,6 +50,7 @@ internal static class RegularEndpoints
 
         group.MapPatch("/{id}", async (string id, RenameRegularRequestDto request, UserId userId, RegularsService service, CancellationToken ct) =>
             {
+                if (ApiParsing.Invalid(RenameRules, request) is { } invalid) return invalid;
                 var renamed = await service.RenameAsync(userId, id, request.Name, ct);
                 return renamed is null ? Results.NotFound() : Results.Ok(renamed.ToDto());
             })

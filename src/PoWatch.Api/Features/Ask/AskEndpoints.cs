@@ -3,20 +3,22 @@ using PoWatch.Api.Features.Stats;
 using PoWatch.Api.Security;
 using PoWatch.Application.Features.Ask;
 using PoWatch.Shared.Models;
+using PoWatch.Shared.Validation;
 
 namespace PoWatch.Api.Features.Ask;
 
 internal static class AskEndpoints
 {
     public const string AlertMethod = "alert";
+    private static readonly AskRequestValidator AskRules = new();
+    private static readonly RuleDraftRequestValidator RuleRules = new();
 
     internal static IEndpointRouteBuilder MapAskFeature(this IEndpointRouteBuilder app)
     {
         app.MapPost("/api/ask", async (AskRequestDto request, UserId userId, AskService ask, ILogger<AskService> logger, CancellationToken ct) =>
             {
-                var question = request.Question?.Trim();
-                if (string.IsNullOrEmpty(question) || question.Length > AskService.MaxQuestionLength)
-                    return Results.BadRequest(new { message = $"question is required, at most {AskService.MaxQuestionLength} characters." });
+                if (ApiParsing.Invalid(AskRules, request) is { } invalid) return invalid;
+                var question = request.Question.Trim();
 
                 try
                 {
@@ -38,9 +40,8 @@ internal static class AskEndpoints
 
         app.MapPost("/api/ask/rule", async (RuleDraftRequestDto request, UserId _, AssistService assist, CancellationToken ct) =>
             {
-                var text = request.Text?.Trim();
-                if (string.IsNullOrEmpty(text) || text.Length > RuleDraftRequestDto.MaxLength)
-                    return Results.BadRequest(new { message = $"text is required, at most {RuleDraftRequestDto.MaxLength} characters." });
+                if (ApiParsing.Invalid(RuleRules, request) is { } invalid) return invalid;
+                var text = request.Text.Trim();
                 if (!assist.IsAvailable)
                     return Results.Problem("No AI provider is configured on this server.", statusCode: StatusCodes.Status503ServiceUnavailable);
 

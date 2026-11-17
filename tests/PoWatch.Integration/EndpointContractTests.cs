@@ -19,7 +19,7 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
     [Fact]
     public async Task Read_endpoints_answer_successfully_and_the_api_ones_with_json()
     {
-        foreach (var route in new[] { "/api/sessions", "/api/regulars", "/api/stats/presence?range=today", "/api/diagnostics/status", "/auth/me", "/auth/config", "/health", "/diag/boot" })
+        foreach (var route in new[] { "/api/sessions", "/api/regulars", "/api/stats/presence?range=today", "/api/diagnostics/status", "/auth/me", "/auth/config", "/health", "/api/diag/boot", "/api/diag" })
         {
             var response = await _client.GetAsync(route);
 
@@ -71,6 +71,44 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
         Assert.DoesNotContain("DEV-LOCAL-KEY-12345", snapshot.MaskedApiKey, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("AccountKey=", snapshot.MaskedEndpoint ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("AccountKey=", snapshot.MaskedApiKey ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task The_diag_document_names_each_store_and_service_without_secrets_or_internals()
+    {
+        var body = await _client.GetStringAsync("/api/diag");
+        var report = JsonSerializer.Deserialize<DiagReportDto>(body, JsonSerializerOptions.Web);
+
+        Assert.NotNull(report);
+        Assert.Contains(report!.Status, (string[])["Healthy", "Degraded", "Unhealthy"]);
+        Assert.Equal("Healthy", Assert.Single(report.Stores, s => s.Name == "Storage").Status);
+        Assert.Contains(report.Services, s => s.Name == "Sign-in");
+        Assert.Contains(report.Services, s => s.Name == "AI models");
+        Assert.Matches(@"^(\d{6}|unknown)$", report.Version);
+        Assert.False(string.IsNullOrWhiteSpace(report.Environment));
+        // Connection strings, keys, URIs, file paths, emails and exception text must never reach an anonymous caller.
+        foreach (var secret in new[] { "AccountKey", "DefaultEndpointsProtocol", "devstoreaccount1", "127.0.0.1", "localhost", "http://", "https://",
+                     ".vault.azure.net", ".core.windows.net", ":\\", "/home/", "@", "Exception:", "   at ", "TenantId", "ClientSecret" })
+            Assert.DoesNotContain(secret, body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Forms_that_break_the_shared_rules_get_a_validation_problem_per_field()
+    {
+        foreach (var (route, payload, field) in new (string, object, string)[]
+        {
+            ("/api/ask", new AskRequestDto { Question = "  " }, "Question"),
+            ("/api/ask/rule", new RuleDraftRequestDto { Text = new string('a', RuleDraftRequestDto.MaxLength + 1) }, "Text"),
+        })
+        {
+            var response = await _client.PostAsJsonAsync(route, payload);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Contains($"\"{field}\"", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        }
+
+        var rename = await _client.PatchAsJsonAsync("/api/regulars/anyone", new RenameRegularRequestDto { Name = new string('b', RenameRegularRequestDto.MaxLength + 1) });
+        Assert.Equal(HttpStatusCode.BadRequest, rename.StatusCode);
+        Assert.Contains("\"Name\"", await rename.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 
     [Fact]

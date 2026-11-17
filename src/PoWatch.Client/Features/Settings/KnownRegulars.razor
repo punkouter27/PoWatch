@@ -65,6 +65,7 @@
                 @foreach (var regular in Shown)
                 {
                     var today = Today(regular);
+                    var edit = Edit(regular);
                     <li class="regular-card @(_selected.Contains(regular.Id) ? "regular-card--on" : null)" @key="regular.Id">
                         <div class="regular-card-head">
                             <span class="regular-kind">@regular.Class</span>
@@ -75,10 +76,12 @@
                             <input type="checkbox" checked="@_selected.Contains(regular.Id)" @onchange="e => Select(regular, e.Value is true)"
                                    aria-label="@($"Select {regular.DisplayName} to merge")" title="Tick two or more of the same kind to merge them" data-test="regular-select" />
                         </div>
-                        <form class="regular-name" data-test="regular-row" @onsubmit="() => RenameAsync(regular)" @onsubmit:preventDefault>
+                        <RadzenTemplateForm TItem="RenameRegularRequestDto" Data="@edit" Submit="@(_ => RenameAsync(regular))" class="regular-name" data-test="regular-row">
+                            <FluentValidationValidator TModel="RenameRegularRequestDto" Validator="@RenameRules" />
                             <label class="visually-hidden" for="rename-@regular.Id">Name for @regular.DisplayName</label>
-                            <input id="rename-@regular.Id" @bind="_edits[regular.Id]" @bind:event="oninput"
-                                   placeholder="@regular.DisplayName" maxlength="40" autocomplete="off" disabled="@_busy" />
+                            <RadzenTextBox id="@($"rename-{regular.Id}")" Name="Name" @bind-Value="edit.Name" Immediate="true"
+                                           Placeholder="@regular.DisplayName" MaxLength="@RenameRegularRequestDto.MaxLength" autocomplete="off" Disabled="@_busy" />
+                            <ValidationMessage For="@(() => edit.Name)" class="form-error" />
                             <div class="regular-edit-actions">
                                 <RadzenButton Text="@(_busy && _savingId == regular.Id ? "Saving..." : "Save name")"
                                               ButtonType="ButtonType.Submit" Size="ButtonSize.Small"
@@ -86,14 +89,14 @@
                                 @if (IsDirty(regular))
                                 {
                                     <button type="button" class="term-button" disabled="@_busy"
-                                            @onclick="() => _edits[regular.Id] = regular.IsNamed ? regular.DisplayName : null">Cancel</button>
+                                            @onclick="() => edit.Name = regular.IsNamed ? regular.DisplayName : null">Cancel</button>
                                 }
                             </div>
                             @if (_savingId == regular.Id && _message is not null)
                             {
                                 <span class="@(_failed ? "live-error" : "term-stat-hint")" role="@(_failed ? "alert" : "status")">@_message</span>
                             }
-                        </form>
+                        </RadzenTemplateForm>
                         <dl class="regular-stats">
                             <div><dt>Visits</dt><dd>@regular.Visits.ToString(CultureInfo.InvariantCulture)</dd></div>
                             <div><dt>In frame</dt><dd>@DisplayText.Duration(regular.DwellSeconds)</dd></div>
@@ -114,7 +117,9 @@
 
 @code {
     private List<RegularDto> _regulars = [];
-    private readonly Dictionary<string, string?> _edits = new(StringComparer.Ordinal);
+    private static readonly RenameRegularRequestValidator RenameRules = new();
+    // One form model per card: the draft name each regular's form edits.
+    private readonly Dictionary<string, RenameRegularRequestDto> _edits = new(StringComparer.Ordinal);
     private readonly HashSet<string> _selected = new(StringComparer.Ordinal);
     private ObjectStatsDto? _today;
     private string _filter = string.Empty;
@@ -126,9 +131,12 @@
     private string _sort = "recent";
     private string? _savingId;
 
-    private bool IsDirty(RegularDto regular) =>
-        (string.IsNullOrWhiteSpace(_edits.GetValueOrDefault(regular.Id)) ? null : _edits[regular.Id]!.Trim())
-        != (regular.IsNamed ? regular.DisplayName : null);
+    private RenameRegularRequestDto Edit(RegularDto regular) =>
+        _edits.TryGetValue(regular.Id, out var edit) ? edit : _edits[regular.Id] = new() { Name = regular.IsNamed ? regular.DisplayName : null };
+
+    private static string? Draft(RenameRegularRequestDto edit) => string.IsNullOrWhiteSpace(edit.Name) ? null : edit.Name.Trim();
+
+    private bool IsDirty(RegularDto regular) => Draft(Edit(regular)) != (regular.IsNamed ? regular.DisplayName : null);
 
     private IEnumerable<RegularDto> Shown
     {
@@ -165,7 +173,7 @@
         else Say("COULD NOT LOAD THE REGULARS — THE SERVER DID NOT ANSWER", failed: true);
 
         _edits.Clear();
-        foreach (var regular in _regulars) _edits[regular.Id] = regular.IsNamed ? regular.DisplayName : null;
+        foreach (var regular in _regulars) _edits[regular.Id] = new() { Name = regular.IsNamed ? regular.DisplayName : null };
         _selected.IntersectWith(_regulars.Select(r => r.Id));
         _today = await Api.GetObjectsAsync(StatsQuery.For("today"));
         _loaded = true;
@@ -195,8 +203,8 @@
 
     private async Task RenameAsync(RegularDto regular)
     {
-        var name = string.IsNullOrWhiteSpace(_edits.GetValueOrDefault(regular.Id)) ? null : _edits[regular.Id]!.Trim();
-        if (_busy || name == (regular.IsNamed ? regular.DisplayName : null)) return;
+        var name = Draft(Edit(regular));
+        if (_busy || name == (regular.IsNamed ? regular.DisplayName : null) || !RenameRules.Validate(Edit(regular)).IsValid) return;
 
         _busy = true;
         (_savingId, _message) = (regular.Id, null);
@@ -207,7 +215,7 @@
                 Sensing.Live.Rename(renamed);
                 Say($"SAVED “{renamed.DisplayName}”");
                 _regulars[_regulars.FindIndex(r => r.Id == regular.Id)] = renamed;
-                _edits[regular.Id] = renamed.IsNamed ? renamed.DisplayName : null;
+                _edits[regular.Id] = new() { Name = renamed.IsNamed ? renamed.DisplayName : null };
             }
             else
             {

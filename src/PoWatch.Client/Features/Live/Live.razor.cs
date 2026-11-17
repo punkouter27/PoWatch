@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using PoWatch.Client.Services;
 using PoWatch.Shared.Models;
+using PoWatch.Shared.Validation;
 
 namespace PoWatch.Client.Features.Live;
 
@@ -14,7 +15,8 @@ public sealed partial class Live
 
     private Guid _sessionId;
     private StatsQuery _query = StatsQuery.For("session");
-    private string? _question;
+    private readonly AskRequestDto _ask = new();
+    private static readonly AskRequestValidator AskRules = new();
     private string? _answer;
     private bool _asking;
     private bool _askOpen;
@@ -98,10 +100,10 @@ public sealed partial class Live
 
     private async Task AskAsync()
     {
-        if (_asking || string.IsNullOrWhiteSpace(_question)) return;
+        if (_asking || !AskRules.Validate(_ask).IsValid) return;
         _asking = true;
         _answer = "Thinking…";
-        _answer = await Api.AskAsync(_question.Trim())
+        _answer = await Api.AskAsync(_ask.Question.Trim())
             ?? "No answer: this server has no AI model configured, or it did not reply.";
         _asking = false;
     }
@@ -109,7 +111,7 @@ public sealed partial class Live
     private Task ExplainAsync()
     {
         _askOpen = true;
-        _question = "Which of today's numbers are unusual against my usual day, and what stands out about today?";
+        _ask.Question = "Which of today's numbers are unusual against my usual day, and what stands out about today?";
         return AskAsync();
     }
 

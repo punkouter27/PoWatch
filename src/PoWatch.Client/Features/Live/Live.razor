@@ -33,11 +33,13 @@
         }
 
         <div class="stats-ask-row" id="session-ask" hidden="@(!_askOpen)">
-            <form class="stats-ask" @onsubmit="AskAsync" @onsubmit:preventDefault data-test="stats-ask">
+            <RadzenTemplateForm TItem="AskRequestDto" Data="@_ask" Submit="@(_ => AskAsync())" class="stats-ask" data-test="stats-ask">
+                <FluentValidationValidator TModel="AskRequestDto" Validator="@AskRules" />
                 <label class="visually-hidden" for="ask">Ask a question about your stats</label>
-                <input id="ask" @bind="_question" @bind:event="oninput" maxlength="300" autocomplete="off" placeholder="Ask: when is it usually busiest?" disabled="@_asking" />
-                <button type="submit" class="term-button" disabled="@(_asking || string.IsNullOrWhiteSpace(_question))">@(_asking ? "…" : "Ask")</button>
-            </form>
+                <RadzenTextBox id="ask" Name="Question" @bind-Value="_ask.Question" Immediate="true" MaxLength="@AskRequestDto.MaxLength" autocomplete="off" Placeholder="Ask: when is it usually busiest?" Disabled="@_asking" />
+                <button type="submit" class="term-button" disabled="@_asking">@(_asking ? "…" : "Ask")</button>
+                <ValidationMessage For="@(() => _ask.Question)" class="form-error" />
+            </RadzenTemplateForm>
         </div>
         @if (_error is not null)
         {

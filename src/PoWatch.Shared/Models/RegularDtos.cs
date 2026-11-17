@@ -31,8 +31,10 @@ public sealed class ObserveRegularResultDto
 
 public sealed class RenameRegularRequestDto
 {
+    public const int MaxLength = 40;
+
     /// <summary>The new name; blank makes the regular anonymous again ("Person 3").</summary>
-    public string? Name { get; init; }
+    public string? Name { get; set; }
 }
 
 public sealed class MergeRegularsRequestDto

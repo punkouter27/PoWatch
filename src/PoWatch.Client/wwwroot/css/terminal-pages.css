@@ -260,3 +260,22 @@
 .term-panel-body--flush > .sys-line { margin: 0; padding: 8px 10px; border-bottom: 1px solid var(--term-line); }
 .sys-raw { margin-top: 8px; }
 .sys-raw pre { margin: 4px 0 0; padding: 8px; max-height: 200px; overflow: auto; white-space: pre-wrap; font-size: 11px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: 2px; }
+
+/* Diagnostics (/diag signed out, and System's Connections tab): DiagStatus + DiagRow. */
+.diag-page { box-sizing: border-box; max-width: 960px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
+.diag { display: grid; gap: 10px; min-width: 0; }
+.diag-meta { color: var(--term-muted); font-family: var(--term-mono); }
+.diag-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.diag-card { display: grid; gap: 8px; min-width: 0; }
+.diag-card--wide { grid-column: 1 / -1; }
+.diag-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--term-line); }
+.diag-row:first-of-type { border-top: 0; }
+.diag-name { font-weight: 600; }
+.diag-purpose, .diag-latency { grid-column: 1 / -1; font-size: 12px; color: var(--term-muted); overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+    .diag-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Inline form errors (FluentValidationValidator + ValidationMessage) sit on their own line under the field. */
+.form-error { flex-basis: 100%; color: var(--term-red); font: 12px var(--term-mono); margin: 2px 0 0; }
+.stats-ask, .rule-form { flex-wrap: wrap; }

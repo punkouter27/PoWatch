@@ -6,4 +6,9 @@
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Form rules shared by the browser (inline errors) and the API (ValidationProblem): Validation/. -->
+    <PackageReference Include="FluentValidation" />
+  </ItemGroup>
+
 </Project>
