@@ -24,6 +24,7 @@ internal static class FeatureRoutes
     {
         app.MapAuthEndpoints();
         app.MapDiagnosticsFeature();
+        app.MapDiagFeature();
         app.MapSessionsFeature();
         app.MapIngestFeature();
         app.MapSnapshotsFeature();

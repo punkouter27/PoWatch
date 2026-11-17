@@ -36,8 +36,15 @@ dotnet run --project src/PoWatch.Api/PoWatch.Api.csproj
 
 Test suites have maximums of 100 unit, 50 integration, 25 API E2E, and 25 UI E2E cases.
 After building, run `./scripts/check-test-caps.ps1` and `./scripts/check-hygiene.ps1`.
-For isolated UI verification, install Chromium using the suite's generated `playwright.ps1`, set
-`E2E_LOCAL=1`, and run `dotnet test tests/PoWatch.E2EUI -c Release`.
+For UI verification, install Chromium using the suite's generated `playwright.ps1` and run
+`dotnet test tests/PoWatch.E2EUI -c Release`. The suite hosts the app itself in-process against an Azurite
+Testcontainer (Docker must be running); set `E2E_BASE_URL` to drive an already-running instance instead.
+It never skips silently: without Docker or Chromium every test fails with the reason.
+
+Diagnostics: `/diag` is a plain-language status page (API, storage, services, version, environment) that
+works signed out, fed by the anonymous `GET /api/diag`; `/system` shows the same status plus the server
+runtime, inference engine and pipeline for a signed-in user. `GET /api/diag/boot` is the boot-readiness
+probe (it was `/diag/boot` until 2026-11-17). On a phone, the sections are a bottom tab bar (`BottomNav`).
 
 Session and day recaps (and their PDFs) are written by a template by default. Set
 `AiProvider:Provider` to `AzureOpenAi` to let a model rewrite the

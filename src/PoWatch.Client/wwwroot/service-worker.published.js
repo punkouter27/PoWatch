@@ -4,7 +4,7 @@
 self.importScripts('./service-worker-assets.js');
 self.addEventListener('install', event => event.waitUntil(onInstall()));
 self.addEventListener('activate', event => event.waitUntil(onActivate()));
-const serverRoutes = /^\/(api|auth|hubs|health|diag|scalar|openapi|signin-oidc|signout-callback-oidc)(\/|$)/;
+const serverRoutes = /^\/(api|auth|hubs|health|scalar|openapi|signin-oidc|signout-callback-oidc)(\/|$)/;
 // Only the app's own files are answered here. Everything else is left to the browser untouched: a
 // request relayed through this worker loses its page (so Chrome cannot ask for local-network access
 // when captions call Ollama on localhost), and its failure surfaced here as an uncaught rejection.

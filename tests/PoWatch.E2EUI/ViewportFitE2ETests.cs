@@ -33,7 +33,6 @@ public sealed class ViewportFitE2ETests
     [Fact]
     public async Task Live_Journal_and_System_bodies_fit_within_every_viewport()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         foreach (var (name, open) in new (string, Func<IPage, Task>)[]
         {
             // Live opens on sign-in; its panels need a beat longer to settle than the other pages.
@@ -55,27 +54,48 @@ public sealed class ViewportFitE2ETests
     }
 
     [Fact]
-    public async Task On_a_phone_every_section_key_is_visible_without_widening_the_page()
+    public async Task On_a_phone_the_bottom_bar_reaches_every_section_and_diag_works_signed_out()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser, "/");
         await page.SetViewportSizeAsync(360, 640);
         await page.WaitForTimeoutAsync(500);
 
-        // Every section stays reachable from the key bar, and the page itself never scrolls sideways.
-        await Assertions.Expect(page.GetByTestId("nav-journal")).ToBeInViewportAsync();
+        // Every primary section stays reachable from the bottom tab bar (the header's key bar hides at this
+        // width), and the page itself never scrolls sideways.
+        await Assertions.Expect(page.GetByTestId("nav-journal")).ToBeHiddenAsync();
+        foreach (var section in new[] { "live", "journal", "system" })
+            await Assertions.Expect(page.GetByTestId($"bottom-nav-{section}")).ToBeInViewportAsync();
         var pageOverflow = await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth > window.innerWidth + 1");
         Assert.False(pageOverflow, "The page scrolls horizontally on a 360 px phone.");
 
-        await page.GetByTestId("nav-journal").ClickAsync();
+        await page.GetByTestId("bottom-nav-journal").ClickAsync();
         await page.ExpectSectionAsync("JOURNAL");
+        await Assertions.Expect(page.GetByTestId("bottom-nav-journal")).ToHaveClassAsync(new System.Text.RegularExpressions.Regex(@"\bactive\b"));
+        await page.GetByTestId("bottom-nav-system").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("health-overall")).ToBeVisibleAsync(new() { Timeout = 30_000 });
         await page.AssertNoBlazorErrorAsync();
+
+        // /diag answers signed out too, on a phone and a laptop, with no console errors.
+        await using var anonymous = await _fixture.Browser.NewPageAsync(new() { IgnoreHTTPSErrors = true });
+        var errors = new List<string>();
+        anonymous.Console += (_, m) => { if (m.Type == "error") errors.Add(m.Text); };
+        anonymous.PageError += (_, e) => errors.Add(e);
+        foreach (var (width, height) in new[] { (390, 844), (1366, 900) })
+        {
+            await anonymous.SetViewportSizeAsync(width, height);
+            await anonymous.GotoAsync($"{PlaywrightFixture.BaseUrl}/diag");
+            await Assertions.Expect(anonymous.GetByTestId("diag-banner")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+            await Assertions.Expect(anonymous.GetByTestId("health-check")).Not.ToHaveCountAsync(0);
+            Assert.EndsWith("/diag", anonymous.Url, StringComparison.Ordinal);
+            Assert.False(await anonymous.EvaluateAsync<bool>("() => document.documentElement.scrollWidth > window.innerWidth + 1"),
+                $"/diag scrolls sideways at {width} px");
+        }
+        Assert.Empty(errors);
     }
 
     [Fact]
     public async Task A_camera_session_samples_the_fake_camera_and_survives_navigation()
     {
-        if (PlaywrightFixture.BaseUrl is null) return;
         await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser);
         await page.SetViewportSizeAsync(1440, 900);
 

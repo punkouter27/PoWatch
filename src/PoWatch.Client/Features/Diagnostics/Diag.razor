@@ -1,0 +1,15 @@
+@page "/diag"
+@attribute [AllowAnonymous]
+@layout PoWatch.Client.Layout.BareLayout
+
+<PageTitle>Diagnostics · PoWatch</PageTitle>
+
+@* Reachable signed out on purpose: "is it me or the server?" must be answerable before sign-in works.
+   Signed-in operators get the same status plus the engine and pipeline on /system. *@
+<div class="diag-page" data-test="diag-page">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="8px">
+        <RadzenText TextStyle="TextStyle.H5" TagName="TagName.H1">PoWatch diagnostics</RadzenText>
+        <RadzenLink Path="" Text="Back to PoWatch" />
+    </RadzenStack>
+    <DiagStatus />
+</div>

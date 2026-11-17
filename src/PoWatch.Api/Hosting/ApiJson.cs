@@ -9,7 +9,7 @@ internal sealed record HealthReportBody(string Status, double DurationMs, IReadO
 
 internal sealed record HealthCheckBody(string Name, string Status, string? Description, double DurationMs);
 
-/// <summary>The <c>/diag/boot</c> body: per-dependency readiness, no secrets.</summary>
+/// <summary>The <c>/api/diag/boot</c> body: per-dependency readiness, no secrets.</summary>
 internal sealed record DiagBootBody(string Environment, bool Ready, DiagBootStorage Storage, DiagBootKeyVault KeyVault);
 
 internal sealed record DiagBootStorage(bool Configured, bool Ready, string? Detail);

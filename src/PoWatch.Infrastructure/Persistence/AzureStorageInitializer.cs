@@ -59,8 +59,8 @@ public sealed class AzureStorageInitializer(
 
             // In Development, fail fast and loud so a local misconfiguration (Azurite not running) is
             // impossible to miss. In hosted environments, DO NOT abort host construction: a throw here
-            // surfaces on App Service as an opaque HTTP 500.30 that also takes /health, /diag/boot and the log
-            // endpoints offline. Instead let the app boot and report NOT-READY (see /health + /diag/boot),
+            // surfaces on App Service as an opaque HTTP 500.30 that also takes /health, /api/diag/boot and the log
+            // endpoints offline. Instead let the app boot and report NOT-READY (see /health + /api/diag/boot),
             // so operators get an actionable signal and can fix RBAC without a black-box crash loop.
             if (environment.IsDevelopment())
                 throw;

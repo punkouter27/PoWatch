@@ -188,12 +188,15 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
         ReadAsync(ct => httpClient.GetAsync("api/diagnostics/status", ct), Json.DiagnosticsSnapshotDto, cancellationToken);
 
     /// <summary>
-    /// Reads the same <c>/health</c> document the App Service probe and the CI deploy gate read.
-    /// HttpClient does not send an <c>Accept: text/html</c> header, so this always resolves to the
-    /// JSON endpoint rather than the Health page's own HTML shell.
+    /// The anonymous <c>/api/diag</c> status behind the /diag page, with how long the server took to answer.
+    /// Null report (and the elapsed time) when the server could not be reached or answered with an error.
     /// </summary>
-    public Task<HealthReportDto?> GetHealthAsync(CancellationToken cancellationToken = default) =>
-        ReadAsync(ct => httpClient.GetAsync("health", ct), Json.HealthReportDto, cancellationToken);
+    public async Task<(DiagReportDto? Report, TimeSpan Elapsed)> GetDiagAsync(CancellationToken cancellationToken = default)
+    {
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        var report = await ReadAsync(ct => httpClient.GetAsync("api/diag", ct), Json.DiagReportDto, cancellationToken);
+        return (report, System.Diagnostics.Stopwatch.GetElapsedTime(started));
+    }
 
     public Task<AuthConfigDto?> GetAuthConfigAsync(CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.GetAsync("auth/config", ct), Json.AuthConfigDto, cancellationToken);

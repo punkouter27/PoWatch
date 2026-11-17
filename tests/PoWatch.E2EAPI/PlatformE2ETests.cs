@@ -17,13 +17,14 @@ public sealed class PlatformE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
     // identified by their metadata, not listed.
     private static readonly string[] AnonymousAllowList =
     [
+        "/api/diag",
+        "/api/diag/boot",
         "/api/{**rest}",
         "/auth/config",
         "/auth/login/fake",
         "/auth/login/microsoft",
         "/auth/logout",
         "/auth/me",
-        "/diag/boot",
         "/health",
         "/health/live",
         "/s/{token}",
@@ -67,7 +68,7 @@ public sealed class PlatformE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
         Assert.True(health.Headers.Contains("X-Commit"));
         Assert.Contains("status", await health.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
 
-        var boot = await _client.GetAsync("/diag/boot");
+        var boot = await _client.GetAsync("/api/diag/boot");
         Assert.Equal(HttpStatusCode.OK, boot.StatusCode);
         Assert.False(string.IsNullOrWhiteSpace(await boot.Content.ReadAsStringAsync()));
 

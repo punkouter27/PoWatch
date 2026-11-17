@@ -5,7 +5,7 @@ namespace PoWatch.Infrastructure;
 ///
 /// Why: converting a dependency failure (e.g. Storage RBAC gap) into a host-construction throw produces an
 /// opaque <strong>HTTP 500.30</strong> that hides the cause and takes the whole app — including /health,
-/// /diag/boot, and log endpoints — offline. Instead, in non-Development environments we let the app boot and
+/// /api/diag/boot, and log endpoints — offline. Instead, in non-Development environments we let the app boot and
 /// record the failure here, so orchestrators see a live process that reports <em>unhealthy/not-ready</em>
 /// with an actionable detail string, rather than a black-box crash loop.
 /// </summary>

@@ -7,8 +7,9 @@ namespace PoWatch.Api.Hosting;
 
 /// <summary>
 /// The two public operations probes: <c>/health</c> (each registered check, the deploy gate) and
-/// <c>/diag/boot</c> (per-dependency readiness without secrets). The signed-in runtime snapshot is
-/// <c>/api/diagnostics/status</c>.
+/// <c>/api/diag/boot</c> (per-dependency readiness without secrets; under /api since 2026-11-17 so a browser
+/// at /diag gets the diagnostics page). The friendly status is <c>/api/diag</c> (DiagEndpoints) and the
+/// signed-in runtime snapshot is <c>/api/diagnostics/status</c>.
 /// </summary>
 internal static class HealthEndpoints
 {
@@ -39,7 +40,7 @@ internal static class HealthEndpoints
 
         // The fastest answer to "why did the app not come ready?". Anonymous and dependency-light, so it
         // stays reachable when a downstream dependency is degraded; 503 until storage is ready.
-        app.MapGet("/diag/boot", (StartupReadiness readiness, IOptions<FeatureFlagsOptions> flags, IConfiguration config, IWebHostEnvironment env) =>
+        app.MapGet("/api/diag/boot", (StartupReadiness readiness, IOptions<FeatureFlagsOptions> flags, IConfiguration config, IWebHostEnvironment env) =>
             {
                 var payload = new DiagBootBody(
                     env.EnvironmentName,

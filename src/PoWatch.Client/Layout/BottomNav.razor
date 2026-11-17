@@ -1,0 +1,17 @@
+@* Phone navigation (under 720 px), the same pattern as the other Po apps' BottomNav: the primary sections
+   as a thumb-reachable tab bar along the bottom, icon over label. The header's key bar (NavBar) hides at that
+   width; on wider screens this bar is hidden instead. Settings stays on the header's gear. *@
+<nav class="bottom-nav" aria-label="Sections" data-test="bottom-nav">
+    <NavLink class="bottom-nav-link" href="" Match="NavLinkMatch.All" data-test="bottom-nav-live">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 7l-7 5 7 5V7z" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
+        <span>Live</span>
+    </NavLink>
+    <NavLink class="bottom-nav-link" href="journal" data-test="bottom-nav-journal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14z" /><path d="M6.5 17A2.5 2.5 0 0 0 4 19.5 2.5 2.5 0 0 0 6.5 22H20v-5" /></svg>
+        <span>Journal</span>
+    </NavLink>
+    <NavLink class="bottom-nav-link" href="system" data-test="bottom-nav-system">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
+        <span>System</span>
+    </NavLink>
+</nav>

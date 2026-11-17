@@ -1,0 +1,20 @@
+@* One store or service on the diagnostics page: name, status badge, what it is for, latency, last checked. *@
+<div class="diag-row" data-test="health-check">
+    <span class="diag-name">@Entry.Name</span>
+    <RadzenBadge BadgeStyle="@Badge(Entry.Status)" Text="@Entry.Status" />
+    <span class="diag-purpose">@Entry.Purpose@(Entry.Problem is { } problem ? $" Problem: {problem}." : null)</span>
+    <span class="diag-latency">
+        @(Entry.LatencyMs is { } ms ? $"{ms.ToString("0", CultureInfo.CurrentCulture)} ms · " : null)checked @Entry.LastCheckedUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture)
+    </span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DiagEntryDto Entry { get; set; } = default!;
+
+    private static BadgeStyle Badge(string status) => status switch
+    {
+        "Healthy" => BadgeStyle.Success,
+        "Degraded" => BadgeStyle.Warning,
+        _ => BadgeStyle.Danger
+    };
+}

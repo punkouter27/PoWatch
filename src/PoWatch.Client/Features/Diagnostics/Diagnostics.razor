@@ -1,4 +1,5 @@
 @page "/system"
+@* /system is the signed-in operator view; its Connections tab is the /diag status (DiagStatus). *@
 @using PoWatch.Shared.Models
 @inject PoWatchApiClient ApiClient
 @inject IJSRuntime JS
@@ -14,39 +15,11 @@
     <Tabs>
         <RadzenTabsItem Text="Connections">
 <div class="term-grid">
-    <TerminalPanel Title="Connections" Class="term-span-2" Test="health-overall" Flush="true">
+    <TerminalPanel Title="Connections" Class="term-span-2">
         <Aside>@(_lastRefreshed is { } at ? $"UPDATED {at:HH:mm:ss} · EVERY {RefreshInterval.TotalSeconds:0} S" : "CHECKING…")</Aside>
         <ChildContent>
-            @if (_healthError is not null)
-            {
-                @* A failed fetch is itself a health signal — the API is unreachable from this browser. *@
-                <p class="sys-line" role="status"><span class="term-dot term-dot--bad"></span><b>Cannot reach the server</b> @_healthError</p>
-            }
-            else if (_health is null)
-            {
-                <p class="sys-line" role="status"><span class="term-dot"></span><b>Checking…</b></p>
-            }
-            else
-            {
-                <p class="sys-line" role="status">
-                    <span class="term-dot @Dot(_health.Status)"></span>
-                    <b data-test="health-overall-status">@FriendlyStatus(_health.Status)</b>
-                    <span class="term-stat-hint">@_health.Checks.Count checked in @_health.DurationMs.ToString("0", CultureInfo.CurrentCulture) ms</span>
-                </p>
-                <table class="term-table term-table--cards" data-test="health-check-list">
-                    <tbody>
-                        @foreach (var check in _health.Checks)
-                        {
-                            <tr data-test="health-check">
-                                <td data-label="Service"><span class="term-dot @Dot(check.Status)"></span> @FriendlyName(check.Name)</td>
-                                <td data-label="Detail" class="term-stat-hint">@check.Description</td>
-                                <td data-label="State">@FriendlyCheckStatus(check.Status)</td>
-                                <td data-label="Time" class="r">@check.DurationMs.ToString("0", CultureInfo.CurrentCulture) ms</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
+            @* The same plain-language status /diag shows signed out; this page adds the runtime, engine and pipeline. *@
+            <DiagStatus @ref="_status" />
         </ChildContent>
     </TerminalPanel>
 
@@ -81,7 +54,7 @@
         {
             var state = inf.LoadState switch { "ready" => "ok", "loading" => "warn", "error" => "bad", _ => "idle" };
             <p class="sys-line">
-                <span class="term-dot term-dot--@state"></span>
+                <span class="term-dot @(state switch { "ok" => "term-dot--ok", "warn" => "term-dot--warn", "bad" => "term-dot--bad", _ => null })"></span>
                 <b>@(state switch { "ok" => "MODEL LOADED", "warn" => "LOADING…", "bad" => "LOAD FAILED", _ => "NOT STARTED" })</b>
                 @if (state == "ok")
                 {
@@ -127,8 +100,7 @@
 </RadzenTabs>
 
 @code {
-    private HealthReportDto? _health;
-    private string? _healthError;
+    private DiagStatus? _status;
     private DiagnosticsSnapshotDto? _snapshot;
     private bool _snapshotLoaded;
     private int _tab;
@@ -174,7 +146,7 @@
 
     private async Task LoadAsync()
     {
-        var health = LoadHealthAsync();
+        var health = _status?.RefreshAsync() ?? Task.CompletedTask;
         var snapshot = LoadSnapshotAsync();
         await Task.WhenAll(health, snapshot);
         // Paint the server numbers now — the inference query below can take seconds to time out
@@ -185,12 +157,6 @@
         await RefreshInferenceDiagnosticsAsync();
     }
 
-    private async Task LoadHealthAsync()
-    {
-        _health = await ApiClient.GetHealthAsync();
-        _healthError = _health is null ? "The server did not answer with a health document." : null;
-    }
-
     private async Task LoadSnapshotAsync()
     {
         _snapshot = await ApiClient.GetDiagnosticsAsync();
@@ -199,39 +165,6 @@
 
     private async Task RefreshInferenceDiagnosticsAsync() =>
         _inference = await JS.TryInvokeAsync<InferenceDiagnosticsDto>("powatchInference.getInferenceDiagnostics");
-
-    private static string Dot(string status) => status switch
-    {
-        "Healthy" => "term-dot--ok",
-        "Degraded" => "term-dot--warn",
-        _ => "term-dot--bad"
-    };
-
-    // Overall verdict — reads as a summary of the whole system.
-    private static string FriendlyStatus(string status) => status switch
-    {
-        "Healthy" => "All systems connected",
-        "Degraded" => "Running with reduced service",
-        "Unhealthy" => "Connection problem",
-        _ => status
-    };
-
-    // Per-connection verdict — the summary wording would be wrong on a single row.
-    private static string FriendlyCheckStatus(string status) => status switch
-    {
-        "Healthy" => "Connected",
-        "Degraded" => "Degraded",
-        "Unhealthy" => "Not connected",
-        _ => status
-    };
-
-    // Check names are registration keys ("azure-storage"); nobody should have to decode them.
-    private static string FriendlyName(string name) => name switch
-    {
-        "azure-storage" => "Storage (stats & snapshots)",
-        "azure-key-vault" => "Key Vault (secrets)",
-        _ => name
-    };
 
     // The raw values are dev-only labels (Azurite is a local emulator; masked endpoint / key rows
     // are for screenshots). Translate them into plain words without losing the status signal.

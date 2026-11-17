@@ -25,8 +25,12 @@ Tests, narrowest first (integration and E2E start Azurite through Testcontainers
 dotnet test tests/PoWatch.Unit --filter "FullyQualifiedName~RollupTests"
 dotnet test tests/PoWatch.Integration
 dotnet test tests/PoWatch.E2EAPI
-$env:E2E_LOCAL = '1'; dotnet test tests/PoWatch.E2EUI -c Release   # needs Playwright's Chromium (CI installs it)
+dotnet test tests/PoWatch.E2EUI -c Release              # needs Playwright's Chromium (CI installs it) and Docker
 ```
+
+E2EUI hosts the app in-process against an Azurite Testcontainer by default (since 2026-11-17; it used to
+pass every test silently unless `E2E_LOCAL=1`). `E2E_BASE_URL` points it at a running instance instead. It
+never skips: no Docker or no Chromium fails every test with the reason.
 
 ## Where the pipeline lives
 
@@ -57,6 +61,18 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   (`AskService`, four tools) and `AssistService` (watch-rule drafts, the digest headline).
 
 ## Things that are easy to get wrong
+
+- **Diagnostics routes (2026-11-17).** `/diag` is the client page (anonymous, `BareLayout`, Radzen) fed by the
+  anonymous `GET /api/diag`, which rewrites every health check in its own words: never return a check's
+  description or exception message there (exception type at most; `EndpointContractTests` checks). The
+  boot probe is `GET /api/diag/boot`; nothing on the server may map `/diag` itself. `/system` is the
+  signed-in view and embeds the same `DiagStatus` component.
+- **Forms (2026-11-17).** Every form that submits data uses `RadzenTemplateForm` + `FluentValidationValidator`
+  (`Client/Layout`) with a validator from `PoWatch.Shared/Validation`; the endpoint runs the same validator
+  through `ApiParsing.Invalid` and answers `Results.ValidationProblem`. Errors show inline
+  (`ValidationMessage`), and the submit button is disabled while saving.
+- **Phone navigation.** Under 720 px the header's key bar (`NavBar`, `nav-*` test ids) hides and
+  `Layout/BottomNav.razor` (`bottom-nav-*`) carries Live, Journal and System.
 
 - **Sign-in in Development.** Every page needs a session. Open `/auth/login/fake?returnUrl=/` to become
   the guest; `POST /api/dev/seed?days=60&tz=America/New_York` fills it with history (once per user).

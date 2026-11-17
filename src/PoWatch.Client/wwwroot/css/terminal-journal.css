@@ -177,20 +177,14 @@
     pointer-events: none;
 }
 
+/* Above the phone's bottom tab bar (BottomNav) inside the app shell; --term-bottom-bar is 0 on wider screens. */
+.term-shell .build-stamp--corner { bottom: calc(6px + var(--term-bottom-bar)); }
+
 @media print { .build-stamp--corner { display: none; } }
 
 .try-demo { margin-left: 8px; min-height: 28px; }
 
 .history-skel-sessions { height: 96px !important; }
-
-/* Tables with data-label cells turn into one small card per row on a phone: no sideways scrolling. */
-@media (max-width: 719.98px) {
-    .term-table--cards thead { display: none; }
-    .term-table--cards tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; padding: 8px 10px; border-bottom: 1px solid var(--term-line); }
-    .term-table--cards td { padding: 0; border: 0; text-align: left; }
-    .term-table--cards td.r { text-align: left; }
-    .term-table--cards td[data-label]::before { content: attr(data-label); display: block; color: var(--term-dim); font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; }
-}
 
 /* ── Shared small parts ───────────────────────────────────────────────── */
 

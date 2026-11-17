@@ -1,0 +1,127 @@
+@inject PoWatchApiClient ApiClient
+
+@* The plain-language status shared by /diag (anyone, signed in or not) and the Connections tab of /system:
+   an overall banner, the API, each store and each external service, with the version and environment.
+   Reads the anonymous /api/diag document, which never carries secrets or internals. *@
+<div class="diag" data-test="health-overall">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="8px">
+        <RadzenText TextStyle="TextStyle.Caption" class="diag-meta" data-test="diag-meta">
+            @if (_report is { } meta)
+            {
+                @($"Version {meta.Version} · {meta.Environment} · checked {meta.CheckedAtUtc.ToLocalTime():HH:mm:ss}")
+            }
+            else
+            {
+                @("Version and environment appear once the server answers.")
+            }
+        </RadzenText>
+        <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh")" Icon="refresh" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small"
+                      Disabled="@_refreshing" IsBusy="@_refreshing" BusyText="Refreshing…" Click="RefreshAsync" data-test="diag-refresh" />
+    </RadzenStack>
+
+    @if (_report is null && _refreshing)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px" role="status" data-test="diag-loading">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+            <RadzenText TextStyle="TextStyle.Body2">Checking the server…</RadzenText>
+        </RadzenStack>
+    }
+    else if (_report is null)
+    {
+        @* A failed fetch is itself the answer: the API is unreachable from this browser. *@
+        <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" AllowClose="false" Title="Cannot reach the server" data-test="diag-error">
+            The PoWatch server did not answer (after @Ms(_elapsed)). Check your connection, then press Refresh.
+        </RadzenAlert>
+    }
+    else
+    {
+        <RadzenAlert AlertStyle="@Style(_report.Status)" Variant="Variant.Flat" AllowClose="false" Title="@Headline(_report.Status)" data-test="diag-banner">
+            <span data-test="health-overall-status">@Summary(_report)</span>
+        </RadzenAlert>
+
+        <div class="diag-grid" data-test="health-check-list">
+            <RadzenCard class="diag-card" Variant="Variant.Outlined">
+                <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H2">API</RadzenText>
+                <div class="diag-row" data-test="health-check">
+                    <span class="diag-name">PoWatch server</span>
+                    <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="Reachable" />
+                    <span class="diag-purpose">Serves this app, your stats and sign-in.</span>
+                    <span class="diag-latency">@Ms(_elapsed) round trip</span>
+                </div>
+            </RadzenCard>
+
+            <RadzenCard class="diag-card" Variant="Variant.Outlined">
+                <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H2">Database / storage</RadzenText>
+                @if (_report.Stores.Count == 0)
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" class="diag-purpose">No stores are checked on this server.</RadzenText>
+                }
+                @foreach (var store in _report.Stores)
+                {
+                    <DiagRow Entry="@store" />
+                }
+            </RadzenCard>
+
+            <RadzenCard class="diag-card diag-card--wide" Variant="Variant.Outlined">
+                <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H2">Services</RadzenText>
+                @if (_report.Services.Count == 0)
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" class="diag-purpose">No external services are checked on this server.</RadzenText>
+                }
+                @foreach (var service in _report.Services)
+                {
+                    <DiagRow Entry="@service" />
+                }
+            </RadzenCard>
+        </div>
+    }
+</div>
+
+@code {
+    private DiagReportDto? _report;
+    private TimeSpan _elapsed;
+    private bool _refreshing;
+
+    /// <summary>Raised after each refresh, so a host page (System) can refresh its own panels with it.</summary>
+    [Parameter] public EventCallback Refreshed { get; set; }
+
+    protected override Task OnInitializedAsync() => RefreshAsync();
+
+    public async Task RefreshAsync()
+    {
+        if (_refreshing) return;
+        _refreshing = true;
+        try
+        {
+            (_report, _elapsed) = await ApiClient.GetDiagAsync();
+        }
+        finally
+        {
+            _refreshing = false;
+        }
+        await Refreshed.InvokeAsync();
+    }
+
+    internal static string Ms(TimeSpan elapsed) => $"{elapsed.TotalMilliseconds.ToString("0", CultureInfo.CurrentCulture)} ms";
+
+    private static AlertStyle Style(string status) => status switch
+    {
+        "Healthy" => AlertStyle.Success,
+        "Degraded" => AlertStyle.Warning,
+        _ => AlertStyle.Danger
+    };
+
+    private static string Headline(string status) => status switch
+    {
+        "Healthy" => "All systems working",
+        "Degraded" => "Working, with reduced service",
+        _ => "Something is not working"
+    };
+
+    private static string Summary(DiagReportDto report)
+    {
+        var all = report.Stores.Concat(report.Services).ToList();
+        var ok = all.Count(e => e.Status == "Healthy");
+        return $"{ok} of {all.Count} checks healthy.";
+    }
+}

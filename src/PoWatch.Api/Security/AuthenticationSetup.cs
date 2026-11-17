@@ -128,7 +128,7 @@ public static class AuthenticationSetup
         // It is deliberately COOKIE-ONLY — it must NOT include the always-succeeds FakeAuth scheme, or the
         // authorization middleware would auto-authenticate a guest on AllowAnonymous endpoints (e.g. /auth/me),
         // making them report an authenticated session before the user has actually signed in. The public surface
-        // (SPA host page, static assets, /health, /diag/boot, /auth sign-in routes) opts out via .AllowAnonymous().
+        // (SPA host page, static assets, /health, /api/diag/boot, /auth sign-in routes) opts out via .AllowAnonymous().
         var fallbackPolicy = new AuthorizationPolicyBuilder(CookieScheme)
             .RequireAuthenticatedUser()
             .Build();
