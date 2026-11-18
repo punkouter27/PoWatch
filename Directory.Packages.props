@@ -20,6 +20,7 @@
   <!-- ASP.NET Core / .NET extensions -->
   <ItemGroup>
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.15" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.15" />
     <!-- Pin transitive Microsoft.OpenApi (GHSA-v5pm-xwqc-g5wc, high-severity DoS in 2.0.0); AspNetCore.OpenApi 10.0.13 needs >= 2.12.2 -->

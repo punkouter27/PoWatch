@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
@@ -24,12 +25,31 @@ public static class AuthenticationSetup
         var clientId = azureAd["ClientId"];
         var oidcConfigured = !string.IsNullOrWhiteSpace(clientId);
 
+        const string authenticateSelector = "PoWatch.Authenticate";
         var auth = builder.Services.AddAuthentication(options =>
         {
             options.DefaultScheme = CookieScheme;
+            options.DefaultAuthenticateScheme = authenticateSelector;
             options.DefaultChallengeScheme = oidcConfigured
                 ? OpenIdConnectDefaults.AuthenticationScheme
                 : CookieScheme;
+        });
+
+        auth.AddPolicyScheme(authenticateSelector, "Cookie, Bearer, or explicit X-Fake-User", options =>
+        {
+            options.ForwardDefaultSelector = ctx =>
+            {
+                if (oidcConfigured
+                    && (ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                        || (ctx.Request.Path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase)
+                            && !string.IsNullOrEmpty(ctx.Request.Query["access_token"]))))
+                    return JwtBearerDefaults.AuthenticationScheme;
+
+                if (flags.DeveloperBypassAuth && ctx.Request.Headers.ContainsKey("X-Fake-User"))
+                    return FakeAuthHandler.SchemeName;
+
+                return CookieScheme;
+            };
         });
 
         auth.AddCookie(CookieScheme, options =>
@@ -98,6 +118,39 @@ public static class AuthenticationSetup
                     return Task.CompletedTask;
                 };
             });
+
+            auth.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                options.Authority = $"{instance}/{tenant}/v2.0";
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateAudience = true,
+                    ValidAudiences = [clientId!, $"api://{clientId}"],
+                    ValidateIssuer = true,
+                    IssuerValidator = (issuer, _, _) =>
+                    {
+                        if (allowedTenants.Length == 0)
+                            return issuer;
+                        var tenantId = Uri.TryCreate(issuer, UriKind.Absolute, out var uri) && uri.Segments.Length > 1
+                            ? uri.Segments[1].Trim('/')
+                            : null;
+                        if (allowedTenants.Contains(tenantId, StringComparer.OrdinalIgnoreCase))
+                            return issuer;
+                        throw new SecurityTokenInvalidIssuerException(
+                            $"Issuer '{issuer}' is not in the configured AllowedTenants list.");
+                    }
+                };
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = ctx =>
+                    {
+                        var token = ctx.Request.Query["access_token"];
+                        if (!string.IsNullOrEmpty(token) && ctx.HttpContext.Request.Path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase))
+                            ctx.Token = token;
+                        return Task.CompletedTask;
+                    }
+                };
+            });
         }
 
         // Dev/Test guest bypass: header-based FakeAuth scheme for automated tests (never in Production).
@@ -110,26 +163,23 @@ public static class AuthenticationSetup
         }
 
         // Default authorization policy used by every .RequireAuthorization() call. In Production it
-        // accepts only the BFF cookie (OIDC signs into the cookie). When the dev/test guest bypass is
-        // enabled, the FakeAuth scheme is added so the header/guest handler can satisfy the policy —
-        // this keeps the integration suite green without weakening the Production surface.
-        // The default policy backs every explicit .RequireAuthorization() call. In Dev/Test it also accepts
-        // the FakeAuth guest scheme so automated suites skip interactive login.
-        var defaultSchemes = flags.DeveloperBypassAuth
-            ? new[] { CookieScheme, FakeAuthHandler.SchemeName }
-            : new[] { CookieScheme };
+        // accepts the BFF cookie and, when Entra OIDC is configured, Bearer JWT tokens from mobile clients.
+        var defaultSchemes = new List<string> { CookieScheme };
+        if (oidcConfigured)
+            defaultSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
+        if (flags.DeveloperBypassAuth)
+            defaultSchemes.Add(FakeAuthHandler.SchemeName);
 
-        var defaultPolicy = new AuthorizationPolicyBuilder(defaultSchemes)
+        var defaultPolicy = new AuthorizationPolicyBuilder([.. defaultSchemes])
             .RequireAuthenticatedUser()
             .Build();
 
-        // Rule 4.5 default-deny: the fallback policy protects any endpoint that never opts into a policy, so a
-        // future slice that forgets .RequireAuthorization() is secure-by-default rather than silently anonymous.
-        // It is deliberately COOKIE-ONLY — it must NOT include the always-succeeds FakeAuth scheme, or the
-        // authorization middleware would auto-authenticate a guest on AllowAnonymous endpoints (e.g. /auth/me),
-        // making them report an authenticated session before the user has actually signed in. The public surface
-        // (SPA host page, static assets, /health, /api/diag/boot, /auth sign-in routes) opts out via .AllowAnonymous().
-        var fallbackPolicy = new AuthorizationPolicyBuilder(CookieScheme)
+        // Rule 4.5 default-deny: fallback accepts the BFF cookie and Bearer JWT (when Entra is configured);
+        // it must NOT include the always-succeeds FakeAuth scheme.
+        var fallbackSchemes = oidcConfigured
+            ? new[] { CookieScheme, JwtBearerDefaults.AuthenticationScheme }
+            : new[] { CookieScheme };
+        var fallbackPolicy = new AuthorizationPolicyBuilder(fallbackSchemes)
             .RequireAuthenticatedUser()
             .Build();
 
