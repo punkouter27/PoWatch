@@ -240,9 +240,11 @@
         readColors();
         state.observer = new ResizeObserver(() => drawTrack());
         state.observer.observe(track);
-        // The header's theme toggle changes the palette under an open replay.
-        state.theme = new MutationObserver(() => { readColors(); drawTrack(); });
-        state.theme.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        // The device's light/dark flip changes the palette under an open replay.
+        const scheme = window.matchMedia('(prefers-color-scheme: dark)');
+        const onScheme = () => { readColors(); drawTrack(); };
+        scheme.addEventListener('change', onScheme);
+        state.theme = { disconnect: () => scheme.removeEventListener('change', onScheme) };
         seek(state.at, false);
 
         // The day's captions become searchable by meaning from the palette (in the background, once).

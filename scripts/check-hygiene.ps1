@@ -51,12 +51,13 @@ if ($hits) {
 }
 
 # Every class a stylesheet defines must be used somewhere in markup, code or scripts. Radzen's own
-# classes (rz-*) are styled, never written by us, so they are exempt.
+# classes (rz-*) are styled, never written by us, so they are exempt, and so is po-tokens.css: the Po
+# web standard's file, identical in every Po app, defines the whole estate's shell classes.
 $clientRoot = Join-Path $sourceRoot 'PoWatch.Client'
 $usage = (Get-ChildItem -LiteralPath $clientRoot -File -Recurse |
     Where-Object { $_.Extension -in '.razor', '.cs', '.js', '.html' -and $_.FullName -notmatch '[\\/](bin|obj|lib)[\\/]' } |
     ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
-$orphans = foreach ($sheet in Get-ChildItem -LiteralPath $clientRoot -Filter '*.css' -File -Recurse | Where-Object { $_.FullName -notmatch '[\\/](bin|obj|lib)[\\/]' }) {
+$orphans = foreach ($sheet in Get-ChildItem -LiteralPath $clientRoot -Filter '*.css' -File -Recurse | Where-Object { $_.FullName -notmatch '[\\/](bin|obj|lib)[\\/]' -and $_.Name -ne 'po-tokens.css' }) {
     $css = [regex]::Replace((Get-Content -LiteralPath $sheet.FullName -Raw), '/\*[\s\S]*?\*/|url\([^)]*\)', '')
     foreach ($class in [regex]::Matches($css, '\.([A-Za-z][\w-]*)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique) {
         if ($class -like 'rz-*') { continue }

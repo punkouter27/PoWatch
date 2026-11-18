@@ -1,5 +1,5 @@
 /* Keep effects composited and separate from the camera's measured pixels. */
-.term-panel, :root:not([data-theme="light"]) .term-panel {
+.term-panel {
     background: linear-gradient(145deg, color-mix(in srgb, var(--term-accent) 5%, var(--term-surface)), var(--term-surface) 65%);
     box-shadow: inset 0 1px color-mix(in srgb, var(--term-text) 7%, transparent), 0 4px 16px #00000014;
 }
@@ -35,7 +35,7 @@ details > :not(summary) { animation: fx-pop 180ms var(--spring-soft); }
 .live-box {
     transition: left 240ms var(--spring-soft), top 240ms var(--spring-soft), width 240ms var(--spring-soft), height 240ms var(--spring-soft);
     animation: fx-pop 180ms ease-out;
-    box-shadow: 0 0 8px #8fdcff20;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--term-accent) 12%, transparent);
 }
 .live-box[data-uncertain="true"] { border-style: dashed; box-shadow: none; }
 .live-box > span { transition: background-color 160ms; }

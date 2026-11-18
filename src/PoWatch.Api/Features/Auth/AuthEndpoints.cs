@@ -67,10 +67,13 @@ internal static class AuthEndpoints
 
             // The default guest keeps the same id as a headerless FakeAuth request, so data seeded by
             // automated suites and the signed-in browser belong to one user.
+            var id = string.IsNullOrWhiteSpace(user) ? "guest" : user;
             var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, string.IsNullOrWhiteSpace(user) ? "guest" : user),
-                new(ClaimTypes.Name, string.IsNullOrWhiteSpace(user) ? "Guest" : user)
+                new(ClaimTypes.NameIdentifier, id),
+                new(ClaimTypes.Name, string.IsNullOrWhiteSpace(user) ? "Guest" : user),
+                // The Po shell header shows the signed-in email; a guest gets a local, undeliverable one.
+                new(ClaimTypes.Email, $"{id.ToLowerInvariant()}@guest.localhost")
             };
             if (!string.IsNullOrWhiteSpace(roles))
                 claims.AddRange(roles

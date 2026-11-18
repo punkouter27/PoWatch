@@ -1,77 +1,91 @@
+@using System.Security.Claims
 @implements IDisposable
 @inject SensingSession Sensing
 @inject DrawerState Drawers
 @inject NavigationManager Navigation
 
-@* Recording controls belong to Live's toolbar, or this header on other pages.
-   Section keys become the phone's bottom tab bar. *@
-<header class="term-header" data-test="term-header">
-    <a class="term-brand" href="" aria-label="PoWatch home">
-        PoWatch
-    </a>
+@* The Po shell header (Po web standard): the app name upper-left, the signed-in email (or Sign in)
+   and the settings gear upper-right, on every page signed in and out. Bare (BareLayout: sign-in and
+   /diag) keeps just those; the full header adds the section keys, the caption model, recording
+   controls, the bell and the outbox chips. Section keys become the phone's bottom tab bar. *@
+<header class="term-header po-header" data-test="term-header">
+    <a class="term-brand po-header__title" href="/" data-test="header-title">PoWatch</a>
 
-    <NavBar />
-
-    @* The camera's caption model, one pick away on every page (the same dropdown as Live's AI strip). *@
-    <label class="term-nav-model" title="Which model describes what the camera sees">
-        <span aria-hidden="true">SEES</span>
-        <CaptionModelSelect Test="nav-caption-model" />
-    </label>
-
-    @if (ShowStart)
+    @if (!Bare)
     {
-        <SessionControls />
+        <NavBar />
     }
 
-    <Tray />
+    <span class="term-header-spacer" aria-hidden="true"></span>
 
-    @* Unsent batches are invisible everywhere else: this is the one place that says the outbox has
-       work, with a way to push it now (a chip, not a dialog — the queued ticks are not an error). *@
-    @if (Sensing.Live.PendingBatches > 0)
+    @if (!Bare)
     {
-        <button type="button" class="term-outbox" @onclick="FlushOutboxAsync" data-test="outbox-chip"
-                title="10-second batches waiting in this browser's outbox. They resend automatically; press to send now.">
-            @Sensing.Live.PendingBatches queued
-        </button>
+        @* The camera's caption model, one pick away on every page (the same dropdown as Live's AI strip). *@
+        <label class="term-nav-model" title="Which model describes what the camera sees">
+            <span aria-hidden="true">SEES</span>
+            <CaptionModelSelect Test="nav-caption-model" />
+        </label>
+
+        @if (ShowStart)
+        {
+            <SessionControls />
+        }
+
+        <Tray />
+
+        @* Unsent batches are invisible everywhere else: this is the one place that says the outbox has
+           work, with a way to push it now (a chip, not a dialog — the queued ticks are not an error). *@
+        @if (Sensing.Live.PendingBatches > 0)
+        {
+            <button type="button" class="term-outbox" @onclick="FlushOutboxAsync" data-test="outbox-chip"
+                    title="10-second batches waiting in this browser's outbox. They resend automatically; press to send now.">
+                @Sensing.Live.PendingBatches queued
+            </button>
+        }
+        @if (Sensing.Live.LostTicks > 0)
+        {
+            <span class="term-outbox term-outbox--lost" data-test="outbox-lost"
+                  title="Ticks dropped because the outbox was full (storage full or a very long offline stretch)">
+                @Sensing.Live.LostTicks lost
+            </span>
+        }
     }
-    @if (Sensing.Live.LostTicks > 0)
+
+    <div class="po-header__actions">
+        <AuthorizeView>
+            <Authorized Context="auth">
+                <span class="po-header__email" title="@EmailOf(auth.User)" data-test="header-email">@EmailOf(auth.User)</span>
+            </Authorized>
+            <NotAuthorized>
+                <a class="term-button term-button--primary" href="login" data-test="header-sign-in">Sign in</a>
+            </NotAuthorized>
+        </AuthorizeView>
+        @* Settings (recording, people, alerts, advanced, sign out) is the /settings page; the bell's
+           "watch rules" and "name everyone" links still open it in the drawer below. *@
+        <a class="po-header__settings" href="/settings" aria-label="Settings" title="Settings" data-test="settings-menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </a>
+    </div>
+
+    @if (!Bare)
     {
-        <span class="term-outbox term-outbox--lost" data-test="outbox-lost"
-              title="Ticks dropped because the outbox was full (storage full or a very long offline stretch)">
-            @Sensing.Live.LostTicks lost
-        </span>
+        @* Inside the header so it hangs from its bottom edge (terminal-shell.css), like the bell's drawer. *@
+        <Drawer Title="Settings" Open="@Drawers.IsOpen(DrawerState.Settings)" OnClose="Drawers.Close" Test="settings-drawer">
+            <SettingsPanel Section="@Drawers.Section" />
+        </Drawer>
     }
-
-    @* Dark or light, remembered in this browser (theme-controller.js); one press, no trip into Settings. *@
-    <button type="button" class="term-icon-button" onclick="powatchTheme.toggle()"
-            aria-label="Switch between dark and light" title="Dark / light" data-test="theme-toggle">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" /></svg>
-    </button>
-
-    <button type="button" class="term-icon-button @(SettingsOpen ? "term-icon-button--on" : null)" @onclick="ToggleSettings"
-            aria-label="Settings" aria-expanded="@(SettingsOpen ? "true" : "false")" title="Settings: recording, people, alerts and sharing, advanced" data-test="settings-menu">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
-    </button>
-
-    @* Inside the header so it hangs from its bottom edge (terminal-shell.css), like the bell's drawer. *@
-    <Drawer Title="Settings" Open="@Drawers.IsOpen(DrawerState.Settings)" OnClose="Drawers.Close" Test="settings-drawer">
-        <SettingsPanel Section="@Drawers.Section" />
-    </Drawer>
 </header>
 
 @code {
     /// <summary>False on Live, where the camera panel has its own start controls.</summary>
     [Parameter] public bool ShowStart { get; set; } = true;
 
-    /// <summary>On the Settings page itself the gear just shows where you are.</summary>
-    private bool OnSettingsPage => Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith("settings", StringComparison.OrdinalIgnoreCase);
+    /// <summary>BareLayout (sign-in, /diag): title, email or Sign in, and the gear only.</summary>
+    [Parameter] public bool Bare { get; set; }
 
-    private bool SettingsOpen => OnSettingsPage || Drawers.IsOpen(DrawerState.Settings);
-
-    private void ToggleSettings()
-    {
-        if (!OnSettingsPage) Drawers.Toggle(DrawerState.Settings);
-    }
+    /// <summary>The header shows the email, never a display name; the name is a last resort.</summary>
+    internal static string EmailOf(ClaimsPrincipal user) =>
+        user.FindFirst(ClaimTypes.Email)?.Value ?? user.FindFirst("preferred_username")?.Value ?? user.Identity?.Name ?? "Signed in";
 
     /// <summary>Send whatever is waiting instead of waiting for the next automatic pass.</summary>
     private Task FlushOutboxAsync() => Sensing.SendOutboxAsync();

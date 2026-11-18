@@ -1,6 +1,6 @@
 @inherits SettingsTab
 
-@* The theme itself is the header's sun/moon button; this resets every choice this browser remembers. *@
+@* Light or dark follows the device (there is no theme switch); this resets every choice this browser remembers. *@
 <TerminalPanel Title="This browser" Test="settings-preferences" Flush="true">
     <Aside>REMEMBERED HERE</Aside>
     <ChildContent>
@@ -9,7 +9,7 @@
                 <span>Commands and shortcuts</span><b>CTRL K</b>
             </button>
             <button class="term-menu-item" @onclick="ResetAsync" data-test="settings-reset">
-                <span>Reset to defaults <i>dark, low sound, captions, listening and posture on, a sitting nudge at 45 minutes; rules and account settings stay</i></span><b>↺</b>
+                <span>Reset to defaults <i>low sound, captions, listening and posture on, a sitting nudge at 45 minutes; rules and account settings stay</i></span><b>↺</b>
             </button>
         </div>
     </ChildContent>
@@ -19,7 +19,6 @@
     /// <summary>Back to the starting values for this browser's choices; watch rules and the account's settings are data, not choices, and stay.</summary>
     private async Task ResetAsync()
     {
-        if (await JS.TryInvokeAsync<string>("powatchTheme.get") == "light") await JS.TryInvokeAsync<string>("powatchTheme.toggle");
         // Sound cues sit under Recording; the level cycles off · low · mid · high.
         for (var i = 0; i < 4 && await JS.TryInvokeAsync<string>("powatchCues.level") is { } level && level != "low"; i++)
             await JS.TryInvokeAsync<string>("powatchCues.cycle");

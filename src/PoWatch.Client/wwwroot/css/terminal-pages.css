@@ -54,7 +54,7 @@
     font: 600 11px var(--term-mono);
     padding: 1px 4px;
     background: var(--term-cyan);
-    color: #041018;
+    color: var(--po-on-accent);
 }
 
 .live-box--person > span { background: var(--term-accent); color: var(--term-accent-ink); }
@@ -266,10 +266,11 @@
 .diag { display: grid; gap: 10px; min-width: 0; }
 .diag-meta { color: var(--term-muted); font-family: var(--term-mono); }
 .diag-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.diag-card { display: grid; gap: 8px; min-width: 0; }
+.diag-card { display: grid; gap: 8px; min-width: 0; align-content: start; }
+.diag-group-title { margin: 0; font-size: var(--fs-lg); }
 .diag-card--wide { grid-column: 1 / -1; }
-.diag-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--term-line); }
-.diag-row:first-of-type { border-top: 0; }
+/* Each row is a Po standard .po-diag__card (po-tokens.css draws the card and the .po-badge). */
+.diag-row { align-items: center; }
 .diag-name { font-weight: 600; }
 .diag-purpose, .diag-latency { grid-column: 1 / -1; font-size: 12px; color: var(--term-muted); overflow-wrap: anywhere; }
 @media (max-width: 640px) {

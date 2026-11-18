@@ -1,10 +1,17 @@
 @using System.Reflection
-@* The day this build was made (yyMMdd) so a bug report can say which build it came from: in the flow of
-   System, and pinned to the corner of every page with Corner (rendered once by MainLayout). *@
+@* The build, v{YYMMDD} (the HEAD commit's UTC date, stamped by PoBuildStamp in Directory.Build.props), so a
+   bug report can say which build it came from: in the flow of System, and pinned to the corner of every
+   page with Corner (rendered once per layout, as the Po standard's .po-version). *@
 @if (Stamp.Length > 0)
 {
-    <span class="build-stamp @(Corner ? "build-stamp--corner" : null)" title="Build date (yyMMdd)"
-          data-test="@(Corner ? "build-stamp-corner" : "build-stamp")">BUILD @Stamp</span>
+    if (Corner)
+    {
+        <span class="po-version" title="Build (vYYMMDD)" data-test="build-stamp-corner">v@(Stamp)</span>
+    }
+    else
+    {
+        <span class="build-stamp" title="Build (vYYMMDD)" data-test="build-stamp">v@(Stamp)</span>
+    }
 }
 
 @code {

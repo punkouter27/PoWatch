@@ -1,0 +1,73 @@
+/* terminal-tokens.css — the "Terminal" look's own tokens: the --term-* palette, type sizes, motion,
+   and the Radzen bridge. Colours and fonts alias the Po estate tokens in po-tokens.css (the Po web
+   standard, linked first and identical in every Po app), so PoWatch shares the one indigo accent,
+   Inter + Space Grotesk, and light/dark follow the device (there is no theme switch). The rules that
+   use these are in the terminal-*.css files. The canvases (heat-gl, replay) read --term-* through
+   getComputedStyle, which resolves the var() aliases to the plain hex in po-tokens.css. */
+
+:root {
+    --term-bg: var(--po-bg);
+    --term-surface: var(--po-surface);
+    --term-panel: var(--po-surface);
+    --term-panel-2: var(--po-surface-2);
+    --term-line: var(--po-border);
+    --term-text: var(--po-text);
+    --term-muted: var(--po-text-muted);
+    --term-dim: var(--po-text-muted);
+    --term-accent: var(--po-accent);
+    --term-accent-ink: var(--po-on-accent);
+    --term-amber: var(--po-warning);
+    --term-cyan: var(--po-info);
+    --term-green: var(--po-success);
+    --term-red: var(--po-danger);
+    --term-font: var(--po-font);
+    --term-mono: var(--po-font-mono);
+    /* Four sizes: labels and meta, body mono, prose, the brand. */
+    --fs-xs: 11px;
+    --fs-sm: 12px;
+    --fs-md: 14px;
+    --fs-lg: 16px;
+    --term-gap: 10px;
+    --term-radius: var(--po-radius-sm);
+    --term-glow: none;
+    /* The phone tab bar along the bottom (0 elsewhere): floating bars sit above it. */
+    --term-bottom-bar: 0px;
+    /* Spring easings (linear() samples of a damped spring): one with a visible bounce, one that only settles. */
+    --spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.077 22.5%, 1.121 26.5%, 1.137 30.6%, 1.129 34.7%, 1.021 49.6%, 0.99 57.9%, 0.995 73.6%, 1);
+    --spring-soft: linear(0, 0.06 4%, 0.42 13%, 0.75 23%, 0.92 33%, 1.0 44%, 1.02 55%, 1.01 70%, 1);
+    /* Floating surfaces (menus, the tray, the palette) are frosted so the camera and charts read through. */
+    --term-glass: color-mix(in srgb, var(--term-surface) 86%, transparent);
+    --term-glass-blur: blur(14px) saturate(1.5);
+
+    /* Radzen (po-tokens.css already points the accent, status and text colours at the estate). */
+    --rz-primary-lighter: color-mix(in srgb, var(--po-accent) 14%, transparent);
+    --rz-secondary: var(--term-cyan);
+    --rz-secondary-lighter: color-mix(in srgb, var(--po-info) 14%, transparent);
+    --rz-selectbar-selected-background-color: var(--term-accent);
+    --rz-selectbar-selected-color: var(--term-accent-ink);
+    --rz-selectbar-selected-border: 1px solid var(--term-accent);
+    --rz-text-secondary-color: var(--term-muted);
+    --rz-text-tertiary-color: var(--term-dim);
+    --rz-text-title-color: var(--term-text);
+    --rz-text-disabled-color: var(--term-dim);
+    --rz-panel-background-color: var(--term-surface);
+    --rz-card-background-color: var(--term-surface);
+    --rz-dialog-background-color: var(--term-surface);
+    --rz-input-background-color: var(--term-bg);
+    --rz-grid-background-color: transparent;
+    --rz-grid-header-background-color: var(--term-panel-2);
+    --rz-grid-header-color: var(--term-muted);
+    --rz-grid-cell-color: var(--term-text);
+    --rz-grid-stripe-background-color: color-mix(in srgb, var(--po-text) 3%, transparent);
+    --rz-border-color: var(--term-line);
+    --rz-link-color: var(--term-accent);
+    --rz-tabs-tab-color: var(--term-muted);
+    --rz-tabs-tab-selected-color: var(--term-accent);
+    --rz-chart-axis-color: var(--term-line);
+    --rz-chart-axis-label-color: var(--term-dim);
+    --rz-series-1: var(--term-accent);
+    --rz-series-2: var(--term-cyan);
+    --rz-series-3: var(--term-green);
+    --rz-series-4: #c084fc;
+    --rz-border-radius: var(--term-radius);
+}

@@ -222,8 +222,11 @@
     .term-nav-model { display: none; }
 }
 
-/* The status chip starts the right-hand group: Start/Stop, bell, gear. */
+/* The status chip starts the right-hand group: Start/Stop, bell, then the Po header actions (email or
+   Sign in, gear). The spacer takes the free width, so the right group sits right whatever is shown. */
 .term-header .term-status { margin-left: auto; }
+.term-header-spacer { flex: 1 1 auto; min-width: 0; }
+.term-header .po-header__actions { gap: 6px; }
 
 .term-button {
     min-height: 36px;
@@ -337,6 +340,8 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 .term-body {
     padding: var(--term-gap);
+    /* Room under the last row for the fixed v{YYMMDD} stamp (.po-version), so it never covers content. */
+    padding-bottom: calc(var(--term-gap) + 32px);
     min-width: 0;
     min-height: 0;
     overflow: auto;
@@ -423,8 +428,8 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     color: var(--term-muted);
 }
 
-.term-z--up { background: rgba(74, 222, 128, 0.15); color: var(--term-green); }
-.term-z--down { background: rgba(248, 113, 113, 0.15); color: var(--term-red); }
+.term-z--up { background: color-mix(in srgb, var(--term-green) 15%, transparent); color: var(--term-green); }
+.term-z--down { background: color-mix(in srgb, var(--term-red) 15%, transparent); color: var(--term-red); }
 .term-z--flag { outline: 1px solid currentColor; }
 
 .term-spark { display: block; width: 100%; height: 28px; }
@@ -471,8 +476,10 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 @media (max-width: 719.98px) {
     .term-grid { grid-template-columns: minmax(0, 1fr); }
     .term-span-2 { grid-column: span 1; }
-    :root { --term-bottom-bar: calc(57px + env(safe-area-inset-bottom)); }
+    :root { --term-bottom-bar: calc(57px + env(safe-area-inset-bottom)); --po-stamp-lift: 57px; }
     .term-status-detail { display: none; }
+    /* Room for the Po header's email and gear: the recording state stays on Live and in Start/Stop. */
+    .term-header .term-status { display: none; }
     .term-header { gap: 6px; padding: 4px 8px; }
     .term-status { margin-left: auto; }
     /* The section keys move to BottomNav, a tab bar along the bottom where a thumb reaches; the header stays one row. */
@@ -490,7 +497,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
         background: color-mix(in srgb, var(--term-surface) 94%, transparent);
         border-top: 1px solid var(--term-line);
     }
-    .term-body { padding: 8px 8px calc(8px + var(--term-bottom-bar)); }
+    .term-body { padding: 8px 8px calc(8px + var(--term-bottom-bar) + 32px); }
     .term-drawer { width: 100vw; }
 }
 

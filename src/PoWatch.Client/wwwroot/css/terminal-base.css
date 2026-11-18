@@ -7,11 +7,13 @@ html, body {
     font-family: var(--term-font);
 }
 
-/* Behind the glass, in the dark theme: a deep field with faint rings. */
-:root:not([data-theme="light"]) .term-shell {
-    background:
-        repeating-radial-gradient(circle at 25% 38%, rgba(130, 205, 255, 0.06) 0 1px, transparent 1px 84px),
-        radial-gradient(120% 90% at 25% 30%, #0b2540 0%, #030a12 62%) fixed;
+/* Behind the glass, when the device is dark: a deep field with faint rings, tinted by the accent. */
+@media (prefers-color-scheme: dark) {
+    :root .term-shell {
+        background:
+            repeating-radial-gradient(circle at 25% 38%, color-mix(in srgb, var(--po-accent) 6%, transparent) 0 1px, transparent 1px 84px),
+            radial-gradient(120% 90% at 25% 30%, color-mix(in srgb, var(--po-accent) 14%, var(--po-bg)) 0%, var(--po-bg) 62%) fixed;
+    }
 }
 
 a { color: var(--term-text); }

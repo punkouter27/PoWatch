@@ -1,10 +1,11 @@
-/* Sign-in card, on the same Terminal tokens as the rest of the app (po-tokens.css). */
+/* Sign-in card, on the same Terminal tokens as the rest of the app (terminal-tokens.css), in the page
+   body under the Po shell header (BareLayout). */
 
 .login-shell {
     display: grid;
-    place-items: center;
-    min-height: 100dvh;
-    padding: 16px;
+    place-items: start center;
+    min-height: calc(100dvh - var(--po-header-h));
+    padding: clamp(24px, 8vh, 80px) 16px 16px;
     box-sizing: border-box;
 }
 

@@ -159,28 +159,12 @@
 /* A panel whose content threw: a small retry box in place of its content, the rest of the page untouched. */
 .panel-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; color: var(--term-red); font: var(--fs-sm) var(--term-mono); }
 
-/* yyMMdd of this build, on System. */
+/* v{YYMMDD} of this build, in System's flow. The copy pinned to the corner of every page is the Po
+   standard's .po-version (po-tokens.css); --po-stamp-lift (terminal-shell.css) keeps it above the
+   phone's bottom tab bar. */
 .build-stamp { display: block; margin: 0 0 6px; text-align: right; color: var(--term-dim); font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; }
 
-/* The same stamp pinned to the viewport's bottom-right on every page: a bug report can always name the
-   build. Never takes a click and stays under drawers, alerts and toasts. */
-.build-stamp--corner {
-    position: fixed;
-    right: 10px;
-    bottom: 6px;
-    z-index: 30;
-    margin: 0;
-    padding: 2px 6px;
-    border-radius: 4px;
-    text-align: left;
-    background: color-mix(in srgb, var(--term-bg) 72%, transparent);
-    pointer-events: none;
-}
-
-/* Above the phone's bottom tab bar (BottomNav) inside the app shell; --term-bottom-bar is 0 on wider screens. */
-.term-shell .build-stamp--corner { bottom: calc(6px + var(--term-bottom-bar)); }
-
-@media print { .build-stamp--corner { display: none; } }
+@media print { .po-version { display: none; } }
 
 .try-demo { margin-left: 8px; min-height: 28px; }
 

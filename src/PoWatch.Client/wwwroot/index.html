@@ -6,22 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>PoWatch</title>
     <base href="/" />
-    <!-- Local-first (NET_RUN_10): Inter is self-hosted, not loaded from the Google CDN,
-         so typography (and the app's offline/vendored supply-chain rule) no longer
-         depends on an outbound network request. -->
-    <style>
-        @font-face {
-            font-family: "Inter";
-            font-style: normal;
-            font-weight: 100 900;
-            font-display: swap;
-            src: url("lib/fonts/inter-latin.woff2") format("woff2");
-            unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-        }
-    </style>
     <link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css" />
     <link rel="preload" as="font" type="font/woff2" crossorigin="anonymous" href="_content/Radzen.Blazor/fonts/MaterialSymbolsOutlined.woff2" />
+    <!-- Po web standard: the estate tokens, self-hosted Inter + Space Grotesk and the shell styles
+         (header, version stamp, /diag cards) come first among the app's sheets (after Radzen's base,
+         whose --rz-* variables they re-point); terminal-tokens.css aliases this app's own onto them. -->
     <link rel="stylesheet" href="css/po-tokens.css" />
+    <link rel="stylesheet" href="css/terminal-tokens.css" />
     <link rel="stylesheet" href="css/po-motion.css" />
     <link rel="stylesheet" href="css/terminal-base.css" />
     <link rel="stylesheet" href="css/terminal-shell.css" />
@@ -32,16 +23,16 @@
     <link rel="stylesheet" href="css/po-polish.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <meta name="theme-color" content="#030a12" />
+    <meta name="theme-color" content="#4f46e5" />
     <link href="PoWatch.Client.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
     <!-- All app-specific JS bridges load in <head> with defer: defer scripts execute after the
          document is parsed but before DOMContentLoaded, so the globals (`powatchInference`,
-         …) are attached before Blazor's first OnAfterRenderAsync interop call.
-         NOTE: theme-controller.js runs on this same deferred schedule — before Blazor boots and
-         paints the app shell, so there is no theme flash, but it is NOT synchronous. -->
+         …) are attached before Blazor's first OnAfterRenderAsync interop call. Light or dark
+         follows the device (prefers-color-scheme); there is no theme script. -->
     <script src="js/error-report.js"></script>
-    <script src="js/theme-controller.js" defer></script>
+    <!-- Tab with nothing focused opens the developer window (/po-dev.html). -->
+    <script src="js/po-devwindow.js"></script>
     <script src="js/idb.js" defer></script>
     <script src="js/local-day.js" defer></script>
     <script src="js/worker-rpc.js" defer></script>

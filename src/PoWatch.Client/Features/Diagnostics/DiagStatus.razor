@@ -8,7 +8,7 @@
         <RadzenText TextStyle="TextStyle.Caption" class="diag-meta" data-test="diag-meta">
             @if (_report is { } meta)
             {
-                @($"Version {meta.Version} · {meta.Environment} · checked {meta.CheckedAtUtc.ToLocalTime():HH:mm:ss}")
+                @($"Version {(meta.Version.Length == 6 ? "v" + meta.Version : meta.Version)} · {meta.Environment} · checked {meta.CheckedAtUtc.ToLocalTime():HH:mm:ss}")
             }
             else
             {
@@ -40,18 +40,18 @@
         </RadzenAlert>
 
         <div class="diag-grid" data-test="health-check-list">
-            <RadzenCard class="diag-card" Variant="Variant.Outlined">
-                <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H2">API</RadzenText>
-                <div class="diag-row" data-test="health-check">
+            <section class="po-diag__group diag-card" data-section="api">
+                <h2 class="diag-group-title">API</h2>
+                <div class="po-diag__card diag-row" data-test="health-check">
                     <span class="diag-name">PoWatch server</span>
-                    <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="Reachable" />
+                    <span class="po-badge po-badge--ok">Reachable</span>
                     <span class="diag-purpose">Serves this app, your stats and sign-in.</span>
                     <span class="diag-latency">@Ms(_elapsed) round trip</span>
                 </div>
-            </RadzenCard>
+            </section>
 
-            <RadzenCard class="diag-card" Variant="Variant.Outlined">
-                <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H2">Database / storage</RadzenText>
+            <section class="po-diag__group diag-card" data-section="data">
+                <h2 class="diag-group-title">Data</h2>
                 @if (_report.Stores.Count == 0)
                 {
                     <RadzenText TextStyle="TextStyle.Body2" class="diag-purpose">No stores are checked on this server.</RadzenText>
@@ -60,10 +60,10 @@
                 {
                     <DiagRow Entry="@store" />
                 }
-            </RadzenCard>
+            </section>
 
-            <RadzenCard class="diag-card diag-card--wide" Variant="Variant.Outlined">
-                <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H2">Services</RadzenText>
+            <section class="po-diag__group diag-card diag-card--wide" data-section="services">
+                <h2 class="diag-group-title">Services</h2>
                 @if (_report.Services.Count == 0)
                 {
                     <RadzenText TextStyle="TextStyle.Body2" class="diag-purpose">No external services are checked on this server.</RadzenText>
@@ -72,7 +72,7 @@
                 {
                     <DiagRow Entry="@service" />
                 }
-            </RadzenCard>
+            </section>
         </div>
     }
 </div>

@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @AGENTS.md
 
-`AGENTS.md` above holds the rules. `docs/README.md` is the project overview (pipeline, pages, API,
-storage); read it before changing behavior.
+`AGENTS.md` above holds the rules. [README.md](README.md) is the project overview (what the app is,
+how to run it, pages, diagnostics); this file maps the pipeline. Read both before changing behavior.
 
 ## Commands
 
@@ -13,7 +13,8 @@ storage); read it before changing behavior.
 docker compose up -d                                   # Azurite; storage is required, the app will not start without it
 dotnet build PoWatch.slnx                              # warnings are errors
 dotnet run --project src/PoWatch.Api --launch-profile http   # http://localhost (port 80); steps to the next free port if taken
-dotnet format PoWatch.slnx --verify-no-changes         # a CI gate (scripts/ci-checks.ps1 runs it)
+dotnet run --project src/PoWatch.Api --no-launch-profile --urls http://localhost:5560   # an explicit --urls / ASPNETCORE_URLS wins over port 80
+dotnet format PoWatch.slnx --verify-no-changes         # run before pushing (scripts/ci-checks.ps1 runs it; CI does not)
 ./scripts/check-hygiene.ps1                            # layout, naming, package versions, vocabulary, dead CSS + components
 ./scripts/check-test-caps.ps1                          # after a build: 100 unit / 50 integration / 25 API E2E / 25 UI E2E
 ./scripts/caption-eval.ps1 -Count 10                   # score the caption models (Node; first run downloads ~1 GB)
@@ -25,7 +26,7 @@ Tests, narrowest first (integration and E2E start Azurite through Testcontainers
 dotnet test tests/PoWatch.Unit --filter "FullyQualifiedName~RollupTests"
 dotnet test tests/PoWatch.Integration
 dotnet test tests/PoWatch.E2EAPI
-dotnet test tests/PoWatch.E2EUI -c Release              # needs Playwright's Chromium (CI installs it) and Docker
+dotnet test tests/PoWatch.E2EUI -c Release              # needs Playwright's Chromium and Docker (local only; CI runs no tests)
 ```
 
 E2EUI hosts the app in-process against an Azurite Testcontainer by default (since 2026-11-17; it used to
@@ -62,11 +63,27 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
 
 ## Things that are easy to get wrong
 
-- **Diagnostics routes (2026-11-17).** `/diag` is the client page (anonymous, `BareLayout`, Radzen) fed by the
+- **Po shell (Po web standard, 2026-11).** `Layout/TerminalHeader.razor` is the one header, `.po-header`,
+  on every page signed in and out (`BareLayout` renders it `Bare`: sign-in and `/diag`): `PoWatch`
+  upper-left, then the signed-in email (`.po-header__email`; the dev guest is `guest@guest.localhost`)
+  or Sign in, and the gear (`.po-header__settings`, a link to `/settings`) upper-right. The bell's links
+  still open Settings in the drawer. `css/po-tokens.css` is the Po standard's file (identical in every
+  Po app, never edited here): Inter + Space Grotesk self-hosted in `wwwroot/fonts/`, one indigo accent,
+  light/dark follow `prefers-color-scheme` (no theme switch, no `data-theme`; the canvases listen to the
+  media query). `css/terminal-tokens.css` aliases the `--term-*` palette onto `--po-*`. The build stamp
+  is one `<span class="po-version">v{YYMMDD}</span>` (the HEAD commit's UTC date, `PoBuildStamp` in
+  `Directory.Build.props`, read as `BuildDate` metadata by the client and `/api/diag`), lifted above
+  the phone bottom bar by `--po-stamp-lift`. Tab with nothing focused opens `/po-dev.html`
+  (`js/po-devwindow.js`).
+- **Diagnostics routes (2026-11-17).** `/diag` is the client page (anonymous, `BareLayout`) fed by the
   anonymous `GET /api/diag`, which rewrites every health check in its own words: never return a check's
   description or exception message there (exception type at most; `EndpointContractTests` checks). The
   boot probe is `GET /api/diag/boot`; nothing on the server may map `/diag` itself. `/system` is the
-  signed-in view and embeds the same `DiagStatus` component.
+  signed-in view and embeds the same `DiagStatus` component: groups API / Data / Services, one
+  `.po-diag__card` with a `.po-badge--ok|warn|bad` per dependency. (Live `/diag` answered the in-app
+  "Page not found" until 2026-11-18 because production was still on 663daec: the commit that added the
+  page, and the two after it, never deployed — the old workflow's E2EUI step failed on Hugging Face CDN
+  downloads, `net::ERR_NETWORK_CHANGED`, in `ViewportFitE2ETests`.)
 - **Forms (2026-11-17).** Every form that submits data uses `RadzenTemplateForm` + `FluentValidationValidator`
   (`Client/Layout`) with a validator from `PoWatch.Shared/Validation`; the endpoint runs the same validator
   through `ApiParsing.Invalid` and answers `Results.ValidationProblem`. Errors show inline
@@ -84,6 +101,8 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
 - **PDFs fail on Windows on ARM.** QuestPDF ships no `win-arm64` native library, so on an ARM machine every
   PDF endpoint answers 503 (the client shows why in a toast). Production is x64 and unaffected; to make PDFs
   locally, install the x64 .NET 10 SDK and run with `-r win-x64`.
-- **Pushing to `master` deploys to production.** `.github/workflows/deploy.yml` is the shared Po workflow (never
-  edit it here); PoWatch's extra build gates go in `scripts/ci-checks.ps1`. The deploy gate is `/health/live`
-  serving this commit, then `GET /health` returning 200; a failure rolls back.
+- **Pushing to `master` deploys to production.** `.github/workflows/deploy.yml` is the Po workflow: the same
+  file in every Po .NET web repo, each repo owning its copy. It builds, publishes, deploys and waits for
+  `/health/live` to serve the pushed commit; no tests, no format check, no infra job, no rollback, no PR
+  runs. Run the narrow tests, `dotnet format` and `scripts/ci-checks.ps1` (hygiene, test caps) locally
+  before pushing.

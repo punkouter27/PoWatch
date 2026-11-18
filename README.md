@@ -23,7 +23,8 @@ Run the setup script from the repository root:
 
 The script prepares local tooling, starts Azurite through Docker Compose, and walks the Azure login path when needed. The development API listens on `http://localhost` (port 80, set by `PoWatch:Ports:Http` in
 `appsettings.Development.json`) and `https://localhost:5001`. If either port is taken, the dev host
-steps to the next free one and logs it. Sign in at `/auth/login/fake?returnUrl=/` (guest, Dev/Test only).
+steps to the next free one and logs it; an explicit `--urls` (or `ASPNETCORE_URLS`) is used as given
+instead. Sign in at `/auth/login/fake?returnUrl=/` (guest, Dev/Test only).
 
 Useful commands:
 
@@ -41,7 +42,13 @@ For UI verification, install Chromium using the suite's generated `playwright.ps
 Testcontainer (Docker must be running); set `E2E_BASE_URL` to drive an already-running instance instead.
 It never skips silently: without Docker or Chromium every test fails with the reason.
 
-Diagnostics: `/diag` is a plain-language status page (API, storage, services, version, environment) that
+Shell (the Po web standard): one header on every page, signed in or out, with `PoWatch` upper-left and
+the signed-in email (or Sign in) and the settings gear upper-right; a `v{YYMMDD}` build stamp
+bottom-right (the HEAD commit's UTC date); Inter + Space Grotesk, one indigo accent, and light/dark
+that follow the device (`css/po-tokens.css`, identical in every Po app). Pressing Tab with nothing
+focused opens a developer window (`/po-dev.html`) with live server and page stats.
+
+Diagnostics: `/diag` is a plain-language status page (API, data, services, version, environment) that
 works signed out, fed by the anonymous `GET /api/diag`; `/system` shows the same status plus the server
 runtime, inference engine and pipeline for a signed-in user. `GET /api/diag/boot` is the boot-readiness
 probe (it was `/diag/boot` until 2026-11-17). On a phone, the sections are a bottom tab bar (`BottomNav`).
@@ -50,15 +57,16 @@ Session and day recaps (and their PDFs) are written by a template by default. Se
 `AiProvider:Provider` to `AzureOpenAi` to let a model rewrite the
 paragraph; the numbers always come from the stats, and the template takes over on any timeout, error
 or invented number.
-Pushing to `master` deploys to production through the shared Po workflow
-(`.github/workflows/deploy.yml`); PoWatch's extra gates live in `scripts/ci-checks.ps1`. Bicep reads
+Pushing to `master` deploys to production through the Po workflow (`.github/workflows/deploy.yml`, the
+same file in every Po repo): build, publish, deploy, then wait for `/health/live` to serve the pushed
+commit. It runs no tests; run them and `scripts/ci-checks.ps1` locally before pushing. Bicep reads
 resource names from `infra/deployment.json`; CI reads the app and resource group from the repo
 variables `AZURE_WEBAPP_NAME` and `AZURE_RESOURCE_GROUP`.
 
 ## Documentation
 
 - `AGENTS.md` — rules for any agent (or human) working in this repo.
-- `docs/README.md` — the project overview: pipeline, stat families, pages, API, storage.
+- `CLAUDE.md` — where the pipeline lives (sensing, ingest, reads, storage, API) and what is easy to get wrong.
 
 This `README.md` stays at the level of "what is this app and how do I run it".
 

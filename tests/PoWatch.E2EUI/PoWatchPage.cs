@@ -111,7 +111,7 @@ internal static class PoWatchPage
         Assertions.Expect(page.GetByTestId($"nav-{section.ToLowerInvariant()}"))
             .ToHaveClassAsync(new System.Text.RegularExpressions.Regex(@"\bactive\b"), new() { Timeout = timeoutMs });
 
-    /// <summary>Settings opens from the header's gear, on its Recording tab.</summary>
+    /// <summary>Settings opens from the header's gear (a link to the /settings page), on its Recording tab.</summary>
     public static Task OpenSettingsAsync(this IPage page) => page.GetByTestId("settings-menu").ClickAsync();
 
     /// <summary>Opens Settings at one of its tabs: recording, people or account (look, alerts, sharing and your data).</summary>

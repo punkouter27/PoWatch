@@ -16,9 +16,13 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("term-header")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("STANDBY");
-        await Assertions.Expect(page.GetByTestId("settings-menu")).ToBeVisibleAsync();
-        // The build date follows you to every page, so a bug report can name the build it came from.
-        await Assertions.Expect(page.GetByTestId("build-stamp-corner")).ToBeVisibleAsync();
+        // The Po shell: the name upper-left, the signed-in email and the gear (a link to /settings) upper-right.
+        await Assertions.Expect(page.GetByTestId("header-title")).ToHaveTextAsync("PoWatch");
+        await Assertions.Expect(page.GetByTestId("header-email")).ToContainTextAsync("@");
+        await Assertions.Expect(page.GetByTestId("settings-menu")).ToHaveAttributeAsync("href", "/settings");
+        // The build follows you to every page as v{YYMMDD}, so a bug report can name the build it came from.
+        await Assertions.Expect(page.Locator(".po-version")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.GetByTestId("build-stamp-corner")).ToHaveTextAsync(new System.Text.RegularExpressions.Regex(@"^v\d{6}$"));
 
         await page.GetByTestId("nav-journal").ClickAsync();
         await page.ExpectSectionAsync("JOURNAL");
@@ -104,11 +108,10 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("watch-rules")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("advanced-toggle")).ToHaveCountAsync(0);
 
-        // Reset puts every browser choice back, the header's theme included.
-        await page.GetByTestId("theme-toggle").ClickAsync();
+        // Reset puts every browser choice back (light or dark is the device's, not a choice).
         await page.GetByTestId("settings-tab-advanced").ClickAsync();
         await page.GetByTestId("settings-reset").ClickAsync();
-        await Assertions.Expect(page.Locator("html")).ToHaveAttributeAsync("data-theme", "dark");
+        await Assertions.Expect(page.Locator("html")).Not.ToHaveAttributeAsync("data-theme", new System.Text.RegularExpressions.Regex("."));
         await page.AssertNoBlazorErrorAsync();
     }
 
@@ -126,20 +129,19 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     }
 
     [Fact]
-    public async Task The_theme_toggle_switches_and_persists_across_a_reload()
+    public async Task Light_and_dark_follow_the_device_with_no_switch()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
+        const string Background = "() => getComputedStyle(document.body).backgroundColor";
 
-        var before = await page.GetAttributeAsync("html", "data-theme");
-        await page.GetByTestId("theme-toggle").ClickAsync();
-        await page.WaitForTimeoutAsync(400);
-        var after = await page.GetAttributeAsync("html", "data-theme");
+        await Assertions.Expect(page.GetByTestId("theme-toggle")).ToHaveCountAsync(0);
+        await page.EmulateMediaAsync(new() { ColorScheme = ColorScheme.Light });
+        var light = await page.EvaluateAsync<string>(Background);
+        await page.EmulateMediaAsync(new() { ColorScheme = ColorScheme.Dark });
+        var dark = await page.EvaluateAsync<string>(Background);
 
-        Assert.NotEqual(before, after);
-
-        await page.ReloadAsync();
-        await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync(new() { Timeout = 60000 });
-        Assert.Equal(after, await page.GetAttributeAsync("html", "data-theme"));
+        Assert.Equal("rgb(246, 247, 251)", light); // --po-bg, light
+        Assert.Equal("rgb(15, 17, 23)", dark);     // --po-bg, dark
     }
 
     [Fact]

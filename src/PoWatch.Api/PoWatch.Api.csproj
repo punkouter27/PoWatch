@@ -42,9 +42,4 @@
     <ProjectReference Include="..\PoWatch.Shared\PoWatch.Shared.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- The yyMMdd build date /api/diag reports as the app version (the client stamps its own the same way). -->
-    <AssemblyMetadata Include="BuildDate" Value="$([System.DateTime]::UtcNow.ToString('yyMMdd'))" />
-  </ItemGroup>
-
 </Project>

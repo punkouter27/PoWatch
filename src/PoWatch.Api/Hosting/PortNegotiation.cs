@@ -8,7 +8,8 @@ namespace PoWatch.Api.Hosting;
 /// <summary>
 /// Development only: binds <c>PoWatch:Ports:Http</c>/<c>Https</c> on both loopback families and, when a
 /// port is held by another app, steps to the next free one and says so. Everywhere else the host's
-/// own binding (ASPNETCORE_URLS, set by App Service) stands untouched.
+/// own binding (ASPNETCORE_URLS, set by App Service) stands untouched, and so does an explicit
+/// <c>--urls</c> / <c>ASPNETCORE_URLS</c> in Development: Kestrel's own Listen calls would override it.
 /// </summary>
 public static class PortNegotiation
 {
@@ -16,7 +17,9 @@ public static class PortNegotiation
 
     public static void Configure(KestrelServerOptions options, IConfiguration configuration, IHostEnvironment env, Serilog.ILogger logger)
     {
-        if (!env.IsDevelopment() || configuration.GetSection("Kestrel:Endpoints").Exists()) return;
+        if (!env.IsDevelopment()
+            || configuration.GetSection("Kestrel:Endpoints").Exists()
+            || !string.IsNullOrWhiteSpace(configuration["urls"])) return;
 
         var busy = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners()
             .Where(l => IPAddress.IsLoopback(l.Address)).Select(l => l.Port).ToHashSet();

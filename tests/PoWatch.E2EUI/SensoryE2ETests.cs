@@ -42,14 +42,12 @@ public sealed class SensoryE2ETests(PlaywrightFixture fixture)
         await page.WaitForTimeoutAsync(250);
         Assert.Equal(image, await page.Locator(".demo-flow:not([hidden])").EvaluateAsync<string>("c => c.toDataURL()"));
 
-        await page.GetByTestId("settings-menu").ClickAsync();
+        // The bell's drawer closes on Escape, every time (the gear is a link to /settings, not a drawer).
+        await page.GetByTestId("tray-toggle").ClickAsync();
         await Assertions.Expect(page.Locator(".term-drawer:not([hidden])")).ToBeVisibleAsync();
         await page.Keyboard.PressAsync("Escape");
-        await Assertions.Expect(page.Locator(".term-drawer")).ToBeHiddenAsync();
-        await page.GetByTestId("tray-toggle").ClickAsync();
-        await page.Keyboard.PressAsync("Escape");
         await Assertions.Expect(page.Locator(".term-drawer:not([hidden])")).ToHaveCountAsync(0);
-        await page.GetByTestId("settings-menu").ClickAsync();
+        await page.GetByTestId("tray-toggle").ClickAsync();
         await Assertions.Expect(page.Locator(".term-drawer:not([hidden])")).ToBeVisibleAsync();
         await page.Keyboard.PressAsync("Escape");
         await Assertions.Expect(page.Locator(".term-drawer:not([hidden])")).ToHaveCountAsync(0);

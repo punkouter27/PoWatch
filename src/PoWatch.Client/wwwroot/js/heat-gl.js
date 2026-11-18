@@ -71,6 +71,7 @@ void main() {
 
     const states = new WeakMap();
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    const darkScheme = matchMedia('(prefers-color-scheme: dark)');
 
     function compile(gl, type, source) {
         const shader = gl.createShader(type);
@@ -147,8 +148,8 @@ void main() {
         state.resize.observe(canvas);
         document.addEventListener('visibilitychange', state.resume);
         reduced.addEventListener('change', state.resume);
-        state.themeObserver = new MutationObserver(state.resume);
-        state.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        // Light or dark follows the device: redraw with the new palette when it flips.
+        darkScheme.addEventListener('change', state.resume);
         return state;
     }
 
@@ -159,7 +160,7 @@ void main() {
     }
 
     function colorsFor(canvas, state) {
-        const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const theme = darkScheme.matches ? 'dark' : 'light';
         if (state.colors && state.theme === theme) return state.colors;
         state.theme = theme;
         state.colors = {
@@ -212,7 +213,7 @@ void main() {
         if (state.onRestored) canvas.removeEventListener('webglcontextrestored', state.onRestored);
         state.observer?.disconnect();
         state.resize?.disconnect();
-        state.themeObserver?.disconnect();
+        darkScheme.removeEventListener('change', state.resume);
         document.removeEventListener('visibilitychange', state.resume);
         reduced.removeEventListener('change', state.resume);
         state.gl.getExtension('WEBGL_lose_context')?.loseContext();
