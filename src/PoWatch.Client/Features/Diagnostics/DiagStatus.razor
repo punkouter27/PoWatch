@@ -3,7 +3,7 @@
 @* The plain-language status shared by /diag (anyone, signed in or not) and the Connections tab of /system:
    an overall banner, the API, each store and each external service, with the version and environment.
    Reads the anonymous /api/diag document, which never carries secrets or internals. *@
-<div class="diag" data-test="health-overall">
+<div class="diag po-diag" data-test="health-overall">
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="8px">
         <RadzenText TextStyle="TextStyle.Caption" class="diag-meta" data-test="diag-meta">
             @if (_report is { } meta)
