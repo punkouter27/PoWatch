@@ -40,6 +40,9 @@
     <PackageVersion Include="Radzen.Blazor" Version="12.2.0" />
     <!-- Live stats push; pinned to the same 10.0.x line as the other ASP.NET Core packages. -->
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.15" />
+    <!-- Native MAUI mobile companion -->
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.110" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.15" />
   </ItemGroup>
   <!-- Azure Storage -->
   <ItemGroup>

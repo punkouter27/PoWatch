@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PoWatch.Mobile.Pages.SettingsPage"
+             Title="Settings">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="12">
+            <Label Text="Backend &amp; Secure Storage" FontSize="22" FontAttributes="Bold" />
+            <Label Text="API Base URL (adb reverse, 10.0.2.2, or Dev Tunnel)" FontAttributes="Bold" />
+            <Entry x:Name="BaseUrlEntry" Placeholder="https://localhost:5001" Keyboard="Url" />
+            <Label Text="Dev X-Fake-User (stored in SecureStorage)" FontAttributes="Bold" />
+            <Entry x:Name="FakeUserEntry" Placeholder="mobile-sentry" />
+            <Label Text="Entra Bearer Token (optional, stored in SecureStorage)" FontAttributes="Bold" />
+            <Entry x:Name="TokenEntry" Placeholder="Paste JWT or leave blank for dev fake auth" IsPassword="True" />
+            <HorizontalStackLayout Spacing="10">
+                <Button Text="Save" Clicked="OnSaveClicked" />
+                <Button Text="Test /auth/me" Clicked="OnTestConnectionClicked" />
+            </HorizontalStackLayout>
+            <Label x:Name="ResultLabel" FontSize="13" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
