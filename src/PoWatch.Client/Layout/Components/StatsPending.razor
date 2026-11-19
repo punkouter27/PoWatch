@@ -1,0 +1,16 @@
+@* What a stat panel holds before its numbers arrive: a shimmer while loading, else why it is empty.
+   The panel itself is always there, so Live's 3×3 keeps every cell in place while it loads. *@
+@if (Loading)
+{
+    <div class="term-skeleton stats-pending" aria-busy="true" role="status" aria-label="Loading"></div>
+}
+else
+{
+    <p class="term-empty">@Empty</p>
+}
+
+@code {
+    [Parameter] public bool Loading { get; set; }
+
+    [Parameter, EditorRequired] public string Empty { get; set; } = string.Empty;
+}

@@ -29,6 +29,15 @@ public sealed class TickDto
 
     public double SoundMax { get; init; }
 
+    /// <summary>Mean ambient light from the device's light sensor, in lux; null when there is no such sensor (every browser).</summary>
+    public double? AmbientLux { get; init; }
+
+    /// <summary>Mean air pressure from the device's barometer, in hPa; null when there is none.</summary>
+    public double? PressureHpa { get; init; }
+
+    /// <summary>Seconds of the tick during which the device itself was moving (accelerometer); 0 when still or unmeasured.</summary>
+    public double DeviceMovedSeconds { get; init; }
+
     /// <summary>
     /// Person-seconds spent sitting, standing and lying down in the tick (two people sitting for ten
     /// seconds is twenty), read from body keypoints in the browser; all zero when posture is off or unreadable.

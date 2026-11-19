@@ -1,2 +1,10 @@
 @* Standardized PoHeader entry point delegating to this app's shell header. *@
-<TerminalHeader />
+<TerminalHeader ShowStart="ShowStart" Bare="Bare" />
+
+@code {
+    /// <summary>Passed through to <see cref="TerminalHeader.ShowStart"/>.</summary>
+    [Parameter] public bool ShowStart { get; set; } = true;
+
+    /// <summary>Passed through to <see cref="TerminalHeader.Bare"/> (sign-in and /diag).</summary>
+    [Parameter] public bool Bare { get; set; }
+}

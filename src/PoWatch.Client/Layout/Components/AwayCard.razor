@@ -1,0 +1,79 @@
+@* "Session saved": one line on Live after a session ends (any Stop control, or Live noticing you came back
+   to the tab). It names the session, gives its headline numbers and links to the Journal, where the story,
+   replay and moments are; it sits in Live's own layout, so it never covers anything. Showing it also asks
+   for the story, which writes whatever is due after Stop: the last chapter and the story itself. *@
+@implements IDisposable
+@inject PoWatchApiClient Api
+@inject SensingSession Sensing
+@inject IJSRuntime JS
+
+@if (_shown is { } recap)
+{
+    var tag = SessionDto.Tag(recap.Session.Id);
+    <section class="away-bar" data-test="away-card" aria-label="Session saved">
+        <b class="away-title">@(recap.AwayFor is { } away ? $"While you were away · {DisplayText.Duration(away.TotalSeconds)}" : "Session saved")</b>
+        <span class="term-stat-hint">@tag · @DisplayText.Duration(recap.Session.DurationSeconds)</span>
+        @if (_presence is { } p)
+        {
+            <span class="away-facts">
+                <span data-test="away-visits"><b>@p.Visits.ToString(CultureInfo.InvariantCulture)</b> visits</span>
+                <span><b>@p.Occupancy.ToString("0%", CultureInfo.InvariantCulture)</b> of the session in frame</span>
+                <span>peak <b>@p.PeakConcurrency.ToString(CultureInfo.InvariantCulture)</b></span>
+            </span>
+        }
+        else
+        {
+            <span class="term-stat-hint">Adding it up…</span>
+        }
+        <span class="away-actions">
+            <a class="term-button term-button--primary" href="@StoryLinks.Session(recap.Session.Id)" title="Its story, replay, timeline and moments in the Journal" data-test="away-open">Open in Journal →</a>
+            <a class="term-button" href="@PoWatchApiClient.SessionRecapPdfUrl(recap.Session.Id)" download="PoWatch-session-@(tag[1..]).pdf"
+               onclick="return powatchFiles.save(event, this)" data-test="away-pdf">PDF ↓</a>
+            <button class="term-icon-button" @onclick="Close" aria-label="Dismiss" data-test="away-close">✕</button>
+        </span>
+    </section>
+}
+
+@code {
+    private SessionRecap? _shown;
+    private PresenceStatsDto? _presence;
+
+    protected override void OnInitialized()
+    {
+        Sensing.Changed += OnChanged;
+        _ = ShowAsync();
+    }
+
+    // Sensing fires several times a second; only a new (or dismissed) recap needs a render.
+    private void OnChanged()
+    {
+        if (!ReferenceEquals(Sensing.Recap, _shown)) InvokeAsync(ShowAsync);
+    }
+
+    private async Task ShowAsync()
+    {
+        if (ReferenceEquals(Sensing.Recap, _shown)) return;
+        _shown = Sensing.Recap;
+        _presence = null;
+        StateHasChanged();
+        if (_shown is not { } recap) return;
+
+        var presence = Api.GetPresenceAsync(StatsQuery.For("session", recap.Session.Id));
+        var story = Api.UpdateStoryAsync(recap.Session.Id);
+        await Task.WhenAll(presence, story);
+        if (!ReferenceEquals(recap, _shown)) return;
+        _presence = presence.Result;
+        StateHasChanged();
+    }
+
+    /// <summary>The last recap dismissed in this browser, so a reload does not bring it back.</summary>
+    public const string DismissedKey = "powatch:recap-dismissed";
+
+    private void Close()
+    {
+        if (_shown is { } recap) _ = JS.TryInvokeVoidAsync("localStorage.setItem", DismissedKey, recap.Session.Id.ToString());
+        Sensing.Recap = null;
+    }
+
+    public void Dispose() => Sensing.Changed -= OnChanged;
+}

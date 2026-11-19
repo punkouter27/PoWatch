@@ -1,0 +1,24 @@
+@using System.Reflection
+@* The build, v{YYMMDD} (the HEAD commit's UTC date, stamped by PoBuildStamp in Directory.Build.props), so a
+   bug report can say which build it came from: in the flow of System, and pinned to the corner of every
+   page with Corner (rendered once per layout, as the Po standard's .po-version). *@
+@if (Stamp.Length > 0)
+{
+    if (Corner)
+    {
+        <span class="po-version" title="Build (vYYMMDD)" data-test="build-stamp-corner">v@(Stamp)</span>
+    }
+    else
+    {
+        <span class="build-stamp" title="Build (vYYMMDD)" data-test="build-stamp">v@(Stamp)</span>
+    }
+}
+
+@code {
+    /// <summary>Pinned to the viewport's bottom-right instead of sitting in the page's own flow.</summary>
+    [Parameter] public bool Corner { get; set; }
+
+    private static readonly string Stamp = typeof(BuildStamp).Assembly
+        .GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(a => a.Key == "BuildDate")?.Value ?? string.Empty;
+}

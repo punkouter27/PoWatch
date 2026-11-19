@@ -159,6 +159,9 @@ public static class SceneNarrator
             if (loudest.SoundMax >= 0.6) sentences.Add($"The loudest moment was at {Clock(loudest.StartUtc, zone)}.");
         }
 
+        // Phone sensors (the native app only): measured light, the pressure trend, and the camera being moved.
+        sentences.AddRange(PhoneSensors(ordered, zone));
+
         // Posture: how the time in frame was mostly spent, once there is a minute of it to go on.
         if (Posture(ordered) is { } posture) sentences.Add(posture);
 
@@ -189,6 +192,43 @@ public static class SceneNarrator
         return lying > Math.Max(sitting, standing)
             ? "The time in frame was split between lying down and being up."
             : "The time in frame was split between sitting and being on foot.";
+    }
+
+    /// <summary>
+    /// Sentences from a phone's own sensors, each only when that sensor reported: the measured light
+    /// range, a pressure swing big enough to mean weather (2 hPa or more), and when the camera itself moved.
+    /// </summary>
+    internal static IEnumerable<string> PhoneSensors(IReadOnlyList<Tick> ordered, TimeZoneInfo zone)
+    {
+        var lit = ordered.Where(t => t.AmbientLux is not null).ToList();
+        if (lit.Count > 0)
+        {
+            var low = lit.Min(t => t.AmbientLux!.Value);
+            var high = lit.Max(t => t.AmbientLux!.Value);
+            yield return high - low < 20
+                ? $"The light meter read a steady {Lux(low)} lux."
+                : $"The light meter ranged from {Lux(low)} to {Lux(high)} lux.";
+        }
+
+        var pressed = ordered.Where(t => t.PressureHpa is not null).ToList();
+        if (pressed.Count >= 2)
+        {
+            // Opening vs closing readings, never overlapping (a short session has fewer than twelve).
+            var span = Math.Min(6, pressed.Count / 2);
+            var swing = pressed.TakeLast(span).Average(t => t.PressureHpa!.Value) - pressed.Take(span).Average(t => t.PressureHpa!.Value);
+            if (Math.Abs(swing) >= 2)
+                yield return swing < 0
+                    ? $"Air pressure fell {Math.Abs(swing):0} hPa — weather moving in."
+                    : $"Air pressure rose {swing:0} hPa — weather clearing.";
+        }
+
+        var moved = ordered.Where(t => t.DeviceMovedSeconds > 0).ToList();
+        if (moved.Count > 0)
+            yield return moved.Count == 1
+                ? $"The camera itself was moved at {Clock(moved[0].StartUtc, zone)}."
+                : $"The camera itself was moved {moved.Count} times, first at {Clock(moved[0].StartUtc, zone)}.";
+
+        static string Lux(double v) => v < 10 ? v.ToString("0.#", CultureInfo.InvariantCulture) : v.ToString("N0", CultureInfo.InvariantCulture);
     }
 
     private static (DateTimeOffset From, DateTimeOffset To)? LongestStill(IReadOnlyList<Tick> ordered)

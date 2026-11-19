@@ -24,6 +24,18 @@ internal static class RequestPipeline
                 return;
             }
 
+            // A body the binder could not read (malformed JSON, wrong shape) is the caller's mistake, not ours: answer with
+            // the binder's own status (400) rather than a 500, so a client knows retrying the same bytes will never help.
+            if (exception is BadHttpRequestException bad)
+            {
+                logger.LogWarning("Unreadable request. Path={Path} TraceId={TraceId} Reason={Reason}", context.Request.Path, context.TraceIdentifier, bad.Message);
+                context.Response.StatusCode = bad.StatusCode;
+                await context.Response.WriteAsJsonAsync(
+                    new ProblemDetails { Title = "The request could not be read.", Status = bad.StatusCode, Instance = context.Request.Path },
+                    ApiJson.Default.ProblemDetails);
+                return;
+            }
+
             logger.LogError(exception, "Unhandled exception. Path={Path} TraceId={TraceId}", context.Request.Path, context.TraceIdentifier);
 
             var details = new ProblemDetails

@@ -56,6 +56,14 @@ public sealed class TickBatcher(TimeProvider time)
     /// <summary>One loudness reading from the microphone (audio-layer.js), in [0, 1].</summary>
     public void AddSound(DateTimeOffset atUtc, double mean, double max) => WindowFor(atUtc).AddSound(mean, max);
 
+    /// <summary>
+    /// One reading from a phone's own sensors (the native app; browsers have none): ambient light in
+    /// lux and air pressure in hPa (null when the device lacks that sensor), and how many seconds since
+    /// the last reading the device itself was moving.
+    /// </summary>
+    public void AddEnvironment(DateTimeOffset atUtc, double? lux, double? pressureHpa, double movedSeconds) =>
+        WindowFor(atUtc).AddEnvironment(lux, pressureHpa, movedSeconds);
+
     /// <summary>Words the speech model heard.</summary>
     /// <param name="regularId">Who said it, when their voice (or being alone in frame) told.</param>
     public void AddSpeech(DateTimeOffset atUtc, string text, string? regularId = null) =>
@@ -134,6 +142,8 @@ public sealed class TickBatcher(TimeProvider time)
         private readonly int[] _postures = new int[Enum.GetValues<Posture>().Length];
         private int _pixelSamples, _gridSamples, _detectorSamples, _soundSamples;
         private double _motionSum, _motionMax, _lumaSum, _soundSum, _soundMax;
+        private int _luxSamples, _pressureSamples;
+        private double _luxSum, _pressureSum, _movedSeconds;
 
         public DateTimeOffset EndUtc => endUtc;
 
@@ -155,6 +165,23 @@ public sealed class TickBatcher(TimeProvider time)
             _soundSamples++;
             _soundSum += Math.Clamp(mean, 0, 1);
             _soundMax = Math.Max(_soundMax, Math.Clamp(max, 0, 1));
+        }
+
+        public void AddEnvironment(double? lux, double? pressureHpa, double movedSeconds)
+        {
+            if (lux is { } l && double.IsFinite(l) && l >= 0)
+            {
+                _luxSamples++;
+                _luxSum += l;
+            }
+
+            if (pressureHpa is { } p && double.IsFinite(p) && p > 0)
+            {
+                _pressureSamples++;
+                _pressureSum += p;
+            }
+
+            if (double.IsFinite(movedSeconds) && movedSeconds > 0) _movedSeconds += movedSeconds;
         }
 
         public void AddDetections(TrackerFrame frame)
@@ -194,6 +221,9 @@ public sealed class TickBatcher(TimeProvider time)
             LuminanceMean = _pixelSamples == 0 ? 0 : _lumaSum / _pixelSamples,
             SoundMean = _soundSamples == 0 ? 0 : _soundSum / _soundSamples,
             SoundMax = _soundMax,
+            AmbientLux = _luxSamples == 0 ? null : _luxSum / _luxSamples,
+            PressureHpa = _pressureSamples == 0 ? null : _pressureSum / _pressureSamples,
+            DeviceMovedSeconds = Math.Min(_movedSeconds, duration),
             Palette = _colors.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key).Take(5).Select(kv => kv.Key).ToList(),
             MotionGrid = _gridSamples == 0 ? [] : _gridSum.Select(v => v / _gridSamples).ToList(),
             PresenceGrid = _presence.Any(v => v > 0) ? [.. _presence] : [],

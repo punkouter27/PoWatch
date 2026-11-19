@@ -37,7 +37,17 @@ internal static class StatsEntityMapper
     public static string Ticks(DateTimeOffset instant) =>
         instant.UtcTicks.ToString("D19", CultureInfo.InvariantCulture);
 
-    public static TableEntity ToEntity(string partitionKey, Tick tick) => new(partitionKey, SensingKeys.TickRowKey(tick))
+    public static TableEntity ToEntity(string partitionKey, Tick tick)
+    {
+        var entity = TickRow(partitionKey, tick);
+        // Phone-sensor columns only when measured, so a browser tick's row is unchanged.
+        if (tick.AmbientLux is { } lux) entity["AmbientLux"] = lux;
+        if (tick.PressureHpa is { } hpa) entity["PressureHpa"] = hpa;
+        if (tick.DeviceMovedSeconds > 0) entity["DeviceMovedSeconds"] = tick.DeviceMovedSeconds;
+        return entity;
+    }
+
+    private static TableEntity TickRow(string partitionKey, Tick tick) => new(partitionKey, SensingKeys.TickRowKey(tick))
     {
         ["SessionId"] = tick.SessionId,
         ["StartUtc"] = tick.StartUtc,
@@ -71,6 +81,9 @@ internal static class StatsEntityMapper
         LuminanceMean = e.GetDouble("LuminanceMean") ?? 0,
         SoundMean = e.GetDouble("SoundMean") ?? 0,
         SoundMax = e.GetDouble("SoundMax") ?? 0,
+        AmbientLux = e.GetDouble("AmbientLux"),
+        PressureHpa = e.GetDouble("PressureHpa"),
+        DeviceMovedSeconds = e.GetDouble("DeviceMovedSeconds") ?? 0,
         SittingSeconds = e.GetDouble("SittingSeconds") ?? 0,
         StandingSeconds = e.GetDouble("StandingSeconds") ?? 0,
         LyingSeconds = e.GetDouble("LyingSeconds") ?? 0,

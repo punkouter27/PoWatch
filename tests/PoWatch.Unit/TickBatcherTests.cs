@@ -110,4 +110,50 @@ public sealed class TickBatcherTests
         var final = batcher.Flush(final: true);
         Assert.Equal(7, Assert.Single(final!.Ticks).DurationSeconds, 9);
     }
+
+    [Fact]
+    public void Phone_sensor_readings_average_into_the_tick_validate_and_reach_the_story()
+    {
+        var time = new FakeTimeProvider(T0);
+        var batcher = new TickBatcher(time);
+        batcher.AddEnvironment(T0, lux: 100, pressureHpa: 1012, movedSeconds: 0);
+        batcher.AddEnvironment(T0.AddSeconds(2), lux: 300, pressureHpa: null, movedSeconds: 1.5);
+        batcher.AddEnvironment(T0.AddSeconds(3), lux: double.NaN, pressureHpa: 1014, movedSeconds: 0.5);
+        time.Advance(TimeSpan.FromSeconds(8));
+
+        var tick = Assert.Single(batcher.Flush()!.Ticks);
+        Assert.Equal(200, tick.AmbientLux!.Value, 9);        // the NaN reading is ignored
+        Assert.Equal(1013, tick.PressureHpa!.Value, 9);      // a missing reading doesn't count as zero
+        Assert.Equal(2, tick.DeviceMovedSeconds, 9);
+
+        // A browser tick has no sensors: nulls, not zeros.
+        var browser = new TickBatcher(new FakeTimeProvider(T0));
+        browser.AddPixel(new PixelSample(T0, 0.1, 0.5, [], []));
+        var none = Assert.Single(browser.Flush(final: true)!.Ticks);
+        Assert.Null(none.AmbientLux);
+        Assert.Null(none.PressureHpa);
+
+        // The domain rejects impossible readings.
+        var session = Guid.NewGuid();
+        Domain.Models.Tick Tick(int minute, double? lux, double? hpa, double moved) => new()
+        {
+            SessionId = session,
+            StartUtc = T0.AddMinutes(minute),
+            DurationSeconds = 10,
+            AmbientLux = lux,
+            PressureHpa = hpa,
+            DeviceMovedSeconds = moved
+        };
+        Assert.Contains(Tick(0, -1, null, 0).Validate(T0), e => e.Contains("AmbientLux", StringComparison.Ordinal));
+        Assert.Contains(Tick(0, null, 50, 0).Validate(T0), e => e.Contains("PressureHpa", StringComparison.Ordinal));
+        Assert.Contains(Tick(0, null, null, 11).Validate(T0), e => e.Contains("DeviceMovedSeconds", StringComparison.Ordinal));
+        Assert.Empty(Tick(0, 250, 1013, 3).Validate(T0));
+
+        // The story mentions the light range, a 4 hPa fall, and the camera moving.
+        List<Domain.Models.Tick> day = [Tick(0, 50, 1015, 0), Tick(1, 800, 1014, 4), Tick(2, 400, 1011, 0)];
+        var story = Application.Features.Stories.SceneNarrator.Atmosphere(day, [], TimeZoneInfo.Utc, new Dictionary<string, string>())!;
+        Assert.Contains("ranged from 50 to 800 lux", story, StringComparison.Ordinal);
+        Assert.Contains("Air pressure fell 4 hPa", story, StringComparison.Ordinal);
+        Assert.Contains("The camera itself was moved at", story, StringComparison.Ordinal);
+    }
 }

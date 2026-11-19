@@ -11,6 +11,37 @@ model) against the device camera. Frames never leave the device except chosen hi
 Compact 10-second ticks are posted through the BFF boundary, stored in Azure Table Storage (Azurite
 locally), and rolled up into minute/hour/day/all-time stats.
 
+### Phone sensor (`src/PoWatch.Mobile`)
+
+A native .NET MAUI app (Android/iOS; not in `PoWatch.slnx`, not built by CI) turns a phone — an old
+one on a shelf is the point — into the same sensor, posting the same ticks:
+
+- **Native camera + on-device ML.** Camera2 (Android) / AVCapture (iOS) frames go through a C# port
+  of the web pixel layer (16×9 grid, threshold 28, Rec.709 luma, 4-bit palette) and the same detector,
+  RF-DETR nano int8 (`onnx-community/rfdetr_nano-ONNX`, downloaded once, ~29 MB, resumable) on ONNX
+  Runtime (`Microsoft.ML.OnnxRuntime`) with NNAPI / Core ML when the phone has them; same 0.5
+  threshold, COCO labels and colour signature, then the shared `CentroidTracker`, `TickBatcher` and
+  `HighlightRules`. Highlights upload a snapshot like the web; regulars are observed the same way.
+  Posture (ViTPose) and captions (VLM) are not on the phone yet, so those tick fields stay empty.
+- **Sensor mode.** Android runs observing as a camera + microphone foreground service with a
+  partial wake lock (screen off; Stop is on the notification); iOS keeps the screen on, dimmed. A
+  near-black dim screen, keep-screen-on switch, and the detector slows on low battery (3 s) or heat
+  (5 s, paused when critical).
+- **Offline tick buffer.** Every closed batch is written to the phone first (one file per batch,
+  oldest first, capped at two days) and posted from there; the server's `batchKey` ledger makes
+  resends safe. Offline stops are retried.
+- **Phone sensors.** Ticks carry three optional fields, null/0 from browsers: `AmbientLux` (light
+  sensor, Android), `PressureHpa` (barometer) and `DeviceMovedSeconds` (accelerometer: the camera was
+  bumped). They are validated (`Tick.Validate`), stored on the tick row only when present, and the
+  scene narrator mentions them (light-meter range, a pressure swing ≥ 2 hPa, the camera moving).
+
+Pages: Live (preview, readings, outbox counters, sensor mode), Journal (week digest, Ask, days and
+sessions → day recap with moments and snapshots, presence, objects, light; session story), Settings
+(profile, regulars rename/merge, watch rules per phone, share links, AI model, CSV export, delete
+data, server), System status. Sign-in: Microsoft (Entra PKCE → bearer, needs redirect
+`powatch://auth`) or, in Debug, the dev guest. Dev loop: run the API with
+`--urls http://localhost:5560`, then `pwsh scripts/mobile-dev.ps1 -ApiPort 5560 -Run`.
+
 The project targets .NET 10 from `global.json` and uses central package management. The client and shared DTO assembly are trim-analyzer clean, using source-generated JSON metadata instead of reflection-heavy serialization. Authentication is BFF-style: Microsoft Entra ID or dev/test guest sign-in creates an encrypted HttpOnly cookie, while the WASM client only asks `/auth/me` for state.
 
 ## Local Setup

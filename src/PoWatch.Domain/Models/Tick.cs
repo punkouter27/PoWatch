@@ -54,6 +54,18 @@ public sealed record Tick
 
     public double SoundMax { get; init; }
 
+    /// <summary>Mean ambient light from a phone's light sensor, in lux; null when not measured.</summary>
+    public double? AmbientLux { get; init; }
+
+    /// <summary>Mean air pressure from a phone's barometer, in hPa; null when not measured.</summary>
+    public double? PressureHpa { get; init; }
+
+    /// <summary>Seconds of the tick during which the observing device itself was moving.</summary>
+    public double DeviceMovedSeconds { get; init; }
+
+    /// <summary>Brightest sunlight is ~120,000 lux; anything above this is a broken reading.</summary>
+    public const double MaxLux = 200_000;
+
     /// <summary>Person-seconds spent sitting, standing and lying down; zero when posture was not read.</summary>
     public double SittingSeconds { get; init; }
 
@@ -95,6 +107,12 @@ public sealed record Tick
         RequireFraction(errors, nameof(LuminanceMean), LuminanceMean);
         RequireFraction(errors, nameof(SoundMean), SoundMean);
         RequireFraction(errors, nameof(SoundMax), SoundMax);
+        if (AmbientLux is { } lux && (!double.IsFinite(lux) || lux is < 0 or > MaxLux))
+            errors.Add($"{nameof(AmbientLux)} must be in [0, {MaxLux:0}] lux.");
+        if (PressureHpa is { } hpa && (!double.IsFinite(hpa) || hpa is < 300 or > 1100))
+            errors.Add($"{nameof(PressureHpa)} must be in [300, 1100] hPa.");
+        if (!double.IsFinite(DeviceMovedSeconds) || DeviceMovedSeconds < 0 || DeviceMovedSeconds > DurationSeconds)
+            errors.Add($"{nameof(DeviceMovedSeconds)} must be in [0, {nameof(DurationSeconds)}].");
         RequirePersonSeconds(errors, nameof(SittingSeconds), SittingSeconds);
         RequirePersonSeconds(errors, nameof(StandingSeconds), StandingSeconds);
         RequirePersonSeconds(errors, nameof(LyingSeconds), LyingSeconds);
