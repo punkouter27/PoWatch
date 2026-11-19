@@ -26,7 +26,7 @@ Tests, narrowest first (integration and E2E start Azurite through Testcontainers
 dotnet test tests/PoWatch.Unit --filter "FullyQualifiedName~RollupTests"
 dotnet test tests/PoWatch.Integration
 dotnet test tests/PoWatch.E2EAPI
-dotnet test tests/PoWatch.E2EUI -c Release              # needs Playwright's Chromium and Docker (local only; CI runs no tests)
+dotnet test tests/PoWatch.E2EUI -c Release              # needs Playwright's Chromium and Docker (local only; CI runs only format + Unit)
 ```
 
 E2EUI hosts the app in-process against an Azurite Testcontainer by default (since 2026-11-17; it used to
@@ -102,7 +102,7 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   PDF endpoint answers 503 (the client shows why in a toast). Production is x64 and unaffected; to make PDFs
   locally, install the x64 .NET 10 SDK and run with `-r win-x64`.
 - **Pushing to `master` deploys to production.** `.github/workflows/deploy.yml` is the Po workflow: the same
-  file in every Po .NET web repo, each repo owning its copy. It builds, publishes, deploys and waits for
-  `/health/live` to serve the pushed commit; no tests, no format check, no infra job, no rollback, no PR
-  runs. Run the narrow tests, `dotnet format` and `scripts/ci-checks.ps1` (hygiene, test caps) locally
+  file in every Po .NET web repo, each repo owning its copy. It checks formatting, builds, runs the Unit tier,
+  publishes, deploys and waits for `/health/live` to serve the pushed commit; a red check stops the deploy.
+  No other tests, no infra job, no rollback, no PR runs. Run the narrow tests and `scripts/ci-checks.ps1` (hygiene, test caps) locally
   before pushing.
