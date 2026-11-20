@@ -265,7 +265,7 @@ public sealed class SettingsPage : ContentPage
     }
 }
 
-/// <summary>System status (the web /diag page): stores and services with their state.</summary>
+/// <summary>System status (the web /diag page): the API, stores and services with their state.</summary>
 public sealed class DiagPage(ApiClient api, MobileConfig config) : ContentPage
 {
     protected override async void OnAppearing()
@@ -282,15 +282,15 @@ public sealed class DiagPage(ApiClient api, MobileConfig config) : ContentPage
         }
 
         body.Add(Ui.Colored($"{report.Status} · {report.Environment} · v{report.Version} · answered in {elapsed.TotalMilliseconds:F0} ms", Badge(report.Status), 16));
-        foreach ((string group, IReadOnlyList<DiagEntryDto> entries) in new[] { ("Data", report.Stores), ("Services", report.Services) })
+        foreach ((string group, string title) in new[] { (DiagGroups.Api, "API"), (DiagGroups.Data, "Data"), (DiagGroups.Service, "Services") })
         {
-            body.Add(Ui.H2(group));
-            foreach (DiagEntryDto e in entries)
+            body.Add(Ui.H2(title));
+            foreach (DiagCheckDto e in report.Checks.Where(c => c.Group == group))
             {
                 body.Add(Ui.Card(Ui.Stack(3,
-                    Ui.Field(e.Name, Ui.Colored(e.Status, Badge(e.Status), 14)),
-                    Ui.Muted($"{e.Purpose}{(e.LatencyMs is { } ms ? $" · {ms:F0} ms" : string.Empty)}"),
-                    Ui.Muted(e.Problem))));
+                    Ui.Field(e.Label, Ui.Colored(e.Status, Badge(e.Status), 14)),
+                    Ui.Muted($"{e.Purpose} · {e.LatencyMs:F0} ms"),
+                    Ui.Muted(e.Problem ?? e.Detail))));
             }
         }
     }

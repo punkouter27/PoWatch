@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using PoWatch.Shared.Models;
@@ -8,9 +9,10 @@ namespace PoWatch.Client.Services;
 /// <summary>
 /// Listens on the stats hub for "your stats changed" and raises <see cref="Changed"/>. Pages that
 /// show stats subscribe and reload. If the hub cannot connect the pages simply keep their own
-/// refresh timers, so push is an accelerator, never a dependency.
+/// refresh timers, so push is an accelerator, never a dependency. The hub is login-only, so a
+/// signed-out visitor never asks for it (no 401 on public pages).
 /// </summary>
-public sealed class StatsFeed(NavigationManager navigation) : IAsyncDisposable
+public sealed class StatsFeed(NavigationManager navigation, AuthenticationStateProvider auth) : IAsyncDisposable
 {
     private HubConnection? _connection;
     private Task? _connecting;
@@ -22,8 +24,12 @@ public sealed class StatsFeed(NavigationManager navigation) : IAsyncDisposable
 
     public bool IsConnected => _connection?.State == HubConnectionState.Connected;
 
-    /// <summary>Connects once; later calls are no-ops. Safe to call from every page that shows stats.</summary>
-    public Task EnsureConnectedAsync() => _connecting ??= ConnectAsync();
+    /// <summary>Connects once when signed in; later calls are no-ops. Safe to call from every page that shows stats.</summary>
+    public async Task EnsureConnectedAsync()
+    {
+        if ((await auth.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
+        await (_connecting ??= ConnectAsync());
+    }
 
     private async Task ConnectAsync()
     {

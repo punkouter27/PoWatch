@@ -7,7 +7,7 @@ namespace PoWatch.Integration;
 
 public sealed class AiModelEndpointTests(AzuriteWebApplicationFactory factory) : IClassFixture<AzuriteWebApplicationFactory>
 {
-    [Fact]
+    [DockerFact]
     public async Task Model_selection_is_validated_persisted_and_isolated_between_browsers()
     {
         using var browser = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });

@@ -185,7 +185,7 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
         SendAsync(ct => httpClient.DeleteAsync($"api/shares/{Uri.EscapeDataString(token)}", ct), cancellationToken);
 
     public Task<DiagnosticsSnapshotDto?> GetDiagnosticsAsync(CancellationToken cancellationToken = default) =>
-        ReadAsync(ct => httpClient.GetAsync("api/diagnostics/status", ct), Json.DiagnosticsSnapshotDto, cancellationToken);
+        ReadAsync(ct => httpClient.GetAsync("api/diag/runtime", ct), Json.DiagnosticsSnapshotDto, cancellationToken);
 
     /// <summary>
     /// The anonymous <c>/api/diag</c> status behind the /diag page, with how long the server took to answer.

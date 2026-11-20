@@ -23,7 +23,6 @@ internal static class FeatureRoutes
     public static WebApplication MapPoWatchFeatures(this WebApplication app)
     {
         app.MapAuthEndpoints();
-        app.MapDiagnosticsFeature();
         app.MapDiagFeature();
         app.MapSessionsFeature();
         app.MapIngestFeature();

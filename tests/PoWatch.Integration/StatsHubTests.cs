@@ -6,7 +6,7 @@ namespace PoWatch.Integration;
 
 public sealed class StatsHubTests(AzuriteWebApplicationFactory factory) : IClassFixture<AzuriteWebApplicationFactory>
 {
-    [Fact]
+    [DockerFact]
     public async Task An_ingest_pushes_stats_changed_to_that_user_only()
     {
         var owner = $"hub-{Guid.NewGuid():N}";

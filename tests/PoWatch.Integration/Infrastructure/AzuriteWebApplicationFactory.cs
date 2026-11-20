@@ -19,11 +19,23 @@ public sealed class AzuriteWebApplicationFactory : WebApplicationFactory<Program
     /// <summary>The running Azurite container's connection string, for tests that build stores directly.</summary>
     public string StorageConnectionString => _azurite.GetConnectionString();
 
-    async Task IAsyncLifetime.InitializeAsync() => await _azurite.StartAsync();
+    async Task IAsyncLifetime.InitializeAsync()
+    {
+        if (DockerAvailability.SkipReason is not null)
+        {
+            return; // Every test in this tier is skipped; there is no Docker to start Azurite in.
+        }
+
+        await _azurite.StartAsync();
+    }
 
     async Task IAsyncLifetime.DisposeAsync()
     {
-        await _azurite.StopAsync();
+        if (DockerAvailability.SkipReason is null)
+        {
+            await _azurite.StopAsync();
+        }
+
         await base.DisposeAsync();
     }
 

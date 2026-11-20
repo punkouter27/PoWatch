@@ -16,10 +16,10 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
 {
     private readonly HttpClient _client = factory.CreateClient();
 
-    [Fact]
+    [DockerFact]
     public async Task Read_endpoints_answer_successfully_and_the_api_ones_with_json()
     {
-        foreach (var route in new[] { "/api/sessions", "/api/regulars", "/api/stats/presence?range=today", "/api/diagnostics/status", "/auth/me", "/auth/config", "/health", "/api/diag/boot", "/api/diag" })
+        foreach (var route in new[] { "/api/sessions", "/api/regulars", "/api/stats/presence?range=today", "/api/diag/runtime", "/auth/me", "/auth/config", "/health", "/api/diag/boot", "/api/diag" })
         {
             var response = await _client.GetAsync(route);
 
@@ -29,14 +29,14 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
         }
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Unknown_and_retired_api_routes_are_404s_not_the_spa_fallback()
     {
         foreach (var route in new[] { "/api/definitely-not-a-route", "/api/observer/state", "/api/archives/2026-01-01", "/api/identity/subjects", "/api/blobs/read?blobPath=x.jpg" })
             Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync(route)).StatusCode);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task The_health_document_keeps_its_deploy_gating_shape_and_never_names_the_key_vault()
     {
         // The JSON contract gates every production deploy: status, checks[], and durations.
@@ -50,19 +50,19 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
         Assert.DoesNotContain(".vault.azure.net", body, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task A_browser_can_report_an_unhandled_error_to_the_server_log()
     {
-        var response = await _client.PostAsJsonAsync("/api/diagnostics/client-error",
+        var response = await _client.PostAsJsonAsync("/api/diag/client-error",
             new { message = "Unhandled exception rendering component", stack = new string('x', 20_000), url = "http://localhost/", userAgent = "test" });
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Diagnostics_report_storage_and_mask_every_secret()
     {
-        var snapshot = await _client.GetFromJsonAsync<DiagnosticsSnapshotDto>("/api/diagnostics/status");
+        var snapshot = await _client.GetFromJsonAsync<DiagnosticsSnapshotDto>("/api/diag/runtime");
 
         Assert.NotNull(snapshot);
         Assert.Equal("Azurite-OK", snapshot!.StorageConnectionStatus);
@@ -73,7 +73,7 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
         Assert.DoesNotContain("AccountKey=", snapshot.MaskedApiKey ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task The_diag_document_names_each_store_and_service_without_secrets_or_internals()
     {
         var body = await _client.GetStringAsync("/api/diag");
@@ -81,9 +81,10 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
 
         Assert.NotNull(report);
         Assert.Contains(report!.Status, (string[])["Healthy", "Degraded", "Unhealthy"]);
-        Assert.Equal("Healthy", Assert.Single(report.Stores, s => s.Name == "Storage").Status);
-        Assert.Contains(report.Services, s => s.Name == "Sign-in");
-        Assert.Contains(report.Services, s => s.Name == "AI models");
+        Assert.Equal("Healthy", Assert.Single(report.Checks, c => c.Group == DiagGroups.Api).Status);
+        Assert.Equal("Healthy", Assert.Single(report.Checks, c => c.Group == DiagGroups.Data && c.Label == "Storage").Status);
+        Assert.Contains(report.Checks, c => c.Group == DiagGroups.Service && c.Label == "Sign-in");
+        Assert.Contains(report.Checks, c => c.Group == DiagGroups.Service && c.Label == "AI models");
         Assert.Matches(@"^(\d{6}|unknown)$", report.Version);
         Assert.False(string.IsNullOrWhiteSpace(report.Environment));
         // Connection strings, keys, URIs, file paths, emails and exception text must never reach an anonymous caller.
@@ -92,7 +93,7 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
             Assert.DoesNotContain(secret, body, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Forms_that_break_the_shared_rules_get_a_validation_problem_per_field()
     {
         foreach (var (route, payload, field) in new (string, object, string)[]
@@ -111,7 +112,7 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
         Assert.Contains("\"Name\"", await rename.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task A_malformed_json_body_is_rejected_rather_than_crashing_the_host()
     {
         var response = await _client.PostAsync(

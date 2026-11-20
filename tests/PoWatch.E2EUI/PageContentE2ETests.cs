@@ -9,7 +9,7 @@ namespace PoWatch.E2EUI;
 [Collection(nameof(PlaywrightCollection))]
 public sealed class PageContentE2ETests(PlaywrightFixture fixture)
 {
-    [Fact]
+    [E2EFact]
     public async Task The_live_page_shows_every_panel_around_the_camera_and_its_narration()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -20,7 +20,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.AssertNoBlazorErrorAsync();
     }
 
-    [Fact]
+    [E2EFact]
     public async Task A_demo_session_fills_the_counters_and_stops_cleanly()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"demo-{Guid.NewGuid():N}");
@@ -53,7 +53,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.AssertNoBlazorErrorAsync();
     }
 
-    [Fact]
+    [E2EFact]
     public async Task Live_renders_every_stat_family_with_real_numbers_for_the_recording_session()
     {
         // Its own user: the seed runs once per user, so on the shared guest it would land on whatever earlier tests left.
@@ -94,7 +94,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.AssertNoBlazorErrorAsync();
     }
 
-    [Fact]
+    [E2EFact]
     public async Task New_people_can_be_named_from_a_passive_prompt_or_left_unnamed()
     {
         // A fresh user: storage persists (Azurite), so a reused guest already knows the walker and the cat.
@@ -148,7 +148,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.AssertNoBlazorErrorAsync();
     }
 
-    [Fact]
+    [E2EFact]
     public async Task History_walks_back_day_by_day_through_real_sessions()
     {
         var user = $"history-{Guid.NewGuid():N}";
@@ -238,7 +238,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.AssertNoBlazorErrorAsync();
     }
 
-    [Fact]
+    [E2EFact]
     public async Task The_system_page_reports_inference_state_and_every_connection_with_a_verdict()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -247,7 +247,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("health-overall")).ToBeVisibleAsync(new() { Timeout = 30000 });
         // Wait for the list itself: "Checking…" also renders health-overall, so counting straight
         // after it is a race with the first fetch.
-        await Assertions.Expect(page.GetByTestId("health-check-list")).ToBeVisibleAsync(new() { Timeout = 30000 });
+        await Assertions.Expect(page.GetByTestId("health-check").First).ToBeVisibleAsync(new() { Timeout = 30000 });
         Assert.True(await page.GetByTestId("health-check").CountAsync() > 0);
 
         await page.OpenSystemTabAsync("Engine");
@@ -255,7 +255,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
             .ToBeVisibleAsync();
     }
 
-    [Fact]
+    [E2EFact]
     public async Task Signing_out_returns_the_operator_to_the_login_page()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -266,7 +266,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("login-shell")).ToBeVisibleAsync(new() { Timeout = 60000 });
     }
 
-    [Fact]
+    [E2EFact]
     public async Task Narration_keeps_the_reading_position_and_new_events_return_to_the_latest_line()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);

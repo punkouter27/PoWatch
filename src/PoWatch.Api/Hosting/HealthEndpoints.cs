@@ -9,7 +9,7 @@ namespace PoWatch.Api.Hosting;
 /// The two public operations probes: <c>/health</c> (each registered check, the deploy gate) and
 /// <c>/api/diag/boot</c> (per-dependency readiness without secrets; under /api since 2026-11-17 so a browser
 /// at /diag gets the diagnostics page). The friendly status is <c>/api/diag</c> (DiagEndpoints) and the
-/// signed-in runtime snapshot is <c>/api/diagnostics/status</c>.
+/// signed-in runtime snapshot is <c>/api/diag/runtime</c>.
 /// </summary>
 internal static class HealthEndpoints
 {

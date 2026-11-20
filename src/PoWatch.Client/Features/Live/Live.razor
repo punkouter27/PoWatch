@@ -8,7 +8,7 @@
 
 <PageTitle>Live · PoWatch</PageTitle>
 
-@* One session, one toolbar; configuration folds away, diagnostics live on System.
+@* One session, one toolbar; configuration folds away, diagnostics live on /diag.
    The desktop grid stays three columns, with page scrolling instead of scrollable cards. *@
 <div class="dash" data-inference-ms="@L.DetectorLatencyMs.ToString(CultureInfo.InvariantCulture)">
     <div class="stats-toolbar" data-test="stats-toolbar">
@@ -24,7 +24,7 @@
         <RadzenButton Text="Ask" Icon="chat_bubble_outline" ButtonStyle="ButtonStyle.Light"
                       Click="@(() => _askOpen = !_askOpen)" aria-expanded="@(_askOpen ? "true" : "false")"
                       aria-controls="session-ask" data-test="ask-toggle" />
-        <a href="system" class="term-button session-health" data-test="session-health">
+        <a href="diag" class="term-button session-health" data-test="session-health">
             @(L.LastError is not null || L.LostTicks > 0 ? "Needs attention" : L.PendingBatches > 0 ? "Saving queued" : Sensing.IsRunning ? "Sensing active" : "System status")
         </a>
         @if (_sessionMissing)

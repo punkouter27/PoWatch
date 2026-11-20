@@ -74,30 +74,32 @@ Testcontainer (Docker must be running); set `E2E_BASE_URL` to drive an already-r
 It never skips silently: without Docker or Chromium every test fails with the reason.
 
 Shell (the Po web standard): one header on every page, signed in or out, with `PoWatch` upper-left and
-the signed-in email (or Sign in) and the settings gear upper-right; a `v{YYMMDD}` build stamp
+the signed-in email (or Sign in) and the settings gear upper-right; a `v{YYMMDD}` version badge
 bottom-right (the HEAD commit's UTC date); Inter + Space Grotesk, one indigo accent, and light/dark
-that follow the device (`css/po-tokens.css`, identical in every Po app). Pressing Tab with nothing
+that follow the device (`css/po-tokens.css`). Pressing Tab with nothing
 focused opens a developer window (`/po-dev.html`) with live server and page stats.
 
-Diagnostics: `/diag` is a plain-language status page (API, data, services, version, environment) that
-works signed out, fed by the anonymous `GET /api/diag`; `/system` shows the same status plus the server
-runtime, inference engine and pipeline for a signed-in user. `GET /api/diag/boot` is the boot-readiness
+Diagnostics: `/diag` ("System status") is a plain-language status page (API, data, services, version,
+environment) that works signed out, fed by the anonymous `GET /api/diag`; signed in, it also shows the
+server runtime, inference engine and pipeline. `GET /api/diag/boot` is the boot-readiness
 probe (it was `/diag/boot` until 2026-11-17). On a phone, the sections are a bottom tab bar (`BottomNav`).
 
 Session and day recaps (and their PDFs) are written by a template by default. Set
 `AiProvider:Provider` to `AzureOpenAi` to let a model rewrite the
 paragraph; the numbers always come from the stats, and the template takes over on any timeout, error
 or invented number.
-Pushing to `master` deploys to production through the Po workflow (`.github/workflows/deploy.yml`, the
-same file in every Po repo): build, publish, deploy, then wait for `/health/live` to serve the pushed
-commit. It runs no tests; run them and `scripts/ci-checks.ps1` locally before pushing. Bicep reads
+Pushing to `master` deploys to production through `.github/workflows/deploy.yml` (the only workflow):
+format check, build, Unit and Integration tests, publish, deploy, then wait for `/health/live` to serve
+the pushed commit; a `mobile` job builds the Android client beside it. Run the E2E tiers and
+`scripts/ci-checks.ps1` locally before pushing. Bicep reads
 resource names from `infra/deployment.json`; CI reads the app and resource group from the repo
 variables `AZURE_WEBAPP_NAME` and `AZURE_RESOURCE_GROUP`.
 
 ## Documentation
 
-- `AGENTS.md` — rules for any agent (or human) working in this repo.
-- `CLAUDE.md` — where the pipeline lives (sensing, ingest, reads, storage, API) and what is easy to get wrong.
+- `AGENTS.md` — the Po web app standard this repo follows, and the rules for any agent (or human) working in it.
+- `docs/development.md` — where the pipeline lives (sensing, ingest, reads, storage, API) and what is easy to get wrong.
+- `CLAUDE.md` — one line pointing at `AGENTS.md`.
 
 This `README.md` stays at the level of "what is this app and how do I run it".
 

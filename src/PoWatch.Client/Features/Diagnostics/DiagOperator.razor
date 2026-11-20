@@ -1,29 +1,21 @@
-@page "/system"
-@* /system is the signed-in operator view; its Connections tab is the /diag status (DiagStatus). *@
+@* The signed-in operator part of /diag, under its API / Data / Services sections: the server
+   runtime, the on-device inference engine and the pipeline counters, in three tabs so each fits one
+   screen. Rendered only inside <AuthorizeView>, so a signed-out visitor never calls its
+   login-only endpoints. *@
 @using PoWatch.Shared.Models
 @inject PoWatchApiClient ApiClient
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<PageTitle>System · PoWatch</PageTitle>
-
-@* Everything operational on one page, refreshed on one timer, in three tabs so each fits one screen:
-   connections (what /health reports) with the server runtime, the on-device inference engine, and the
-   pipeline counters. *@
-<BuildStamp />
+<section class="po-diag__group" data-group="operator" aria-labelledby="diag-operator">
+<h2 id="diag-operator">Operator details</h2>
 <RadzenTabs @bind-SelectedIndex="_tab" RenderMode="TabRenderMode.Server" class="sys-tabs" data-test="system-tabs">
     <Tabs>
-        <RadzenTabsItem Text="Connections">
+        <RadzenTabsItem Text="Server">
 <div class="term-grid">
-    <TerminalPanel Title="Connections" Class="term-span-2">
+    <TerminalPanel Title="Server" Class="term-span-4">
         <Aside>@(_lastRefreshed is { } at ? $"UPDATED {at:HH:mm:ss} · EVERY {RefreshInterval.TotalSeconds:0} S" : "CHECKING…")</Aside>
         <ChildContent>
-            @* The same plain-language status /diag shows signed out; this page adds the runtime, engine and pipeline. *@
-            <DiagStatus @ref="_status" />
-        </ChildContent>
-    </TerminalPanel>
-
-    <TerminalPanel Title="Server" Class="term-span-2">
         @if (!_snapshotLoaded)
         {
             <Skeleton Heights="@([110])" Span="term-span-4" />
@@ -43,6 +35,7 @@
                 <StatCell Label="Captured" Value="@DisplayText.RelativeTime(_snapshot.CapturedAtUtc)" />
             </div>
         }
+        </ChildContent>
     </TerminalPanel>
 </div>
         </RadzenTabsItem>
@@ -98,9 +91,9 @@
         </RadzenTabsItem>
     </Tabs>
 </RadzenTabs>
+</section>
 
 @code {
-    private DiagStatus? _status;
     private DiagnosticsSnapshotDto? _snapshot;
     private bool _snapshotLoaded;
     private int _tab;
@@ -144,11 +137,12 @@
         _refresh.Dispose();
     }
 
+    /// <summary>Called by /diag's Refresh, besides this component's own timer.</summary>
+    public Task RefreshAsync() => LoadAsync();
+
     private async Task LoadAsync()
     {
-        var health = _status?.RefreshAsync() ?? Task.CompletedTask;
-        var snapshot = LoadSnapshotAsync();
-        await Task.WhenAll(health, snapshot);
+        await LoadSnapshotAsync();
         // Paint the server numbers now — the inference query below can take seconds to time out
         // when no worker is running, and the page looked broken meanwhile.
         _pipelineQuery = _pipelineQuery with { Stamp = _pipelineQuery.Stamp + 1 };

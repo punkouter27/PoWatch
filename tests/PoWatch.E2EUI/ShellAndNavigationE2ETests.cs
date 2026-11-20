@@ -8,7 +8,7 @@ namespace PoWatch.E2EUI;
 [Collection(nameof(PlaywrightCollection))]
 public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
 {
-    [Fact]
+    [E2EFact]
     public async Task The_terminal_shell_renders_header_and_keys_and_the_keys_navigate()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -31,7 +31,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await page.AssertNoBlazorErrorAsync();
     }
 
-    [Fact]
+    [E2EFact]
     public async Task Going_back_and_forth_between_pages_does_not_grow_the_js_heap()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -68,7 +68,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await page.AssertNoBlazorErrorAsync();
     }
 
-    [Fact]
+    [E2EFact]
     public async Task Every_route_renders_with_its_section_title()
     {
         foreach (var (route, heading) in new (string route, string heading)[]
@@ -86,7 +86,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         }
     }
 
-    [Fact]
+    [E2EFact]
     public async Task Ask_downloads_and_watch_rules_are_there_from_the_start()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -115,7 +115,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await page.AssertNoBlazorErrorAsync();
     }
 
-    [Fact]
+    [E2EFact]
     public async Task An_unknown_route_offers_a_way_back_instead_of_dead_ending()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -128,7 +128,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
             .ToBeVisibleAsync();
     }
 
-    [Fact]
+    [E2EFact]
     public async Task Light_and_dark_follow_the_device_with_no_switch()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -144,7 +144,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         Assert.Equal("rgb(15, 17, 23)", dark);     // --po-bg, dark
     }
 
-    [Fact]
+    [E2EFact]
     public async Task The_skip_link_is_the_first_thing_a_keyboard_user_reaches()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
@@ -164,7 +164,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     /// Every in-app link opens a working page, and every harmless button on every page can be pressed
     /// without an error or a sideways scroll; the pages settle without layout jumps (CLS).
     /// </summary>
-    [Fact]
+    [E2EFact]
     public async Task Every_link_and_button_works_without_errors_or_layout_jumps()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);

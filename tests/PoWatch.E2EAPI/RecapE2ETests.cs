@@ -6,7 +6,7 @@ namespace PoWatch.E2EAPI;
 
 public sealed class RecapE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE2EFactory>
 {
-    [Fact]
+    [DockerFact]
     public async Task Days_get_a_readable_recap_and_sessions_a_pdf_without_any_ai_configured()
     {
         using var client = factory.CreateClient();

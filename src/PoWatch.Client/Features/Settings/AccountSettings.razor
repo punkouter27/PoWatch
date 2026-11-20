@@ -15,7 +15,7 @@
             </div>
         </SettingsBody>
         <div class="settings-list">
-            <a class="term-menu-item" href="system" data-test="nav-system"><span>System status <i>connections, runtime, inference, pipeline</i></span><b>→</b></a>
+            <a class="term-menu-item" href="diag" data-test="nav-system"><span>System status <i>connections, runtime, inference, pipeline</i></span><b>→</b></a>
             <a class="term-menu-item" href="@PoWatchApiClient.ExportUrl(TimeZoneInfo.Local.Id)" download="PoWatch-days.csv" data-test="export-csv"><span>Export days <i>one row per observed day</i></span><b>CSV ↓</b></a>
             <button class="term-menu-item" @onclick="SignOutAsync" disabled="@_signingOut" data-test="sign-out"><span>Sign out</span><b>@(_signingOut ? "…" : "→")</b></button>
             <button class="term-menu-item term-menu-item--danger" @onclick="DeleteAllAsync" disabled="@_deleting" data-test="delete-data">

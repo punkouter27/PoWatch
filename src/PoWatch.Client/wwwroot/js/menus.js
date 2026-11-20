@@ -17,7 +17,7 @@
         { label: 'Start the demo scene', hint: '', run: () => click('start-demo') || Blazor.navigateTo('?start=demo') },
         { label: 'Notifications', hint: '', run: () => click('tray-toggle') },
         { label: 'Settings: recording, people, alerts, AI models, your data', hint: '', run: () => click('settings-menu') },
-        { label: 'System status', hint: '', run: () => Blazor.navigateTo('system') },
+        { label: 'System status', hint: '', run: () => Blazor.navigateTo('diag') },
         { label: 'Journal: today', hint: '', run: () => Blazor.navigateTo('journal') },
         { label: 'Journal: this week', hint: '', run: () => Blazor.navigateTo('journal?view=week') },
         { label: 'Export every observed day as CSV', hint: 'cookies stay on this request', run: () => { window.location.assign('api/export.csv'); } },

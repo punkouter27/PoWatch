@@ -34,7 +34,7 @@ public sealed class PlatformE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
 
     private readonly HttpClient _client = factory.CreateClient();
 
-    [Fact]
+    [DockerFact]
     public void Anonymous_surface_is_exactly_the_allow_list()
     {
         var anonymous = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
@@ -48,7 +48,7 @@ public sealed class PlatformE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
         Assert.Equal(AnonymousAllowList, anonymous);
     }
 
-    [Fact]
+    [DockerFact]
     public void Every_other_endpoint_requires_a_signed_in_user()
     {
         var policy = factory.Services.GetRequiredService<IOptions<AuthorizationOptions>>().Value.FallbackPolicy;
@@ -57,7 +57,7 @@ public sealed class PlatformE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
         Assert.Contains(policy.Requirements, r => r is DenyAnonymousAuthorizationRequirement);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Operations_endpoints_report_health_boot_and_storage()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "/health");
@@ -72,7 +72,7 @@ public sealed class PlatformE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
         Assert.Equal(HttpStatusCode.OK, boot.StatusCode);
         Assert.False(string.IsNullOrWhiteSpace(await boot.Content.ReadAsStringAsync()));
 
-        var snapshot = await _client.GetFromJsonAsync<DiagnosticsSnapshotDto>("/api/diagnostics/status");
+        var snapshot = await _client.GetFromJsonAsync<DiagnosticsSnapshotDto>("/api/diag/runtime");
         Assert.NotNull(snapshot);
         Assert.False(string.IsNullOrWhiteSpace(snapshot!.StorageConnectionStatus));
     }

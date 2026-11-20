@@ -24,7 +24,7 @@ public sealed class RegularsE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
         (await (await client.PostAsJsonAsync("/api/regulars/observe", new ObserveRegularRequestDto { Class = cls, Signature = look }))
             .Content.ReadFromJsonAsync<ObserveRegularResultDto>())!;
 
-    [Fact]
+    [DockerFact]
     public async Task A_new_person_can_be_named_recognised_counted_and_merged()
     {
         using var client = ClientFor($"regulars-{Guid.NewGuid():N}");

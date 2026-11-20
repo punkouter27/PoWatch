@@ -60,7 +60,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         return session;
     }
 
-    [Fact]
+    [DockerFact]
     public async Task The_profile_round_trips_and_refuses_choices_it_does_not_offer()
     {
         using var client = ClientFor($"profile-{Guid.NewGuid():N}");
@@ -90,7 +90,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Empty(noPlace!.Days);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Retention_deletes_old_raw_detail_and_keeps_the_rollups()
     {
         var user = $"retention-{Guid.NewGuid():N}";
@@ -124,7 +124,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal(2, (await rollups.GetRangeAsync(user, RollupGrain.Day, LocalDay.Window(oldDay, TimeZoneInfo.Utc).StartUtc, DateTimeOffset.UtcNow.AddDays(1), CancellationToken.None)).Count);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task A_stopped_session_gets_its_chapters_joined_into_one_story_written_once()
     {
         using var client = ClientFor($"storyteller-{Guid.NewGuid():N}");
@@ -155,7 +155,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/stories/year")).StatusCode);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task What_the_microphone_heard_is_a_transcript_and_part_of_the_story()
     {
         using var client = ClientFor($"listener-{Guid.NewGuid():N}");
@@ -186,7 +186,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/sessions/{Guid.NewGuid()}/transcript")).StatusCode);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Posture_read_in_the_browser_comes_back_as_person_time_in_the_presence_numbers()
     {
         using var client = ClientFor($"sitter-{Guid.NewGuid():N}");
@@ -219,7 +219,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal(HttpStatusCode.BadRequest, absurd.StatusCode);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task A_shared_recap_reads_without_signing_in_until_it_is_taken_down()
     {
         var owner = $"sharer-{Guid.NewGuid():N}";
@@ -267,7 +267,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/shares", new CreateShareDto { Day = TodayUtc, Days = 365 })).StatusCode);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task The_replay_has_each_observed_minute_with_its_grid_and_the_days_events()
     {
         var user = $"replay-{Guid.NewGuid():N}";
@@ -298,7 +298,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/stats/replay?date=yesterday")).StatusCode);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Without_an_AI_model_the_assistant_endpoints_check_input_then_say_there_is_no_model()
     {
         using var client = ClientFor($"assist-{Guid.NewGuid():N}");
@@ -316,7 +316,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Null(week.Headline);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Weather_comes_from_the_chosen_place_and_the_weekly_email_goes_once()
     {
         var user = $"weekly-{Guid.NewGuid():N}";

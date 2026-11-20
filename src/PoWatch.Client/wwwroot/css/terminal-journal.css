@@ -159,10 +159,8 @@
 /* A panel whose content threw: a small retry box in place of its content, the rest of the page untouched. */
 .panel-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; color: var(--term-red); font: var(--fs-sm) var(--term-mono); }
 
-/* v{YYMMDD} of this build, in System's flow. The copy pinned to the corner of every page is the Po
-   standard's .po-version (po-tokens.css); --po-stamp-lift (terminal-shell.css) keeps it above the
-   phone's bottom tab bar. */
-.build-stamp { display: block; margin: 0 0 6px; text-align: right; color: var(--term-dim); font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; }
+/* The version badge pinned to the corner of every page is .po-version (po-tokens.css);
+   --po-stamp-lift (terminal-shell.css) keeps it above the phone's bottom tab bar. */
 
 @media print { .po-version { display: none; } }
 

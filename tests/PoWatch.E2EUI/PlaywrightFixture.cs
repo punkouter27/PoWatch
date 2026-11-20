@@ -16,8 +16,8 @@ public sealed class PlaywrightFixture : IAsyncLifetime, IAsyncDisposable
     /// <summary>
     /// The app under test. <c>E2E_BASE_URL</c> points the suite at an already-running instance; otherwise
     /// (the default since 2026-11-17) the fixture hosts the app itself in-process against an Azurite
-    /// Testcontainer. There is no silent skip: a run that cannot host the app or launch Chromium fails
-    /// every test with the reason, instead of reporting 25 passes in under a second.
+    /// Testcontainer. When that cannot work (no Docker, no app at E2E_BASE_URL, no Chromium) every test
+    /// is reported as skipped with the reason (<see cref="E2EFactAttribute"/>), never as a pass.
     /// </summary>
     public static string BaseUrl => Environment.GetEnvironmentVariable("E2E_BASE_URL") is { Length: > 0 } url
         ? url.TrimEnd('/')
@@ -39,6 +39,11 @@ public sealed class PlaywrightFixture : IAsyncLifetime, IAsyncDisposable
 
     public async Task InitializeAsync()
     {
+        if (E2EAvailability.SkipReason is not null)
+        {
+            return; // Every test in this tier is skipped; start nothing.
+        }
+
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("E2E_BASE_URL")))
         {
             try

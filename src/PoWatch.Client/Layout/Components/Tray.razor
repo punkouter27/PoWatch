@@ -9,6 +9,7 @@
 @inject PoWatchApiClient Api
 @inject IJSRuntime JS
 @inject DrawerState Drawers
+@inject AuthenticationStateProvider Auth
 
 <div class="term-tray" data-test="tray" data-hub="@(Feed.IsConnected ? "up" : "down")">
     <button class="term-icon-button @(Open ? "term-icon-button--on" : null)" @onclick="Toggle" aria-expanded="@(Open ? "true" : "false")"
@@ -28,7 +29,7 @@
         <ChildContent>
             @if (Sensing.IsRunning && Sensing.Live.LastError is { } error)
             {
-                <p class="tray-item tray-item--bad" role="alert" data-test="tray-error">@error <a class="term-link" href="system" data-test="tray-system">System status →</a></p>
+                <p class="tray-item tray-item--bad" role="alert" data-test="tray-error">@error <a class="term-link" href="diag" data-test="tray-system">System status →</a></p>
             }
 
             @foreach (var alert in _alerts)
@@ -137,6 +138,8 @@
             if (Sensing.Live.ExpirePrompts(Time.GetUtcNow())) StateHasChanged();
         }), null, 5000, 5000);
 
+        // Alerts and last week's review are login-only: a signed-out visitor never requests them.
+        if ((await Auth.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
         await Feed.EnsureConnectedAsync();
         StateHasChanged();
         await OfferLastWeekAsync();

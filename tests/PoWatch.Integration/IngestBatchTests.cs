@@ -9,7 +9,7 @@ namespace PoWatch.Integration;
 
 public sealed class IngestBatchTests(AzuriteWebApplicationFactory factory) : IClassFixture<AzuriteWebApplicationFactory>
 {
-    [Fact]
+    [DockerFact]
     public async Task A_batch_lands_once_no_matter_how_often_it_is_replayed()
     {
         var user = $"ingest-{Guid.NewGuid():N}";

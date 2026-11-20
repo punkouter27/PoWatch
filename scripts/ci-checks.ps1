@@ -1,5 +1,5 @@
 # PoWatch's extra build-time checks. Run this locally from the repo root after a Release build, before
-# pushing: .github/workflows/deploy.yml (the Po workflow) only builds and deploys, it runs no checks.
+# pushing: .github/workflows/deploy.yml runs format, build, Unit and Integration; these extra checks run here.
 # Order: cheap static checks first, then the trim gate, then the test tiers that need Docker/Playwright.
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent

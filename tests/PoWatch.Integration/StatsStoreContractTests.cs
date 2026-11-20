@@ -42,7 +42,7 @@ public sealed class StatsStoreContractTests(AzuriteWebApplicationFactory factory
 
     private static string NewUser() => $"user-{Guid.NewGuid():N}";
 
-    [Fact]
+    [DockerFact]
     public async Task Sessions_list_newest_first_per_user_and_batches_claim_once()
     {
         foreach (var (name, newSessions, newLedger) in SessionStores())
@@ -70,7 +70,7 @@ public sealed class StatsStoreContractTests(AzuriteWebApplicationFactory factory
         }
     }
 
-    [Fact]
+    [DockerFact]
     public async Task The_sensing_log_keeps_one_row_per_tick_and_event_across_replays()
     {
         foreach (var (name, newLog) in SensingLogs())
@@ -112,7 +112,7 @@ public sealed class StatsStoreContractTests(AzuriteWebApplicationFactory factory
         }
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Rollups_merge_per_bucket_and_concurrent_merges_all_count()
     {
         foreach (var (name, newRollups) in StatsStores())

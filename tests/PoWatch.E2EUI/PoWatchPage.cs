@@ -95,14 +95,14 @@ internal static class PoWatchPage
         await page.ExpectSectionAsync(expectedSection, BootTimeoutMs);
     }
 
-    /// <summary>System has no section key (it is reached from Settings): load it and wait for its first panel.</summary>
+    /// <summary>System status (/diag) has no section key (it is reached from Settings): load it and wait for it.</summary>
     public static async Task GoToSystemAsync(this IPage page)
     {
-        await page.GotoAsync($"{PlaywrightFixture.BaseUrl}/system");
+        await page.GotoAsync($"{PlaywrightFixture.BaseUrl}/diag");
         await Assertions.Expect(page.GetByTestId("health-overall")).ToBeVisibleAsync(new() { Timeout = BootTimeoutMs });
     }
 
-    /// <summary>System is three tabs (Connections, Engine, Pipeline); this opens one by its label.</summary>
+    /// <summary>/diag's signed-in operator details are three tabs (Server, Engine, Pipeline); this opens one by its label.</summary>
     public static Task OpenSystemTabAsync(this IPage page, string tab) =>
         page.Locator("[data-test=system-tabs] [role=tab]").Filter(new() { HasText = tab }).ClickAsync();
 

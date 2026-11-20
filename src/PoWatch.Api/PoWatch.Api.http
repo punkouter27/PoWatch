@@ -70,7 +70,7 @@ Content-Type: application/json
 ### ─── Diagnostics ───────────────────────────────────────────────────────────
 
 # Masked system health snapshot (CPU, memory, storage status, masked credentials)
-GET {{baseUrl}}/api/diagnostics/status
+GET {{baseUrl}}/api/diag/runtime
 Accept: application/json
 
 ###

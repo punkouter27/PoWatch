@@ -5,7 +5,7 @@ namespace PoWatch.E2EUI;
 [Collection(nameof(PlaywrightCollection))]
 public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
 {
-    [Fact]
+    [E2EFact]
     public async Task Model_choices_on_Live_persist_switch_during_a_session_and_fit_on_a_phone()
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"ai-selectors-{Guid.NewGuid():N}");

@@ -18,7 +18,7 @@ public sealed class AuthFlowE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
             HandleCookies = true
         });
 
-    [Fact]
+    [DockerFact]
     public async Task Config_reports_guest_only_in_test_environment()
     {
         var client = HttpsClient();
@@ -30,7 +30,7 @@ public sealed class AuthFlowE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
         Assert.Equal("Test", config.Environment);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Guest_login_issues_a_session_cookie_that_authenticates_me()
     {
         var client = HttpsClient(followRedirects: false); // capture the 302 + its Set-Cookie

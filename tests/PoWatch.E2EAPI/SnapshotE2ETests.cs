@@ -14,7 +14,7 @@ public sealed class SnapshotE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
         return client;
     }
 
-    [Fact]
+    [DockerFact]
     public async Task A_snapshot_uploads_under_its_owner_and_comes_back_as_a_private_moment()
     {
         var owner = $"snap-{Guid.NewGuid():N}";

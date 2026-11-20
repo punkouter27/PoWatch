@@ -14,7 +14,7 @@ public sealed class SessionLifecycleE2ETests(ApiE2EFactory factory) : IClassFixt
         return client;
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Deleting_your_data_removes_all_of_it_and_nobody_elses()
     {
         // "ab" and "ab-c" share a prefix on purpose: the purge is a partition-range delete.
@@ -39,7 +39,7 @@ public sealed class SessionLifecycleE2ETests(ApiE2EFactory factory) : IClassFixt
         Assert.StartsWith("date,occupancy,visits,motion\n2", await theirs.GetStringAsync("/api/export.csv?tz=UTC"), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Sessions_can_be_listed_by_the_time_range_they_overlap()
     {
         using var client = ClientFor($"range-{Guid.NewGuid():N}");
@@ -54,7 +54,7 @@ public sealed class SessionLifecycleE2ETests(ApiE2EFactory factory) : IClassFixt
         Assert.Empty(before!);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task A_session_starts_lists_and_stops_once()
     {
         using var client = ClientFor($"sessions-{Guid.NewGuid():N}");
@@ -88,7 +88,7 @@ public sealed class SessionLifecycleE2ETests(ApiE2EFactory factory) : IClassFixt
         Assert.Equal(stopped.EndedUtc, fetched!.EndedUtc);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Sessions_are_private_and_bad_input_is_rejected()
     {
         using var owner = ClientFor($"owner-{Guid.NewGuid():N}");

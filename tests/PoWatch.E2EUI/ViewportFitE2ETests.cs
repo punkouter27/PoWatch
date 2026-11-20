@@ -30,7 +30,7 @@ public sealed class ViewportFitE2ETests
         yield return new object[] { 1440, 900 };
     }
 
-    [Fact]
+    [E2EFact]
     public async Task Live_Journal_and_System_bodies_fit_within_every_viewport()
     {
         foreach (var (name, open) in new (string, Func<IPage, Task>)[]
@@ -53,7 +53,7 @@ public sealed class ViewportFitE2ETests
         }
     }
 
-    [Fact]
+    [E2EFact]
     public async Task On_a_phone_the_bottom_bar_reaches_every_section_and_diag_works_signed_out()
     {
         await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser, "/");
@@ -93,7 +93,7 @@ public sealed class ViewportFitE2ETests
         Assert.Empty(errors);
     }
 
-    [Fact]
+    [E2EFact]
     public async Task A_camera_session_samples_the_fake_camera_and_survives_navigation()
     {
         await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser);

@@ -14,7 +14,7 @@ public sealed class StatsE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE2EF
         return client;
     }
 
-    [Fact]
+    [DockerFact]
     public async Task A_year_of_history_answers_within_the_time_budget()
     {
         using var client = ClientFor($"year-{Guid.NewGuid():N}");
@@ -58,7 +58,7 @@ public sealed class StatsE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE2EF
         Assert.Equal(System.Text.Json.JsonValueKind.Array, day.GetProperty("events").ValueKind);
     }
 
-    [Fact]
+    [DockerFact]
     public async Task Fresh_batches_show_up_in_every_stat_family_straight_away()
     {
         using var client = ClientFor($"live-{Guid.NewGuid():N}");

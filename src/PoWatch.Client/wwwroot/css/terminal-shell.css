@@ -26,17 +26,10 @@
     font-size: var(--fs-sm);
 }
 
+/* The title's font, size and colour are the page shell's .po-header__title (po-tokens.css). */
 .term-brand {
     flex: none;
     min-height: 32px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    font-size: 16px;
-    color: var(--term-text);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 6px;
 }
 
 

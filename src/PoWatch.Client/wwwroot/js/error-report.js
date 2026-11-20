@@ -1,4 +1,4 @@
-// Sends this browser's unhandled errors to the server log (POST api/diagnostics/client-error), so a crash on
+// Sends this browser's unhandled errors to the server log (POST api/diag/client-error), so a crash on
 // someone's screen ("An unhandled error has occurred") can be read and fixed. Blazor writes its unhandled
 // component exceptions to console.error; uncaught script errors and rejected promises are caught too. At
 // most five reports a page, each clipped by the server; nothing is sent before sign-in (the endpoint needs it).
@@ -14,7 +14,7 @@
         sent.add(text);
         left--;
         try {
-            fetch('api/diagnostics/client-error', {
+            fetch('api/diag/client-error', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
