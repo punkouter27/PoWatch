@@ -1,13 +1,20 @@
 # AGENTS.md
 
-## Po Web App Standard
+## 1. Standard
+
+> This repo owns every file in it. Nothing here is generated from, synced with, or required to stay identical to
+> another repository. Headers like "SAME FILE IN EVERY PO …", "Generated from po-shared … DO NOT EDIT", and scripts
+> that copy files into or check other repos are forbidden. Only Azure resources in the `PoShared` resource group
+> may be shared.
+
+### Po Web App Standard
 
 This repo is one of several independent Po apps. It follows the conventions below, but it owns every file:
 nothing is generated from, synced with, or required to stay identical to another repository. Change anything
 here freely; only the *conventions* are common, never the code. Azure resources may be shared through the
 `PoShared` resource group; code may not.
 
-### Repo skeleton
+#### Repo skeleton
 ```
 README.md          what the app is, live URL, how to run locally, how it deploys
 AGENTS.md          this standard + repo-specific notes (CLAUDE.md just points here)
@@ -23,7 +30,7 @@ docs/              lowercase; everything else that is prose
 No `.cursorrules`, `.copilotignore`, `SPEC.md`, `tasks/`, `DOCS/` at the root (fold useful content into docs/).
 `SCREENSHOTS/` is allowed only if README references it.
 
-### Page shell (every page, signed in or out, including the sign-in page)
+#### Page shell (every page, signed in or out, including the sign-in page)
 - Header `.po-header`, height 56px, sticky: app name top-left (`.po-header__title`, links to `/`).
 - Top-right `.po-header__actions`: signed-in user's **email** (`.po-header__email`, full email, ellipsis at 16ch on
   phones) — or, signed out, one **Sign in** button `class="po-link-btn filled small"` (same style on every page) —
@@ -37,11 +44,11 @@ No `.cursorrules`, `.copilotignore`, `SPEC.md`, `tasks/`, `DOCS/` at the root (f
 - Login-only data must not be requested for signed-out visitors (no 401s in the console on public pages), and
   actions a signed-out visitor cannot perform are hidden.
 
-### Version
+#### Version
 - `Directory.Build.props` stamps ONE assembly metadata key: `BuildVersion` = UTC `yyMMdd`. No `BuildStamp`/`BuildDate`
   aliases. Every reader (header badge component, `/api/diag`, `/health` headers) reads `BuildVersion`.
 
-### Health + /diag contract
+#### Health + /diag contract
 - `GET /health/live` (liveness, returns header `X-Commit: <sha>`), `GET /health` (readiness), `GET /api/diag` →
   ```
   DiagReportDto(string Status, string Environment, string Version, DateTimeOffset CheckedAt, double CheckedMs,
@@ -55,13 +62,13 @@ No `.cursorrules`, `.copilotignore`, `SPEC.md`, `tasks/`, `DOCS/` at the root (f
   **Services**; each row = label, purpose, status pill, latency ms, problem/detail text. Every external dependency
   the app really calls appears as a check. Anonymous, nothing secret in the payload.
 
-### Workflow (`.github/workflows/deploy.yml`, the only one)
+#### Workflow (`.github/workflows/deploy.yml`, the only one)
 push to master → format check → build (Release, warnings as errors) → Unit tests → Integration tests (Testcontainers /
 Azurite; Docker is available on ubuntu-latest) → publish → deploy → confirm `/health/live` X-Commit = this SHA.
 If the repo has a MAUI `src/<App>.Mobile`, a second job in the SAME file (`mobile`, `needs: []`, not blocking deploy)
 installs the `maui-android` workload and builds the Android target, so the client is always compiled.
 
-### Tests
+#### Tests
 - Unit tier: fast, no I/O, runs in CI.
 - Integration tier: runs in CI; locally it SKIPS with a clear message when Docker is not running (never a wall of
   `DockerUnavailableException` failures).
@@ -69,8 +76,43 @@ installs the `maui-android` workload and builds the Android target, so the clien
   message. They are not part of CI.
 - Docs must state real counts, not caps that are out of date.
 
-### Azure naming
+#### Azure naming
 App Service `app-<repo lowercase>`; per-app resources named `<type>-<repo lowercase>`; shared things only in `PoShared`.
+
+## 2. Concurrent work
+
+> Several sessions (people and agents) commit to this repo, sometimes at the same time.
+> - Before every commit and every push: `git fetch origin && git rebase --autostash origin/master`.
+> - Stage only the files you changed (`git add <paths>`); never `git add -A` / `git add .`; check `git diff --cached`.
+> - Never revert, reformat or overwrite changes you didn't make; keep the owner's recent decisions (e.g. features
+>   removed on purpose stay removed).
+> - Don't commit or sync from the IDE while an agent is working in this folder.
+> - Pushing `master` deploys production; changes to `.github/workflows/*` need a token with the `workflow` scope.
+
+## 3. Verification
+
+Every command below was run on 2026-11-20 (PowerShell or bash, repo root).
+
+| What | Command | Needs / skips |
+|---|---|---|
+| Format | `dotnet format PoWatch.slnx --verify-no-changes` | — |
+| Build | `dotnet build PoWatch.slnx -c Release` | warnings are errors (the client is trim-analysed) |
+| Hygiene / caps | `pwsh scripts/check-hygiene.ps1` and `pwsh scripts/check-test-caps.ps1` | after a Release build |
+| Unit | `dotnet test tests/PoWatch.Unit -c Release` | nothing (58 tests) |
+| Integration | `dotnet test tests/PoWatch.Integration -c Release` | Docker (Testcontainers Azurite); skips with one message without it (23) |
+| E2E API | `dotnet test tests/PoWatch.E2EAPI -c Release` | Docker; skips without it (14) |
+| E2E UI | `dotnet test tests/PoWatch.E2EUI -c Release` | hosts the app itself (Docker) + Playwright Chromium, or a running app at `E2E_BASE_URL`; skips with the reason otherwise (25) |
+| Node checks | `node --test scripts/sensory-audio.test.cjs scripts/sensory-visual.test.cjs` | Node |
+| Azurite for a local run | `docker run -d --rm -p 21000:10000 -p 21001:10001 -p 21002:10002 mcr.microsoft.com/azure-storage/azurite:latest azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --skipApiVersionCheck --loose` | Docker |
+| Run locally (guest sign-in) | `AzureStorage__ConnectionString="<Azurite connection string, ports 21000-21002>" FeatureFlags__DeveloperBypassAuth=true FeatureFlags__EnableKeyVault=false ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:7428 dotnet run --project src/PoWatch.Api --no-launch-profile` | → http://localhost:7428 and http://localhost:7428/diag |
+
+- **Deploy:** push to `master` runs `.github/workflows/deploy.yml` (format, build, Unit, Integration, publish,
+  deploy; the `mobile` job builds the Android client beside it). `*.md` changes do not deploy.
+- **Deploy check:** `curl -sI https://app-powatch-win2.azurewebsites.net/health/live` shows `X-Commit: <pushed sha>`
+  (the workflow waits for it).
+- **Live:** https://app-powatch-win2.azurewebsites.net and https://app-powatch-win2.azurewebsites.net/diag
+- **Pinned:** .NET SDK `10.0.400` (`global.json`, rollForward latestFeature); MAUI client built with the
+  `maui-android` workload in CI only (not in the .slnx).
 
 ---
 
