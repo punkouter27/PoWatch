@@ -20,7 +20,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 4px 12px;
+    /* Vertical room comes from .po-header's 56px min-height (po-tokens.css); padding here would make it 64. */
+    padding: 0 12px;
     border-bottom: 1px solid var(--term-line);
     background: color-mix(in srgb, var(--term-surface) 82%, transparent);
     font-size: var(--fs-sm);
@@ -473,7 +474,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .term-status-detail { display: none; }
     /* Room for the Po header's email and gear: the recording state stays on Live and in Start/Stop. */
     .term-header .term-status { display: none; }
-    .term-header { gap: 6px; padding: 4px 8px; }
+    .term-header { gap: 6px; padding: 0 8px; }
     .term-status { margin-left: auto; }
     /* The section keys move to BottomNav, a tab bar along the bottom where a thumb reaches; the header stays one row. */
     .term-header .term-keys { display: none; }
