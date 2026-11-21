@@ -1,6 +1,6 @@
 /* terminal-tokens.css — the "Terminal" look's own tokens: the --term-* palette, type sizes, motion,
-   and the Radzen bridge. Colours and fonts alias the Po estate tokens in po-tokens.css (the Po web
-   standard, linked first and identical in every Po app), so PoWatch shares the one indigo accent,
+   and the Radzen bridge. Colours and fonts alias the Po tokens in po-tokens.css (owned by this
+   repo and linked first), so PoWatch uses the indigo accent,
    Inter + Space Grotesk, and light/dark follow the device (there is no theme switch). The rules that
    use these are in the terminal-*.css files. The canvases (heat-gl, replay) read --term-* through
    getComputedStyle, which resolves the var() aliases to the plain hex in po-tokens.css. */

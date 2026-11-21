@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $sourceRoot = Join-Path $repoRoot 'src'
 
@@ -51,8 +51,8 @@ if ($hits) {
 }
 
 # Every class a stylesheet defines must be used somewhere in markup, code or scripts. Radzen's own
-# classes (rz-*) are styled, never written by us, so they are exempt, and so is po-tokens.css: the Po
-# web standard's file, identical in every Po app, defines the whole estate's shell classes.
+# classes (rz-*) are styled, never written by us, so they are exempt, and so is po-tokens.css: this
+# repo's copy of the Po shell tokens defines the shared shell classes.
 $clientRoot = Join-Path $sourceRoot 'PoWatch.Client'
 $usage = (Get-ChildItem -LiteralPath $clientRoot -File -Recurse |
     Where-Object { $_.Extension -in '.razor', '.cs', '.js', '.html' -and $_.FullName -notmatch '[\\/](bin|obj|lib)[\\/]' } |
