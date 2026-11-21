@@ -96,7 +96,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeVisibleAsync();
         await page.GetByTestId("ask-toggle").ClickAsync();
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeHiddenAsync();
-        await Assertions.Expect(page.GetByTestId("session-health")).ToHaveAttributeAsync("href", "system");
+        await Assertions.Expect(page.GetByTestId("session-health")).ToHaveAttributeAsync("href", "diag");
         await Assertions.Expect(page.GetByTestId("live-metrics").Locator("table")).ToHaveCountAsync(0);
         await Assertions.Expect(page.GetByTestId("live-pipeline")).ToHaveCountAsync(0);
         await Assertions.Expect(page.GetByTestId("metric-motion")).ToContainTextAsync("Available while observing");
@@ -179,7 +179,7 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
             "start|stop|delete|merge|share|reset|sign out|keep|demo|clear|send|ask|save|remove|take down|download|explain|pdf",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-        foreach (var route in new[] { "/", "/journal", "/system" })
+        foreach (var route in new[] { "/", "/journal", "/diag" })
         {
             await page.GotoAsync($"{PlaywrightFixture.BaseUrl}{route}");
             await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync(new() { Timeout = 60_000 });

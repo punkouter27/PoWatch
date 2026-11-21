@@ -64,7 +64,7 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
 ## Things that are easy to get wrong
 
 - **Page shell (AGENTS.md).** `Layout/PoHeader.razor` is the one header, `.po-header`,
-  on every page signed in and out (`BareLayout` renders it `Bare`: sign-in and `/diag`): `PoWatch`
+  on every page signed in and out (`BareLayout` renders it `Bare`: sign-in, and `/diag` when signed out): `PoWatch`
   upper-left, then the signed-in email (`.po-header__email`; the dev guest is `guest@guest.localhost`)
   or the Sign in button (`po-link-btn filled small`), and the gear (`.po-header__settings`, a link to `/settings`) upper-right. The bell's links
   still open Settings in the drawer. `css/po-tokens.css` is this repo's copy of the Po conventions: Inter + Space Grotesk self-hosted in `wwwroot/fonts/`, one indigo accent,
@@ -75,7 +75,7 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   the phone bottom bar by `--po-stamp-lift`. Tab with nothing focused opens `/po-dev.html`
   (`js/po-devwindow.js`).
 - **Diagnostics: one page, one API.** `/diag` ("System status", `Features/Diagnostics/Diag.razor`, anonymous,
-  `BareLayout`) follows the /diag contract in AGENTS.md: banner, then API / Data / Services from the anonymous
+  `DiagLayout`: the bare shell signed out, the full app shell signed in) follows the /diag contract in AGENTS.md: banner, then API / Data / Services from the anonymous
   `GET /api/diag` (`DiagReportDto`), which rewrites every health check in its own words: never return a check's
   description or exception message there (exception type at most; `EndpointContractTests` checks). A
   signed-in operator also gets `DiagOperator` under the sections: server runtime (`GET /api/diag/runtime`),
