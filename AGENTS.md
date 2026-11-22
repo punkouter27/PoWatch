@@ -92,6 +92,13 @@ App Service `app-<repo lowercase>`; per-app resources named `<type>-<repo lowerc
 
 ## 3. Verification
 
+One command sequence verifies the repo (format, build, Unit, Integration, E2E API, then E2E UI three times on the
+trimmed Release publish):
+
+```powershell
+dotnet format PoWatch.slnx --verify-no-changes && dotnet build PoWatch.slnx -c Release && dotnet test tests/PoWatch.Unit -c Release && dotnet test tests/PoWatch.Integration -c Release && dotnet test tests/PoWatch.E2EAPI -c Release && pwsh scripts/run-browser-tests.ps1 -Repeat 3
+```
+
 Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 
 | What | Command | Needs / skips |
@@ -117,6 +124,21 @@ Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 - **Pinned:** .NET SDK `10.0.400` (`global.json`, rollForward latestFeature); MAUI client built with the
   `maui-android` workload in CI only (not in the .slnx).
 
+### Deliberate deviations
+
+| Deviation | Why | Commit sha / date | How to undo |
+|---|---|---|---|
+| Radzen exceptions: camera `<video>` (`Layout/MainLayout.razor`) and drawing canvases (Live heat map, Journal replay, time-lapse); plain `<form @onsubmit>` around the weather search (its controls are Radzen) | media surfaces and a container, not form controls (Profile A) | `9e0cffd` 2026-11-21 | — |
+| Replay scrubber `<input type="range" data-replay="scrub">` (`Features/Journal/TimelineReplay.razor`) stays native | `js/replay.js` drives it every frame as a media seek bar; **awaiting owner confirmation** | `9e0cffd` 2026-11-21 | swap for `RadzenSlider` and rewire `replay.js` |
+| /diag: a service switched off on purpose is **Off** (grey, not counted in the banner or overall status) | opt-in services left off are not faults | `9e0cffd` 2026-11-21 | `ServiceProbes.cs` |
+| Phones: the stamp is the last child of `<main>`, static after the content; on wide screens it stays fixed | a fixed stamp covered /diag cards (overrides the older fixed rule) | `9e0cffd` 2026-11-21 | `git revert 9e0cffd` (stamp part) |
+| `/login` shows one Microsoft button (guest only where no tenant is set); no gear signed out | one-button sign-in rule | `9e0cffd` 2026-11-21 | — |
+| `SCREENSHOTS/` is git-ignored (before/after pages stay local) | keeps the repo small | — | un-ignore it |
+| App Service `app-powatch-win2` on `asp-PoWatch-f1` (standard `app-powatch`) | renaming means recreating | — | owner-approved recreate |
+
+**Hosting:** App Service F1 (Free, `asp-PoWatch-f1`): 165 MB of data out and 60 CPU-minutes per day. Never run test
+suites against the live site; live checks = at most 6 page loads + /diag + X-Commit.
+
 ---
 
 # PoWatch: repo-specific notes
@@ -141,14 +163,7 @@ working in this repository:
 ### Radzen is the component library (owner decision 2026-11-21)
 Every button, text box, dropdown, number box, checkbox, tab set and chart is a Radzen component
 (`Radzen.Blazor`, pinned in `Directory.Packages.props`); class `pw-plain` keeps the app's own look
-(docs/development.md, "Radzen controls"). The only native elements left, on purpose:
-* **Native video/canvas:** the camera feed `<video>` (`Layout/MainLayout.razor`) and the drawing canvases
-  (Live heat map, Journal replay track/heat, time-lapse) - media surfaces, not form controls.
-* **The replay scrubber** `<input type="range" data-replay="scrub">` (`Features/Journal/TimelineReplay.razor`):
-  the seek bar of the JS-drawn replay (`js/replay.js` owns its value and events every frame), treated like a
-  native media control. Recorded as an exception for the owner to confirm.
-* **Plain `<form @onsubmit>`** around the weather place search (`WeatherSettings.razor`) - a container; its
-  controls are Radzen.
+(docs/development.md, "Radzen controls"). The native elements left on purpose are in "Deliberate deviations" above.
 
 ### 4. UI & Output Rules
 * **UI Previews:** For visual changes, save before-and-after HTML mockups to `SCREENSHOTS/{YYMMDD}-{feature}.html` / Annotate screenshots and show in a single PNG the before and after with notes
@@ -168,4 +183,4 @@ Every button, text box, dropdown, number box, checkbox, tab set and chart is a R
 - Every permission the app and CI need lives in `scripts/ensure-azure-access.ps1`. A role granted by hand and not added there is a bug: the next re-provision loses it.
 - The app answers `/health/live` (process up, no dependencies, `X-Commit` header) `/health` (dependencies reachable) and `/api/diag` (the /diag page's report). The deploy waits for `/health/live` to report the pushed commit.
 - Tests pass on any machine: no drive-letter, temp-folder or working-directory assumptions, and no live config value hard-coded as an expected result (read it from the same config the app reads).
-- A red run on the default branch gets an ntfy push from the CI watcher in PoPunkouterSoftware. Fix it, or say why it is red.
+- Nothing alerts on a red run any more (the PoPunkouterSoftware CI watcher was dropped 2026-11-20): check `gh run list -L 1` after a push. Fix it, or say why it is red.
