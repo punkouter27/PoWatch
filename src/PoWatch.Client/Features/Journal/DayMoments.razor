@@ -31,7 +31,7 @@
     {
         <canvas @ref="_timelapse" class="timelapse-canvas" aria-label="Time-lapse of the day"></canvas>
         <div class="timelapse-actions">
-            <button class="term-button" @onclick="PlayAsync" disabled="@_playing" data-test="timelapse-play">@(_playing ? "Playing…" : "▶ Play")</button>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="PlayAsync" Disabled="@_playing" data-test="timelapse-play">@(_playing ? "Playing…" : "▶ Play")</RadzenButton>
             @if (_videoUrl is { } url)
             {
                 <a class="term-button" href="@url" download="powatch-@(DayKey).webm" data-test="timelapse-save">Save video</a>

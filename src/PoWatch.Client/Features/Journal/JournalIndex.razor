@@ -40,7 +40,7 @@
                 </ol>
                 @if (_sessions.Count >= _take && _take < MaxTake)
                 {
-                    <button type="button" class="term-button story-more" @onclick="OlderAsync" data-test="story-more">Older sessions</button>
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button story-more" Click="OlderAsync" data-test="story-more">Older sessions</RadzenButton>
                 }
             }
         </ChildContent>

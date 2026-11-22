@@ -5,12 +5,12 @@
     <Aside>REMEMBERED HERE</Aside>
     <ChildContent>
         <div class="settings-list">
-            <button class="term-menu-item" onclick="powatchMenus.openPalette()" data-test="open-palette">
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="@(() => JS.TryInvokeVoidAsync("powatchMenus.openPalette"))" data-test="open-palette">
                 <span>Commands and shortcuts</span><b>CTRL K</b>
-            </button>
-            <button class="term-menu-item" @onclick="ResetAsync" data-test="settings-reset">
+            </RadzenButton>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="ResetAsync" data-test="settings-reset">
                 <span>Reset to defaults <i>low sound, captions, listening and posture on, a sitting nudge at 45 minutes; rules and account settings stay</i></span><b>↺</b>
-            </button>
+            </RadzenButton>
         </div>
     </ChildContent>
 </TerminalPanel>

@@ -99,7 +99,7 @@
 .ai-models-title { color: var(--term-accent); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.12em; }
 .ai-model { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .ai-model label, .ai-model-label { color: var(--term-dim); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; cursor: help; }
-.ai-model select {
+.ai-model .rz-dropdown {
     min-width: 0;
     max-width: 260px;
     min-height: 30px;
@@ -112,8 +112,8 @@
     text-overflow: ellipsis;
     cursor: pointer;
 }
-.ai-model select:hover, .ai-model select:focus-visible { border-color: var(--term-accent); outline: none; }
-.ai-model select:disabled { cursor: wait; opacity: 0.6; }
+.ai-model .rz-dropdown:hover, .ai-model .rz-dropdown:focus-visible { border-color: var(--term-accent); outline: none; }
+.ai-model .rz-dropdown.rz-state-disabled { cursor: wait; opacity: 0.6; }
 .ai-model-status { color: var(--term-muted); font: var(--fs-xs) var(--term-mono); text-decoration: none; white-space: nowrap; }
 .ai-model-status--warn { color: var(--term-amber, var(--term-red)); }
 
@@ -177,8 +177,9 @@
 
 .settings-camera label { min-width: 0; }
 .settings-camera label i { display: block; color: var(--term-muted); font-style: normal; font-size: var(--fs-xs); }
-.settings-camera select {
+.settings-camera .rz-dropdown {
     max-width: 55%;
+    min-width: min(14rem, 55%);
     min-height: 30px;
     border: 1px solid var(--term-line);
     border-radius: var(--term-radius);
@@ -191,14 +192,14 @@
 @media (max-width: 719.98px) {
     .ai-model { flex-wrap: wrap; width: 100%; }
     .ai-model label { min-width: 52px; }
-    .ai-model select { flex: 1; max-width: none; min-height: 44px; }
+    .ai-model .rz-dropdown { flex: 1; max-width: none; min-height: 44px; }
     .ai-model-status, .model-load { white-space: normal; flex-wrap: wrap; min-width: 0; }
 }
 /* The caption model in the header, next to the section keys: a label and the same compact dropdown as
    the AI strip. Phones keep it in the AI strip, where a full-width dropdown fits. */
 .term-nav-model { flex: 0 1 auto; display: flex; align-items: center; gap: 6px; min-width: 0; }
 .term-nav-model > span { color: var(--term-dim); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; }
-.term-nav-model select {
+.term-nav-model .rz-dropdown {
     min-width: 0;
     max-width: 280px;
     min-height: 30px;
@@ -211,7 +212,7 @@
     text-overflow: ellipsis;
     cursor: pointer;
 }
-.term-nav-model select:hover, .term-nav-model select:focus-visible { border-color: var(--term-accent); outline: none; }
+.term-nav-model .rz-dropdown:hover, .term-nav-model .rz-dropdown:focus-visible { border-color: var(--term-accent); outline: none; }
 @media (max-width: 719.98px) {
     .term-nav-model { display: none; }
 }
@@ -470,7 +471,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 @media (max-width: 719.98px) {
     .term-grid { grid-template-columns: minmax(0, 1fr); }
     .term-span-2 { grid-column: span 1; }
-    :root { --term-bottom-bar: calc(57px + env(safe-area-inset-bottom)); --po-stamp-lift: 57px; }
+    :root { --term-bottom-bar: calc(57px + env(safe-area-inset-bottom)); }
     .term-status-detail { display: none; }
     /* Room for the Po header's email and gear: the recording state stays on Live and in Start/Stop. */
     .term-header .term-status { display: none; }
@@ -491,7 +492,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
         background: color-mix(in srgb, var(--term-surface) 94%, transparent);
         border-top: 1px solid var(--term-line);
     }
-    .term-body { padding: 8px 8px calc(8px + var(--term-bottom-bar) + 32px); }
+    .term-body { padding: 8px 8px calc(8px + var(--term-bottom-bar)); }
     .term-drawer { width: 100vw; }
 }
 

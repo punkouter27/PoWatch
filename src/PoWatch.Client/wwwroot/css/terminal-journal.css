@@ -67,8 +67,8 @@
 
 /* Cards flow as many across as fit; the name is edited in place; the merge bar floats over the page. */
 .regulars-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border-bottom: 1px solid var(--term-line); font: var(--fs-sm) var(--term-mono); }
-.regulars-bar input[type="search"], .regulars-merge select { min-height: 32px; padding: 0 8px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: var(--fs-sm) var(--term-mono); }
-.regulars-bar input[type="search"] { width: min(220px, 100%); }
+.regulars-bar .rz-textbox, .regulars-merge .rz-dropdown { min-height: 32px; padding: 0 8px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: var(--fs-sm) var(--term-mono); }
+.regulars-bar .rz-textbox { width: min(220px, 100%); }
 .regulars-merge {
     display: flex;
     flex-wrap: wrap;
@@ -149,8 +149,8 @@
     .settings-search .term-button, .moment-filters .term-button, .history-share .term-button { min-height: 44px; }
     .term-icon-button, .rule-row .term-icon-button, .away-bar .term-icon-button { min-width: 44px; }
     .term-key { font-size: 12px; }
-    .regulars-bar input[type="search"], .regulars-merge select, .regular-name input, .stats-ask input,
-    .rule-form select, .rule-form input, .name-prompt input, .settings-search input, .history-share input { min-height: 44px; }
+    .regulars-bar .rz-textbox, .regulars-merge .rz-dropdown, .regular-name input, .stats-ask input,
+    .rule-form .rz-dropdown, .rule-form input, .name-prompt input, .settings-search input, .history-share input { min-height: 44px; }
     .regular-card input[type="checkbox"] { width: 24px; height: 24px; }
 }
 
@@ -159,8 +159,7 @@
 /* A panel whose content threw: a small retry box in place of its content, the rest of the page untouched. */
 .panel-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; color: var(--term-red); font: var(--fs-sm) var(--term-mono); }
 
-/* The version badge pinned to the corner of every page is .po-version (po-tokens.css);
-   --po-stamp-lift (terminal-shell.css) keeps it above the phone's bottom tab bar. */
+/* The version badge is .po-version (po-tokens.css): the corner on wide screens, after the content on phones. */
 
 @media print { .po-version { display: none; } }
 

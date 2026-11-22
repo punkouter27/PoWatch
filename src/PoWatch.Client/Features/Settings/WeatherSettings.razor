@@ -10,7 +10,7 @@
                 @if (profile.Place is { } place)
                 {
                     <b>@place.Name.ToUpperInvariant()</b>
-                    <button class="term-icon-button" @onclick="ClearPlaceAsync" disabled="@Saving" aria-label="Stop showing weather" title="Stop showing weather">✕</button>
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Click="ClearPlaceAsync" Disabled="@Saving" aria-label="Stop showing weather" title="Stop showing weather">✕</RadzenButton>
                 }
                 else
                 {
@@ -19,8 +19,8 @@
             </div>
             <form class="settings-search" @onsubmit="SearchPlacesAsync">
                 <label class="visually-hidden" for="place-search">Find a town or city</label>
-                <input id="place-search" @bind="_placeQuery" placeholder="Find a town or city…" autocomplete="off" maxlength="80" data-test="place-search" />
-                <button type="submit" class="term-button" disabled="@_searching" data-test="place-search-go">@(_searching ? "…" : "Find")</button>
+                <RadzenTextBox id="place-search" Name="place-search" @bind-Value="_placeQuery" Placeholder="Find a town or city…" autocomplete="off" MaxLength="80" data-test="place-search" />
+                <RadzenButton ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@_searching" data-test="place-search-go">@(_searching ? "…" : "Find")</RadzenButton>
             </form>
             @if (_places is { } places)
             {
@@ -31,7 +31,7 @@
                 <ul class="settings-results" data-test="place-results">
                     @foreach (var found in places)
                     {
-                        <li><button class="term-menu-item" @onclick="() => SavePlaceAsync(found)" disabled="@Saving"><span>@found.Name <i>@found.Detail</i></span><b>USE</b></button></li>
+                        <li><RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="() => SavePlaceAsync(found)" Disabled="@Saving"><span>@found.Name <i>@found.Detail</i></span><b>USE</b></RadzenButton></li>
                     }
                 </ul>
             }

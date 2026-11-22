@@ -4,9 +4,9 @@
 <li class="moment @(Lit ? "is-now" : null)" data-test="moment-line" data-kind="@Entry.Kind">
     @if (Jump)
     {
-        <button type="button" class="moment-jump" data-replay-jump="@Entry.AtUtc.ToUnixTimeMilliseconds()" title="Replay from @Time">
+        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain moment-jump" data-replay-jump="@Entry.AtUtc.ToUnixTimeMilliseconds()" title="@($"Replay from {Time}")">
             <time class="num">@Time</time><span class="moment-tag">@Entry.Tag</span><span class="moment-text">@Entry.Sentence</span>
-        </button>
+        </RadzenButton>
     }
     else
     {

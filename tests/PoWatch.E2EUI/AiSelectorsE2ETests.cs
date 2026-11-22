@@ -15,18 +15,18 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
         await page.GetByTestId("ai-config-toggle").ClickAsync();
         var captions = page.GetByTestId("ai-caption-model");
         var chat = page.GetByTestId("ai-chat-model");
-        await Assertions.Expect(chat).ToBeEnabledAsync();
-        await captions.SelectOptionAsync("qwen2.5vl:7b");
-        await chat.SelectOptionAsync("Ollama");
-        await Assertions.Expect(chat).ToBeEnabledAsync();
-        await page.GetByTestId("ai-hearing").SelectOptionAsync("off");
+        await Assertions.Expect(chat).Not.ToHaveClassAsync(new System.Text.RegularExpressions.Regex(@"rz-state-disabled"));
+        await captions.PickAsync("qwen2.5vl:7b");
+        await chat.PickAsync("Ollama");
+        await Assertions.Expect(chat).Not.ToHaveClassAsync(new System.Text.RegularExpressions.Regex(@"rz-state-disabled"));
+        await page.GetByTestId("ai-hearing").PickAsync("off");
         await page.ReloadAsync();
         await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync(new() { Timeout = 60_000 });
         await page.GetByTestId("ai-config-toggle").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("ai-hearing")).ToHaveValueAsync("off", new() { Timeout = 60_000 });
-        await page.GetByTestId("ai-hearing").SelectOptionAsync("on");
-        await Assertions.Expect(captions).ToHaveValueAsync("qwen2.5vl:7b", new() { Timeout = 60_000 });
-        await Assertions.Expect(chat).ToHaveValueAsync("Ollama");
+        await page.GetByTestId("ai-hearing").ExpectPickedAsync("off", 60_000);
+        await page.GetByTestId("ai-hearing").PickAsync("on");
+        await captions.ExpectPickedAsync("qwen2.5vl:7b", 60_000);
+        await chat.ExpectPickedAsync("Ollama");
 
         page.ThrowIfErrors();
         await page.RouteAsync("**/api/ai/models", async route =>
@@ -34,9 +34,9 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
             if (route.Request.Method == "PUT") await route.FulfillAsync(new() { Status = 503 });
             else await route.ContinueAsync();
         });
-        await chat.SelectOptionAsync("Template");
+        await chat.PickAsync("Template");
         await Assertions.Expect(page.GetByRole(AriaRole.Alert)).ToContainTextAsync("Could not switch server AI");
-        await Assertions.Expect(chat).ToHaveValueAsync("Ollama");
+        await chat.ExpectPickedAsync("Ollama");
         await page.UnrouteAsync("**/api/ai/models");
         // Clear the intentional 503 fault-injection error verified immediately above.
         page.ClearErrors();
@@ -79,18 +79,18 @@ public sealed class AiSelectorsE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("model-cpu-notice")).ToContainTextAsync("object detector is running on the CPU, not the GPU, because this browser offers no WebGPU");
         await page.WaitForFunctionAsync("() => captionCalls.includes('qwen2.5vl:7b')");
         await Assertions.Expect(page.GetByTestId("ai-caption-status")).ToContainTextAsync("OLLAMA");
-        await captions.SelectOptionAsync("minicpm-v");
+        await captions.PickAsync("minicpm-v");
         await page.WaitForFunctionAsync("() => captionCalls.at(-1) === 'minicpm-v'");
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("OBSERVING");
-        await captions.SelectOptionAsync("off");
+        await captions.PickAsync("off");
         await Assertions.Expect(page.GetByTestId("ai-caption-status")).ToHaveTextAsync("OFF");
-        await captions.SelectOptionAsync("qwen3-vl:8b-instruct");
+        await captions.PickAsync("qwen3-vl:8b-instruct");
         await page.WaitForFunctionAsync("() => captionCalls.at(-1) === 'qwen3-vl:8b-instruct'");
         await page.GetByTestId("header-stop").ClickAsync();
 
         await page.GotoAsync($"{PlaywrightFixture.BaseUrl}/");
         await page.GetByTestId("ai-config-toggle").ClickAsync();
-        await Assertions.Expect(captions).ToHaveValueAsync("qwen3-vl:8b-instruct", new() { Timeout = 60_000 });
+        await captions.ExpectPickedAsync("qwen3-vl:8b-instruct", 60_000);
 
         await page.SetViewportSizeAsync(375, 812);
         // An opened <details> body pops in from scale(0.94) (po-polish.css); measure the settled box, not a frame of the pop.

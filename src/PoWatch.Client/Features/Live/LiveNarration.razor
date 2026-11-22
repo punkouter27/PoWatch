@@ -24,7 +24,7 @@
     else
     {
         <SessionMinimap Lines="@lines" List="@_list" Start="@(Started ?? lines[^1].AtUtc)" End="@(Recording ? DateTimeOffset.UtcNow : _endedUtc ?? lines[0].AtUtc)" Live="@Recording" OnPick="@LightAsync" />
-        <button type="button" class="term-button narration-new" data-narration-new hidden>New events ↑</button>
+        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button narration-new" data-narration-new hidden>New events ↑</RadzenButton>
         <ol class="moment-list" data-test="narration-lines" @ref="_list" @key="_filter">
             @foreach (var entry in lines)
             {

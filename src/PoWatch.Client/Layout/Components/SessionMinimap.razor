@@ -13,9 +13,9 @@
             }
             @foreach (var pin in _pins)
             {
-                <button type="button" class="minimap-pin" data-kind="@pin.Entry.Kind" style="left: @Pct(pin.Left)%;"
-                        title="@Time(pin.Entry.AtUtc) @pin.Entry.Tag @pin.Entry.Sentence" aria-label="@Time(pin.Entry.AtUtc) @pin.Entry.Tag @pin.Entry.Sentence"
-                        @onclick="() => ShowAsync(pin.Entry, pin.Index)" data-test="minimap-pin"></button>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain minimap-pin" data-kind="@pin.Entry.Kind" style="@($"left: {Pct(pin.Left)}%;")"
+                        title="@($"{Time(pin.Entry.AtUtc)} {pin.Entry.Tag} {pin.Entry.Sentence}")" aria-label="@($"{Time(pin.Entry.AtUtc)} {pin.Entry.Tag} {pin.Entry.Sentence}")"
+                        Click="() => ShowAsync(pin.Entry, pin.Index)" data-test="minimap-pin"></RadzenButton>
             }
         </div>
         <div class="minimap-axis" aria-hidden="true"><span>@Time(Start)</span><span>@(Live ? "NOW" : Time(End))</span></div>

@@ -1,6 +1,11 @@
+using System.Net;
+using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using PoWatch.Api.Features.Diagnostics;
 using Testcontainers.Azurite;
 
 namespace PoWatch.Integration;
@@ -49,8 +54,40 @@ public sealed class AzuriteWebApplicationFactory : WebApplicationFactory<Program
             {
                 ["AzureStorage:ConnectionString"] = _azurite.GetConnectionString(),
                 ["FeatureFlags:DeveloperBypassAuth"] = "true",
-                ["FeatureFlags:EnableKeyVault"] = "false"
+                ["FeatureFlags:EnableKeyVault"] = "false",
+                // /api/diag probes Azure OpenAI with a key here, never with the machine's Azure sign-in.
+                ["AzureOpenAi:ApiKey"] = "integration-test-key",
+                ["ApplicationInsights:ConnectionString"] = ""
             });
         });
+        // /api/diag's live probes answer from a stub, so the suite never depends on the internet.
+        builder.ConfigureTestServices(services =>
+            services.AddHttpClient(ServiceProbes.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => new ProbeStub(WeatherStatus)));
     }
+
+    /// <summary>What the stubbed Open-Meteo answers; a test sets 500 to see a service row degrade.</summary>
+    public HttpStatusCode WeatherStatus { get; init; } = HttpStatusCode.OK;
+}
+
+/// <summary>
+/// Stands in for every service /api/diag probes: Open-Meteo finds a place (or fails with the given status),
+/// Azure OpenAI lists models, nothing listens on localhost (a local Ollama that is not running), and
+/// anything else is a 404.
+/// </summary>
+internal sealed class ProbeStub(HttpStatusCode weather) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var uri = request.RequestUri!;
+        if (uri.IsLoopback)
+            throw new HttpRequestException("Connection refused (stub).");
+        if (uri.Host.Contains("open-meteo", StringComparison.OrdinalIgnoreCase))
+            return Task.FromResult(weather == HttpStatusCode.OK ? Json("""{"results":[{"name":"London"}]}""") : new HttpResponseMessage(weather));
+        if (uri.AbsolutePath.EndsWith("/openai/v1/models", StringComparison.Ordinal))
+            return Task.FromResult(Json("""{"data":[]}"""));
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+    }
+
+    private static HttpResponseMessage Json(string body) =>
+        new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 }

@@ -16,10 +16,10 @@
 .term-key.active { box-shadow: inset 0 -3px 0 var(--term-text); }
 .term-header .term-keys { margin-right: auto; }
 .term-header .term-keys + .term-status { margin-right: 0; }
-.rz-button { min-height: 36px; border-radius: var(--term-radius); font-family: var(--term-font); }
+.rz-button:not(.pw-plain) { min-height: 36px; border-radius: var(--term-radius); font-family: var(--term-font); }
 .term-toast { border-radius: 10px; box-shadow: 0 8px 24px #00000028; }
 @media (pointer: coarse) {
-    .rz-button, .ai-config-summary { min-height: 44px; }
+    .rz-button:not(.pw-plain), .ai-config-summary { min-height: 44px; }
 }
 .term-drawer {
     animation: none;

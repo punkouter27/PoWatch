@@ -17,7 +17,7 @@
             {
                 <div class="rule-row" data-test="share-row">
                     <span><a class="term-link" href="@share.Path" target="_blank" rel="noopener">@share.Day.ToString("ddd d MMM", CultureInfo.CurrentCulture)</a> <i class="term-stat-hint">UNTIL @share.ExpiresUtc.ToLocalTime().ToString("d MMM HH:mm", CultureInfo.CurrentCulture)</i></span>
-                    <button class="term-icon-button" @onclick="() => RevokeAsync(share)" aria-label="@($"Take down the link to {share.Day:d MMM}")" title="Take the link down" data-test="share-revoke">✕</button>
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Click="() => RevokeAsync(share)" aria-label="@($"Take down the link to {share.Day:d MMM}")" title="Take the link down" data-test="share-revoke">✕</RadzenButton>
                 </div>
             }
         }

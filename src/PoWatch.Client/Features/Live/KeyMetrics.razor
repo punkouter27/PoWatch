@@ -34,7 +34,7 @@
         @if (OnExplain.HasDelegate && Patterns?.Anomalies.Any(a => a.Flagged) == true)
         {
             @* The σ chips say how unusual today is; the model says what stands out, from the same tools Ask uses. *@
-            <button class="term-button live-explain" @onclick="OnExplain" disabled="@Asking" data-test="metrics-explain">✦ Explain today</button>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button live-explain" Click="OnExplain" Disabled="@Asking" data-test="metrics-explain">✦ Explain today</RadzenButton>
         }
     </ChildContent>
 </TerminalPanel>

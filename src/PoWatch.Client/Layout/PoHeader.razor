@@ -37,10 +37,10 @@
            work, with a way to push it now (a chip, not a dialog — the queued ticks are not an error). *@
         @if (Sensing.Live.PendingBatches > 0)
         {
-            <button type="button" class="term-outbox" @onclick="FlushOutboxAsync" data-test="outbox-chip"
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-outbox" Click="FlushOutboxAsync" data-test="outbox-chip"
                     title="10-second batches waiting in this browser's outbox. They resend automatically; press to send now.">
                 @Sensing.Live.PendingBatches queued
-            </button>
+            </RadzenButton>
         }
         @if (Sensing.Live.LostTicks > 0)
         {
@@ -51,21 +51,26 @@
         }
     }
 
-    <div class="po-header__actions">
-        <AuthorizeView>
-            <Authorized Context="auth">
-                <span class="po-header__email" title="@EmailOf(auth.User)" data-test="header-email">@EmailOf(auth.User)</span>
-            </Authorized>
-            <NotAuthorized>
-                <a class="po-link-btn filled small" href="login" data-test="header-sign-in">Sign in</a>
-            </NotAuthorized>
-        </AuthorizeView>
-        @* Settings (recording, people, alerts, advanced, sign out) is the /settings page; the bell's
-           "watch rules" and "name everyone" links still open it in the drawer below. *@
-        <a class="po-header__settings" href="/settings" aria-label="Settings" title="Settings" data-test="settings-menu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        </a>
-    </div>
+    @* The sign-in page shows the title only: its one action is the card's button. Signed out, the
+       actions are just Sign in (settings needs a sign-in, so the gear is for signed-in users). *@
+    @if (!OnSignInPage)
+    {
+        <div class="po-header__actions">
+            <AuthorizeView>
+                <Authorized Context="auth">
+                    <span class="po-header__email" title="@EmailOf(auth.User)" data-test="header-email">@EmailOf(auth.User)</span>
+                    @* Settings (recording, people, alerts, advanced, sign out) is the /settings page; the bell's
+                       "watch rules" and "name everyone" links still open it in the drawer below. *@
+                    <a class="po-header__settings" href="/settings" aria-label="Settings" title="Settings" data-test="settings-menu">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </a>
+                </Authorized>
+                <NotAuthorized>
+                    <a class="po-link-btn filled small" href="login" data-test="header-sign-in">Sign in</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    }
 
     @if (!Bare)
     {
@@ -82,6 +87,8 @@
 
     /// <summary>BareLayout (sign-in, /diag): title, email or Sign in, and the gear only.</summary>
     [Parameter] public bool Bare { get; set; }
+
+    private bool OnSignInPage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').Equals("/login", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The header shows the email, never a display name; the name is a last resort.</summary>
     internal static string EmailOf(ClaimsPrincipal user) =>

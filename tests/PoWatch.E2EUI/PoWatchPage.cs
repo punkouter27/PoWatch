@@ -120,4 +120,21 @@ internal static class PoWatchPage
         await page.OpenSettingsAsync();
         await page.GetByTestId($"settings-tab-{section}").ClickAsync();
     }
+
+    /// <summary>
+    /// Picks an option of a RadzenDropDown by its key: opens the dropdown, then clicks the option tagged
+    /// <c>data-value</c> (Layout/PickOption) in that dropdown's own popup.
+    /// </summary>
+    public static async Task PickAsync(this ILocator dropdown, string value)
+    {
+        // Radzen renders each dropdown's list as "popup-{dropdown id}"; aim at that one, not any open popup
+        // (another dropdown's list may still be closing).
+        var id = await dropdown.GetAttributeAsync("id");
+        await dropdown.ClickAsync();
+        await dropdown.Page.Locator($"[id=\"popup-{id}\"] [data-value=\"{value}\"]").ClickAsync();
+    }
+
+    /// <summary>The key a RadzenDropDown shows as chosen (its <c>data-value</c> attribute).</summary>
+    public static Task ExpectPickedAsync(this ILocator dropdown, string value, int timeoutMs = 5_000) =>
+        Assertions.Expect(dropdown).ToHaveAttributeAsync("data-value", value, new() { Timeout = timeoutMs });
 }

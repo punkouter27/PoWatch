@@ -33,7 +33,7 @@
     margin: 16px 0 0;
 }
 
-.login-btn {
+::deep .login-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -49,23 +49,10 @@
     cursor: pointer;
 }
 
-.login-btn-icon { width: 1.4em; font-size: 1.1em; line-height: 1; }
+::deep .login-btn:focus-visible { outline: 2px solid var(--term-cyan); outline-offset: 3px; }
 
-/* Hint copy under each sign-in button. */
-.login-btn-hint {
-    margin: 8px 0 16px;
-    font: 11px var(--term-mono);
-    color: var(--term-dim);
-    line-height: 1.4;
-    text-align: left;
-}
+::deep .login-btn-ms { background: var(--term-accent); color: var(--term-accent-ink); border: 1px solid var(--term-accent); }
+::deep .login-btn-ms:hover { filter: brightness(1.08); }
 
-.login-btn-hint--muted { font-style: italic; }
-
-.login-btn:focus-visible { outline: 2px solid var(--term-cyan); outline-offset: 3px; }
-
-.login-btn-ms { background: var(--term-accent); color: var(--term-accent-ink); border: 1px solid var(--term-accent); }
-.login-btn-ms:hover { filter: brightness(1.08); }
-
-.login-btn-guest { background: var(--term-panel-2); color: var(--term-text); border: 1px solid var(--term-line); }
-.login-btn-guest:hover { border-color: var(--term-muted); }
+::deep .login-btn-guest { background: var(--term-panel-2); color: var(--term-text); border: 1px solid var(--term-line); }
+::deep .login-btn-guest:hover { border-color: var(--term-muted); }

@@ -1,9 +1,9 @@
 <div class="moment-filters" role="group" aria-label="@Label">
     @foreach (var (key, label, _) in TimelineEntry.Filters)
     {
-        <button type="button" class="term-button @(Value == key ? "term-button--on" : null)"
-                aria-pressed="@(Value == key ? "true" : "false")" @onclick="() => ValueChanged.InvokeAsync(key)"
-                data-test="@($"{TestPrefix}-filter-{key}")">@label</button>
+        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(Value == key ? "pw-plain term-button term-button--on" : "pw-plain term-button")"
+                aria-pressed="@(Value == key ? "true" : "false")" Click="() => ValueChanged.InvokeAsync(key)"
+                data-test="@($"{TestPrefix}-filter-{key}")">@label</RadzenButton>
     }
     @ChildContent
 </div>

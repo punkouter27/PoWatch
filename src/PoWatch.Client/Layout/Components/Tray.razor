@@ -12,14 +12,14 @@
 @inject AuthenticationStateProvider Auth
 
 <div class="term-tray" data-test="tray" data-hub="@(Feed.IsConnected ? "up" : "down")">
-    <button class="term-icon-button @(Open ? "term-icon-button--on" : null)" @onclick="Toggle" aria-expanded="@(Open ? "true" : "false")"
+    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(Open ? "pw-plain term-icon-button term-icon-button--on" : "pw-plain term-icon-button")" Click="Toggle" aria-expanded="@(Open ? "true" : "false")"
             aria-label="@($"Notifications, {Count} waiting")" title="Notifications" data-test="tray-toggle">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" /></svg>
         @if (Count > 0)
         {
             <span class="term-tray-count" aria-hidden="true">@Count</span>
         }
-    </button>
+    </RadzenButton>
 
     @* Announced politely even while the panel is closed. *@
     <span class="visually-hidden" role="status">@_announce</span>
@@ -55,8 +55,8 @@
                                        Placeholder="@prompt.Regular.DisplayName" @bind-Value="draft.Name" Immediate="true" Disabled="@_naming.Contains(prompt.Regular.Id)" />
                         <ValidationMessage For="@(() => draft.Name)" class="form-error" />
                         <div class="name-prompt-actions">
-                            <button type="submit" class="term-button term-button--primary" disabled="@_naming.Contains(prompt.Regular.Id)" data-test="name-save">@(_naming.Contains(prompt.Regular.Id) ? "Saving…" : "Save")</button>
-                            <button type="button" class="term-button" @onclick="() => Sensing.NameAsync(prompt.Regular.Id, null)" data-test="name-skip">Not now</button>
+                            <RadzenButton ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button term-button--primary" Disabled="@_naming.Contains(prompt.Regular.Id)" data-test="name-save">@(_naming.Contains(prompt.Regular.Id) ? "Saving…" : "Save")</RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="() => Sensing.NameAsync(prompt.Regular.Id, null)" data-test="name-skip">Not now</RadzenButton>
                             <span class="term-stat-hint">stays “@prompt.Regular.DisplayName” if you skip</span>
                         </div>
                     </RadzenTemplateForm>
@@ -77,14 +77,14 @@
             }
             else if (_alerts.Count > 0 || _week is not null)
             {
-                <button class="term-menu-item" @onclick="Clear" data-test="tray-clear"><span>Clear</span><b>@(_alerts.Count + (_week is null ? 0 : 1))</b></button>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="Clear" data-test="tray-clear"><span>Clear</span><b>@(_alerts.Count + (_week is null ? 0 : 1))</b></RadzenButton>
             }
 
             @if (Sensing.Live.Prompts.Count > 0)
             {
-                <button type="button" class="term-menu-item" @onclick="@(() => Drawers.ShowSettings("people"))" data-test="tray-people-link"><span>Name everyone at once</span><b>PEOPLE →</b></button>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="@(() => Drawers.ShowSettings("people"))" data-test="tray-people-link"><span>Name everyone at once</span><b>PEOPLE →</b></RadzenButton>
             }
-            <button type="button" class="term-menu-item" @onclick="@(() => Drawers.ShowSettings("alerts"))" data-test="tray-rules-link"><span>Watch rules</span><b>ALERTS →</b></button>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="@(() => Drawers.ShowSettings("alerts"))" data-test="tray-rules-link"><span>Watch rules</span><b>ALERTS →</b></RadzenButton>
         </ChildContent>
     </Drawer>
 </div>

@@ -10,9 +10,9 @@
             {
                 <span class="term-panel-meta">@Aside</span>
             }
-            <button type="button" class="term-icon-button" data-drawer-close aria-label="@($"Close {Title}")" title="Close (Esc)" @onclick="OnClose">
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" data-drawer-close aria-label="@($"Close {Title}")" title="Close (Esc)" Click="OnClose">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-            </button>
+            </RadzenButton>
         </header>
         <div class="term-drawer-body">
             @ChildContent

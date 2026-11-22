@@ -83,14 +83,38 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
         Assert.Contains(report!.Status, (string[])["Healthy", "Degraded", "Unhealthy"]);
         Assert.Equal("Healthy", Assert.Single(report.Checks, c => c.Group == DiagGroups.Api).Status);
         Assert.Equal("Healthy", Assert.Single(report.Checks, c => c.Group == DiagGroups.Data && c.Label == "Storage").Status);
-        Assert.Contains(report.Checks, c => c.Group == DiagGroups.Service && c.Label == "Sign-in");
-        Assert.Contains(report.Checks, c => c.Group == DiagGroups.Service && c.Label == "AI models");
+        // Every external service is a live probe (stubbed here); the ones switched off on purpose are "Off".
+        Assert.Equal("Off", Assert.Single(report.Checks, c => c.Name == "sign-in").Status);
+        Assert.Equal("Off", Assert.Single(report.Checks, c => c.Name == "key-vault").Status);
+        Assert.Equal("Off", Assert.Single(report.Checks, c => c.Name == "ollama").Status);
+        Assert.Equal("Off", Assert.Single(report.Checks, c => c.Name == "gemini").Status);
+        Assert.Equal("Healthy", Assert.Single(report.Checks, c => c.Name == "azure-openai").Status);
+        Assert.Equal("Healthy", Assert.Single(report.Checks, c => c.Name == "weather").Status);
+        Assert.All(report.Checks.Where(c => c.Status == "Off"), c => Assert.Equal(0, c.LatencyMs));
+        // Off rows never count toward the overall status.
+        Assert.Equal("Healthy", report.Status);
         Assert.Matches(@"^(\d{6}|unknown)$", report.Version);
         Assert.False(string.IsNullOrWhiteSpace(report.Environment));
         // Connection strings, keys, URIs, file paths, emails and exception text must never reach an anonymous caller.
         foreach (var secret in new[] { "AccountKey", "DefaultEndpointsProtocol", "devstoreaccount1", "127.0.0.1", "localhost", "http://", "https://",
                      ".vault.azure.net", ".core.windows.net", ":\\", "/home/", "@", "Exception:", "   at ", "TenantId", "ClientSecret" })
             Assert.DoesNotContain(secret, body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [DockerFact]
+    public async Task A_service_that_fails_its_live_probe_degrades_the_diag_report()
+    {
+        await using var failing = new AzuriteWebApplicationFactory { WeatherStatus = HttpStatusCode.InternalServerError };
+        await ((IAsyncLifetime)failing).InitializeAsync();
+        using var client = failing.CreateClient();
+
+        var report = await client.GetFromJsonAsync<DiagReportDto>("/api/diag", JsonSerializerOptions.Web);
+
+        var weather = Assert.Single(report!.Checks, c => c.Name == "weather");
+        Assert.Equal("Degraded", weather.Status);
+        Assert.Contains("500", weather.Problem);
+        Assert.Equal("Degraded", report.Status);
+        await ((IAsyncLifetime)failing).DisposeAsync();
     }
 
     [DockerFact]

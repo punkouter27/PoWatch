@@ -69,18 +69,20 @@ dotnet run --project src/PoWatch.Api/PoWatch.Api.csproj
 Test suites have maximums of 100 unit, 50 integration, 25 API E2E, and 25 UI E2E cases.
 After building, run `./scripts/check-test-caps.ps1` and `./scripts/check-hygiene.ps1`.
 For UI verification, install Chromium using the suite's generated `playwright.ps1` and run
-`dotnet test tests/PoWatch.E2EUI -c Release`. The suite hosts the app itself in-process against an Azurite
-Testcontainer (Docker must be running); set `E2E_BASE_URL` to drive an already-running instance instead.
-It never skips silently: without Docker or Chromium every test fails with the reason.
+`pwsh scripts/run-browser-tests.ps1 -Repeat 3`: it publishes the trimmed Release build (what deploys), starts Azurite
+and the published app, and runs the browser tier against it three times in a row. `dotnet test
+tests/PoWatch.E2EUI -c Release` is the quicker untrimmed run (the app hosted in-process, or `E2E_BASE_URL`);
+without Docker or Chromium it skips with the reason.
 
 Shell (the Po web standard): one header on every page, signed in or out, with `PoWatch` upper-left and
-the signed-in email (or Sign in) and the settings gear upper-right; a `v{YYMMDD}` version badge
-bottom-right (the HEAD commit's UTC date); Inter + Space Grotesk, one indigo accent, and light/dark
+the signed-in email and the settings gear (signed out: Sign in) upper-right; a `v{YYMMDD}` version badge
+bottom-right (the HEAD commit's UTC date; on phones it follows the page content); Radzen controls; Inter + Space Grotesk, one indigo accent, and light/dark
 that follow the device (`css/po-tokens.css`). Pressing Tab with nothing
 focused opens a developer window (`/po-dev.html`) with live server and page stats.
 
 Diagnostics: `/diag` ("System status") is a plain-language status page (API, data, services, version,
-environment) that works signed out, fed by the anonymous `GET /api/diag`; signed in, it also shows the
+environment) that works signed out, fed by the anonymous `GET /api/diag`, which checks every external service with a live call
+(services switched off on purpose show "Off"); signed in, it also shows the
 server runtime, inference engine and pipeline. `GET /api/diag/boot` is the boot-readiness
 probe (it was `/diag/boot` until 2026-11-17). On a phone, the sections are a bottom tab bar (`BottomNav`).
 

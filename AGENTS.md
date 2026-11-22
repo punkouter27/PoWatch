@@ -38,7 +38,8 @@ No `.cursorrules`, `.copilotignore`, `SPEC.md`, `tasks/`, `DOCS/` at the root (f
   re-add it). Apps without OAuth show nothing in place of the email (no fake identity chips).
 - Version badge `.po-version` fixed bottom-right showing `vYYMMDD`. It must never cover content: `main` gets
   `padding-bottom: calc(var(--po-space-6) + env(safe-area-inset-bottom))`, and when a mobile bottom nav exists the
-  badge sits above it (`--po-stamp-lift: <nav height>`).
+  badge sits above it. On phones (≤ 768 px) the badge leaves the corner and follows the page content (here: it is
+  the last child of `<main>`, `position: static`).
 - Colours only from `wwwroot/css/po-tokens.css` (`--po-*`). All text ≥ 4.5:1 contrast in light AND dark mode
   (status banners: use `--po-text` on `--po-*-soft` backgrounds, never warning-on-peach).
 - Login-only data must not be requested for signed-out visitors (no 401s in the console on public pages), and
@@ -91,7 +92,7 @@ App Service `app-<repo lowercase>`; per-app resources named `<type>-<repo lowerc
 
 ## 3. Verification
 
-Every command below was run on 2026-11-20 (PowerShell or bash, repo root).
+Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 
 | What | Command | Needs / skips |
 |---|---|---|
@@ -99,10 +100,12 @@ Every command below was run on 2026-11-20 (PowerShell or bash, repo root).
 | Build | `dotnet build PoWatch.slnx -c Release` | warnings are errors (the client is trim-analysed) |
 | Hygiene / caps | `pwsh scripts/check-hygiene.ps1` and `pwsh scripts/check-test-caps.ps1` | after a Release build |
 | Unit | `dotnet test tests/PoWatch.Unit -c Release` | nothing (58 tests) |
-| Integration | `dotnet test tests/PoWatch.Integration -c Release` | Docker (Testcontainers Azurite); skips with one message without it (23) |
+| Integration | `dotnet test tests/PoWatch.Integration -c Release` | Docker (Testcontainers Azurite); skips with one message without it (24) |
 | E2E API | `dotnet test tests/PoWatch.E2EAPI -c Release` | Docker; skips without it (14) |
-| E2E UI | `dotnet test tests/PoWatch.E2EUI -c Release` | hosts the app itself (Docker) + Playwright Chromium, or a running app at `E2E_BASE_URL`; skips with the reason otherwise (25) |
+| E2E UI (the release gate) | `pwsh scripts/run-browser-tests.ps1 -Repeat 3` | publishes the trimmed Release build (what deploys), starts Azurite (Docker) and the published app on :7429, runs the tier 3 times in a row against it, stops everything; needs Playwright Chromium (25) |
+| E2E UI (quick, untrimmed) | `dotnet test tests/PoWatch.E2EUI -c Release` | hosts the app in-process (Docker) or tests `E2E_BASE_URL`; skips with the reason otherwise |
 | Node checks | `node --test scripts/sensory-audio.test.cjs scripts/sensory-visual.test.cjs` | Node |
+| Caption eval (syntax) | `node --check scripts/caption-eval/eval.mjs` | Node; a real evaluation is `pwsh scripts/caption-eval.ps1 -Count 5` (installs its npm packages, downloads the models) |
 | Azurite for a local run | `docker run -d --rm -p 21000:10000 -p 21001:10001 -p 21002:10002 mcr.microsoft.com/azure-storage/azurite:latest azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --skipApiVersionCheck --loose` | Docker |
 | Run locally (guest sign-in) | `AzureStorage__ConnectionString="<Azurite connection string, ports 21000-21002>" FeatureFlags__DeveloperBypassAuth=true FeatureFlags__EnableKeyVault=false ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:7428 dotnet run --project src/PoWatch.Api --no-launch-profile` | → http://localhost:7428 and http://localhost:7428/diag |
 
@@ -134,6 +137,18 @@ working in this repository:
 * **Keep Docs Updated:** Check `docs/` and `README.md` first to get an overview of the app, and update them in the same change
 * **Fully Automated:** Run all builds, scripts, and setup commands directly. Do not ask the user to run terminal commands.
 * **Shared Components:** Look to consolidate functionality and UI into shared components when possible. Reusable UI goes in `src/PoWatch.Client/Components/` (`WhoList`, `StatCell`, `Sparkline`, `TerminalPanel`), browser-safe logic in `PoWatch.Shared/Services`; two panels that render the same list or number should share one component rather than copy the markup. `scripts/check-hygiene.ps1` fails on a component nothing renders.
+
+### Radzen is the component library (owner decision 2026-11-21)
+Every button, text box, dropdown, number box, checkbox, tab set and chart is a Radzen component
+(`Radzen.Blazor`, pinned in `Directory.Packages.props`); class `pw-plain` keeps the app's own look
+(docs/development.md, "Radzen controls"). The only native elements left, on purpose:
+* **Native video/canvas:** the camera feed `<video>` (`Layout/MainLayout.razor`) and the drawing canvases
+  (Live heat map, Journal replay track/heat, time-lapse) - media surfaces, not form controls.
+* **The replay scrubber** `<input type="range" data-replay="scrub">` (`Features/Journal/TimelineReplay.razor`):
+  the seek bar of the JS-drawn replay (`js/replay.js` owns its value and events every frame), treated like a
+  native media control. Recorded as an exception for the owner to confirm.
+* **Plain `<form @onsubmit>`** around the weather place search (`WeatherSettings.razor`) - a container; its
+  controls are Radzen.
 
 ### 4. UI & Output Rules
 * **UI Previews:** For visual changes, save before-and-after HTML mockups to `SCREENSHOTS/{YYMMDD}-{feature}.html` / Annotate screenshots and show in a single PNG the before and after with notes

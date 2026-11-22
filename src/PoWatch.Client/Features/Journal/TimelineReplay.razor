@@ -51,7 +51,7 @@
             </div>
 
             <div class="replay-actions">
-                <button class="term-button term-button--primary" data-replay="play" data-test="replay-play">▶ Play</button>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button term-button--primary" data-replay="play" data-test="replay-play">▶ Play</RadzenButton>
                 <span class="term-stat-hint">@_data.Minutes.Count OBSERVED MINUTES · DRAG, OR ← → A MINUTE · CLICK A LINE TO JUMP</span>
             </div>
         }
@@ -64,10 +64,10 @@
                 <TranscriptLink Entries="@shown" Title="@TranscriptTitle" FileName="@TranscriptFile" />
                 @if (_frames > 0)
                 {
-                    <button class="term-menu-item" disabled="@(_saving || !_canRecord)" title="@(_canRecord ? "Download this browser's time-lapse as WebM" : "This browser cannot record video.")"
-                            @onclick="SaveVideoAsync" data-test="replay-save-video">@(_saving ? "Saving…" : "Time-lapse")</button>
-                    <button class="term-menu-item" disabled="@(_saving || _cutting || !_canRecord)" title="@(_canRecord ? "Download this browser's highlight reel as WebM" : "This browser cannot record video.")"
-                            @onclick="SaveReelAsync" data-test="replay-save-reel">@(_cutting ? "Cutting…" : "Highlight reel")</button>
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Disabled="@(_saving || !_canRecord)" title="@(_canRecord ? "Download this browser's time-lapse as WebM" : "This browser cannot record video.")"
+                            Click="SaveVideoAsync" data-test="replay-save-video">@(_saving ? "Saving…" : "Time-lapse")</RadzenButton>
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Disabled="@(_saving || _cutting || !_canRecord)" title="@(_canRecord ? "Download this browser's highlight reel as WebM" : "This browser cannot record video.")"
+                            Click="SaveReelAsync" data-test="replay-save-reel">@(_cutting ? "Cutting…" : "Highlight reel")</RadzenButton>
                 }
             </ExportMenu>
         </TimelineFilters>

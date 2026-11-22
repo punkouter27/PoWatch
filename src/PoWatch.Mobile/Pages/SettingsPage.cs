@@ -299,6 +299,7 @@ public sealed class DiagPage(ApiClient api, MobileConfig config) : ContentPage
     {
         "healthy" => Ui.Good,
         "degraded" => Ui.Warn,
+        "off" => Color.FromArgb("#6B7280"), // switched off on purpose: neutral grey
         _ => Ui.Bad,
     };
 }

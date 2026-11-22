@@ -22,14 +22,14 @@
             </Items>
         </RadzenSelectBar>
         <span class="history-nav">
-            <button type="button" class="term-button" @onclick="() => Move(-1)"
-                    aria-label="@($"Previous {Kind ?? "day"}")" data-test="@(Kind is null ? "history-prev" : "period-prev")">◀</button>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="() => Move(-1)"
+                    aria-label="@($"Previous {Kind ?? "day"}")" data-test="@(Kind is null ? "history-prev" : "period-prev")">◀</RadzenButton>
             <span class="history-day" data-test="history-day">@Day.ToString("d MMM yyyy", CultureInfo.CurrentCulture)</span>
             <RadzenDatePicker TValue="DateOnly" Value="@Day" ValueChanged="@Go" ShowInput="false"
                               Max="@Today.ToDateTime(TimeOnly.MinValue)" class="history-pick" aria-label="Pick a date" />
-            <button type="button" class="term-button" @onclick="() => Move(1)" disabled="@AtCurrentPeriod"
-                    aria-label="@($"Next {Kind ?? "day"}")" data-test="@(Kind is null ? "history-next" : "period-next")">▶</button>
-            <button type="button" class="term-button" @onclick="() => Go(Today)" disabled="@(Day == Today && Session is null)" aria-label="Go to today">Today</button>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="() => Move(1)" Disabled="@AtCurrentPeriod"
+                    aria-label="@($"Next {Kind ?? "day"}")" data-test="@(Kind is null ? "history-next" : "period-next")">▶</RadzenButton>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="() => Go(Today)" Disabled="@(Day == Today && Session is null)" aria-label="Go to today">Today</RadzenButton>
         </span>
         <a href="@($"{Navigation.ToBaseRelativePath(Navigation.Uri).Split('#')[0]}#journal-browse")"
            class="term-button journal-browse-link">Choose day or session ↓</a>

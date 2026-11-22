@@ -6,7 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>PoWatch</title>
     <base href="/" />
-    <link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css" />
+    <!-- The Radzen theme sits in @layer vendor, so every unlayered app sheet below wins over it, and
+         class "pw-plain" (terminal-base.css, @layer plain) gives a Radzen control the app's own look. -->
+    <style>
+        @layer vendor, plain;
+        @import url("_content/Radzen.Blazor/css/material-base.css") layer(vendor);
+    </style>
     <link rel="preload" as="font" type="font/woff2" crossorigin="anonymous" href="_content/Radzen.Blazor/fonts/MaterialSymbolsOutlined.woff2" />
     <!-- Po web standard: the estate tokens, self-hosted Inter + Space Grotesk and the shell styles
          (header, version stamp, /diag cards) come first among the app's sheets (after Radzen's base,

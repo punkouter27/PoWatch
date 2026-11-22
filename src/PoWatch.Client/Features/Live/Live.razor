@@ -37,7 +37,7 @@
                 <FluentValidationValidator TModel="AskRequestDto" Validator="@AskRules" />
                 <label class="visually-hidden" for="ask">Ask a question about your stats</label>
                 <RadzenTextBox id="ask" Name="Question" @bind-Value="_ask.Question" Immediate="true" MaxLength="@AskRequestDto.MaxLength" autocomplete="off" Placeholder="Ask: when is it usually busiest?" Disabled="@_asking" />
-                <button type="submit" class="term-button" disabled="@_asking">@(_asking ? "…" : "Ask")</button>
+                <RadzenButton ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@_asking">@(_asking ? "…" : "Ask")</RadzenButton>
                 <ValidationMessage For="@(() => _ask.Question)" class="form-error" />
             </RadzenTemplateForm>
         </div>
@@ -69,10 +69,10 @@
                         @if (!Sensing.IsRunning || L.Demo)
                         {
                             <canvas class="demo-flow" @ref="_demoCanvas" aria-hidden="true"></canvas>
-                            <button type="button" class="term-button demo-effects" aria-pressed="@(_demoEffects ? "true" : "false")"
-                                    @onclick="ToggleDemoEffects" data-test="demo-effects" title="Decorative simulation, not measured motion">
+                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button demo-effects" aria-pressed="@(_demoEffects ? "true" : "false")"
+                                    Click="ToggleDemoEffects" data-test="demo-effects" title="Decorative simulation, not measured motion">
                                 Effects @(_demoEffects ? "on" : "off")
-                            </button>
+                            </RadzenButton>
                         }
                         @foreach (var track in Sensing.IsRunning ? L.Tracks : [])
                         {
@@ -116,8 +116,8 @@
         <TerminalPanel Title="Space" Class="cell-heat" Test="live-motion-grid">
             <Aside>
                 <span class="space-switch" role="group" aria-label="Which heat to show">
-                    <button type="button" class="@(_peopleHeat ? null : "on")" aria-pressed="@(_peopleHeat ? "false" : "true")" @onclick="() => _peopleHeat = false" data-test="space-motion">MOTION NOW</button>
-                    <button type="button" class="@(_peopleHeat ? "on" : null)" aria-pressed="@(_peopleHeat ? "true" : "false")" @onclick="() => _peopleHeat = true" data-test="space-people">PEOPLE TODAY</button>
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_peopleHeat ? "pw-plain" : "pw-plain on")" aria-pressed="@(_peopleHeat ? "false" : "true")" Click="() => _peopleHeat = false" data-test="space-motion">MOTION NOW</RadzenButton>
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_peopleHeat ? "pw-plain on" : "pw-plain")" aria-pressed="@(_peopleHeat ? "true" : "false")" Click="() => _peopleHeat = true" data-test="space-people">PEOPLE TODAY</RadzenButton>
                 </span>
             </Aside>
             <ChildContent>

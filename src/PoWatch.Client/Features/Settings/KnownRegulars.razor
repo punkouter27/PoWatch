@@ -10,7 +10,7 @@
     <ChildContent>
         <div class="regulars-bar">
             <label class="visually-hidden" for="regulars-filter">Filter by name</label>
-            <input id="regulars-filter" type="search" placeholder="Filter by name…" @bind="_filter" @bind:event="oninput" autocomplete="off" data-test="regulars-filter" />
+            <RadzenTextBox id="regulars-filter" Name="regulars-filter" Placeholder="Filter by name…" @bind-Value="_filter" Immediate="true" autocomplete="off" data-test="regulars-filter" />
             <RadzenSelectBar TValue="string" @bind-Value="_sort" Size="ButtonSize.Small" aria-label="Sort by">
                 <Items>
                     <RadzenSelectBarItem Text="RECENT" Value="@("recent")" />
@@ -30,20 +30,19 @@
                     else
                     {
                         <label for="merge-into">Merge @_selected.Count into</label>
-                        <select id="merge-into" @bind="_primaryId">
-                            @foreach (var regular in Selected)
-                            {
-                                <option value="@regular.Id">@regular.DisplayName</option>
-                            }
-                        </select>
-                        <button class="term-button term-button--primary" @onclick="MergeAsync" disabled="@_busy" data-test="merge-selected">@(_busy ? "Merging…" : "Merge")</button>
+                        <RadzenDropDown TValue="string" Data="@(Selected.Select(r => r.Id).ToList())" @bind-Value="_primaryId" Name="merge-into" data-test="merge-into"
+                                        InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Merge into" })">
+                            <Template Context="id">@PickOption.Render((object)id, NameOf)</Template>
+                            <ValueTemplate Context="id">@PickOption.Text((object)id, NameOf)</ValueTemplate>
+                        </RadzenDropDown>
+                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button term-button--primary" Click="MergeAsync" Disabled="@_busy" data-test="merge-selected">@(_busy ? "Merging…" : "Merge")</RadzenButton>
                     }
-                    <button class="term-button" @onclick="() => _selected.Clear()" disabled="@_busy">Clear</button>
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="() => _selected.Clear()" Disabled="@_busy">Clear</RadzenButton>
                 </div>
             }
             @if (Sensing.Voices.Prints.Count > 0)
             {
-                <button class="term-button" @onclick="ForgetVoicesAsync" disabled="@_busy" title="Voiceprints are kept only in this browser" data-test="forget-voices">Forget voices (@Sensing.Voices.Prints.Count)</button>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="ForgetVoicesAsync" Disabled="@_busy" title="Voiceprints are kept only in this browser" data-test="forget-voices">Forget voices (@Sensing.Voices.Prints.Count)</RadzenButton>
             }
             @if (_message is not null)
             {
@@ -73,8 +72,9 @@
                             {
                                 <span class="regular-voice" title="Their voice is known in this browser, so the stories can say what they said" data-test="regular-voice">VOICE</span>
                             }
-                            <input type="checkbox" checked="@_selected.Contains(regular.Id)" @onchange="e => Select(regular, e.Value is true)"
-                                   aria-label="@($"Select {regular.DisplayName} to merge")" title="Tick two or more of the same kind to merge them" data-test="regular-select" />
+                            <RadzenCheckBox TValue="bool" Value="@_selected.Contains(regular.Id)" Change="@(on => Select(regular, on))" Name="@($"select-{regular.Id}")"
+                                            InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = $"Select {regular.DisplayName} to merge" })"
+                                            title="Tick two or more of the same kind to merge them" data-test="regular-select" />
                         </div>
                         <RadzenTemplateForm TItem="RenameRegularRequestDto" Data="@edit" Submit="@(_ => RenameAsync(regular))" class="regular-name" data-test="regular-row">
                             <FluentValidationValidator TModel="RenameRegularRequestDto" Validator="@RenameRules" />
@@ -88,8 +88,8 @@
                                               Disabled="@(_busy || !IsDirty(regular))" data-test="regular-save" />
                                 @if (IsDirty(regular))
                                 {
-                                    <button type="button" class="term-button" disabled="@_busy"
-                                            @onclick="() => edit.Name = regular.IsNamed ? regular.DisplayName : null">Cancel</button>
+                                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@_busy"
+                                            Click="() => edit.Name = regular.IsNamed ? regular.DisplayName : null">Cancel</RadzenButton>
                                 }
                             </div>
                             @if (_savingId == regular.Id && _message is not null)
@@ -182,6 +182,8 @@
     private RegularStatDto? Today(RegularDto regular) => _today?.Regulars.FirstOrDefault(r => r.Id == regular.Id);
 
     private static string When(DateTimeOffset utc) => utc.ToLocalTime().ToString("dd MMM HH:mm", CultureInfo.CurrentCulture);
+
+    private string NameOf(string id) => _regulars.FirstOrDefault(r => r.Id == id)?.DisplayName ?? id;
 
     private void Select(RegularDto regular, bool on)
     {

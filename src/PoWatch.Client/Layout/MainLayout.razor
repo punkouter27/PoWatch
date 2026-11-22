@@ -27,10 +27,9 @@
                 </div>
             </ErrorContent>
         </ErrorBoundary>
+        @* The build date: fixed in the corner on wide screens, after the page's content on phones. *@
+        <BuildVersion />
     </main>
-
-    @* The build date in the corner of every page, out of the page's own flow. *@
-    <BuildVersion />
 
     @* Phones only: the sections as a bottom tab bar (the header's key bar hides at that width). *@
     <BottomNav />

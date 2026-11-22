@@ -7,7 +7,7 @@
         {
             <div class="rule-row">
                 <span>@rule</span>
-                <button class="term-icon-button" @onclick="() => RemoveRuleAsync(rule)" aria-label="@($"Remove rule: {rule}")">✕</button>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Click="() => RemoveRuleAsync(rule)" aria-label="@($"Remove rule: {rule}")">✕</RadzenButton>
             </div>
         }
         @if (_rules.Count < WatchRules.Max)
@@ -15,18 +15,17 @@
             <RadzenTemplateForm TItem="WatchRuleInputDto" Data="@_rule" Submit="@(_ => AddRuleAsync())" class="rule-form" data-test="rule-form">
                 <FluentValidationValidator TModel="WatchRuleInputDto" Validator="@RuleRules" />
                 <label class="visually-hidden" for="rule-class">Alert me when this appears</label>
-                <InputSelect id="rule-class" @bind-Value="_rule.Class">
-                    <option value="person">person</option>
-                    <option value="cat">cat</option>
-                    <option value="dog">dog</option>
-                    <option value="@WatchRules.Any">anything</option>
-                </InputSelect>
+                <RadzenDropDown TValue="string" Data="@RuleClasses" @bind-Value="_rule.Class" Name="rule-class" data-test="rule-class"
+                                InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Alert me when this appears" })">
+                    <Template Context="c">@PickOption.Render((object)c, k => k == WatchRules.Any ? "anything" : k)</Template>
+                    <ValueTemplate Context="c">@PickOption.Text((object)c, k => k == WatchRules.Any ? "anything" : k)</ValueTemplate>
+                </RadzenDropDown>
                 <label class="visually-hidden" for="rule-from">From hour</label>
-                <InputNumber id="rule-from" min="0" max="23" @bind-Value="_rule.FromHour" />
+                <RadzenNumeric TValue="int" id="rule-from" Name="rule-from" Min="0" Max="23" @bind-Value="_rule.FromHour" ShowUpDown="false" InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "From hour" })" class="rule-hour" />
                 <span aria-hidden="true">→</span>
                 <label class="visually-hidden" for="rule-to">Until hour</label>
-                <InputNumber id="rule-to" min="0" max="23" @bind-Value="_rule.ToHour" />
-                <button type="submit" class="term-button" disabled="@_adding" data-test="rule-add">@(_adding ? "…" : "Add")</button>
+                <RadzenNumeric TValue="int" id="rule-to" Name="rule-to" Min="0" Max="23" @bind-Value="_rule.ToHour" ShowUpDown="false" InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Until hour" })" class="rule-hour" />
+                <RadzenButton ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@_adding" data-test="rule-add">@(_adding ? "…" : "Add")</RadzenButton>
                 <ValidationMessage For="@(() => _rule.Class)" class="form-error" />
                 <ValidationMessage For="@(() => _rule.FromHour)" class="form-error" />
                 <ValidationMessage For="@(() => _rule.ToHour)" class="form-error" />
@@ -37,7 +36,7 @@
                 <label class="visually-hidden" for="rule-words">Describe a rule in your own words</label>
                 <RadzenTextBox id="rule-words" Name="Text" @bind-Value="_words.Text" Immediate="true" MaxLength="@RuleDraftRequestDto.MaxLength" autocomplete="off"
                                Placeholder="Or say it: tell me if a dog shows up at night" Disabled="@_drafting" />
-                <button type="submit" class="term-button" disabled="@_drafting">@(_drafting ? "…" : "Draft")</button>
+                <RadzenButton ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@_drafting">@(_drafting ? "…" : "Draft")</RadzenButton>
                 <ValidationMessage For="@(() => _words.Text)" class="form-error" />
             </RadzenTemplateForm>
             @if (_draft is { } draft)
@@ -45,8 +44,8 @@
                 <div class="rule-row rule-row--draft" data-test="rule-draft">
                     <span>@draft</span>
                     <span>
-                        <button class="term-button" @onclick="KeepDraftAsync" data-test="rule-draft-keep">Keep</button>
-                        <button class="term-icon-button" @onclick="() => _draft = null" aria-label="Discard the drafted rule">✕</button>
+                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="KeepDraftAsync" data-test="rule-draft-keep">Keep</RadzenButton>
+                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Click="() => _draft = null" aria-label="Discard the drafted rule">✕</RadzenButton>
                     </span>
                 </div>
             }
@@ -62,11 +61,11 @@
     <ChildContent>
         <SettingsBody Profile="@Profile" Missing="@ProfileMissing" Message="@ProfileMessage" Context="profile">
             <div class="settings-list">
-                <button class="term-menu-item" role="switch" aria-checked="@(profile.DigestEmail ? "true" : "false")" @onclick="ToggleDigestEmailAsync"
-                        disabled="@(Saving || !profile.DigestEmailAvailable)" data-test="digest-toggle">
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" role="switch" aria-checked="@(profile.DigestEmail ? "true" : "false")" Click="ToggleDigestEmailAsync"
+                        Disabled="@(Saving || !profile.DigestEmailAvailable)" data-test="digest-toggle">
                     <span>Weekly email <i>@(profile.DigestEmailAvailable ? (profile.DigestEmail ? $"Mondays, to {profile.Email}" : "the week in review, Monday mornings") : "this server cannot send email; the week is in the Journal")</i></span>
                     <b>@(profile.DigestEmail ? "ON" : "OFF")</b>
-                </button>
+                </RadzenButton>
             </div>
         </SettingsBody>
     </ChildContent>
@@ -76,6 +75,7 @@
     private List<WatchRule> _rules = [];
     private string? _notifications;
     private static readonly WatchRuleInputValidator RuleRules = new();
+    private static readonly string[] RuleClasses = ["person", "cat", "dog", WatchRules.Any];
     private static readonly RuleDraftRequestValidator WordsRules = new();
     private readonly WatchRuleInputDto _rule = new();
     private readonly RuleDraftRequestDto _words = new();

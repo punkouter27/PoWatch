@@ -9,18 +9,18 @@
     <ChildContent>
         <SettingsBody Profile="@Profile" Missing="@ProfileMissing" Message="@ProfileMessage" Context="profile">
             <div class="settings-list">
-                <button class="term-menu-item" @onclick="NextRetention" disabled="@Saving" data-test="retention-toggle">
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="NextRetention" Disabled="@Saving" data-test="retention-toggle">
                     <span>Raw detail kept <i>replays, captions, moments; charts and totals stay forever</i></span><b>@RetentionLabel(profile.RetentionDays)</b>
-                </button>
+                </RadzenButton>
             </div>
         </SettingsBody>
         <div class="settings-list">
             <a class="term-menu-item" href="diag" data-test="nav-system"><span>System status <i>connections, runtime, inference, pipeline</i></span><b>→</b></a>
             <a class="term-menu-item" href="@PoWatchApiClient.ExportUrl(TimeZoneInfo.Local.Id)" download="PoWatch-days.csv" data-test="export-csv"><span>Export days <i>one row per observed day</i></span><b>CSV ↓</b></a>
-            <button class="term-menu-item" @onclick="SignOutAsync" disabled="@_signingOut" data-test="sign-out"><span>Sign out</span><b>@(_signingOut ? "…" : "→")</b></button>
-            <button class="term-menu-item term-menu-item--danger" @onclick="DeleteAllAsync" disabled="@_deleting" data-test="delete-data">
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="SignOutAsync" Disabled="@_signingOut" data-test="sign-out"><span>Sign out</span><b>@(_signingOut ? "…" : "→")</b></RadzenButton>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item term-menu-item--danger" Click="DeleteAllAsync" Disabled="@_deleting" data-test="delete-data">
                 <span>Delete everything <i>sessions, stats, regulars, voices, snapshots, links</i></span><b>@(_deleting ? "DELETING…" : "DELETE…")</b>
-            </button>
+            </RadzenButton>
         </div>
         @if (_dataMessage is not null)
         {

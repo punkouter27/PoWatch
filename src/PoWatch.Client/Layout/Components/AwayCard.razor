@@ -29,7 +29,7 @@
             <a class="term-button term-button--primary" href="@StoryLinks.Session(recap.Session.Id)" title="Its story, replay, timeline and moments in the Journal" data-test="away-open">Open in Journal →</a>
             <a class="term-button" href="@PoWatchApiClient.SessionRecapPdfUrl(recap.Session.Id)" download="PoWatch-session-@(tag[1..]).pdf"
                onclick="return powatchFiles.save(event, this)" data-test="away-pdf">PDF ↓</a>
-            <button class="term-icon-button" @onclick="Close" aria-label="Dismiss" data-test="away-close">✕</button>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Click="Close" aria-label="Dismiss" data-test="away-close">✕</RadzenButton>
         </span>
     </section>
 }

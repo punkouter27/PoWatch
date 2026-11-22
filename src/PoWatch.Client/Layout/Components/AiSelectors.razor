@@ -46,16 +46,18 @@
         @* Ollama answered but lacks this model: hand over the exact command instead of making you guess. *@
         @if (PullCommand is { } pull)
         {
-            <button type="button" class="ai-model-pull" @onclick="CopyPullAsync" data-test="ai-pull"
-                    title="@(pull) — press to copy">@(_copied ? "COPIED" : "PULL")</button>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain ai-model-pull" Click="CopyPullAsync" data-test="ai-pull"
+                    title="@($"{pull} — press to copy")">@(_copied ? "COPIED" : "PULL")</RadzenButton>
         }
     </div>
     <div class="ai-model">
         <label for="ai-hearing" title="Words (Whisper), sounds (AST) and voices (WavLM), all heard on this machine; never the audio itself.">HEARS</label>
-        <select id="ai-hearing" value="@(Sensing.Listening ? "on" : "off")" @onchange="SelectHearingAsync" data-test="ai-hearing">
-            <option value="on">WHISPER · AST · WAVLM</option>
-            <option value="off">Listening off</option>
-        </select>
+        <RadzenDropDown TValue="string" Data="@HearingKeys" Value="@(Sensing.Listening ? "on" : "off")" Change="@(v => SelectHearingAsync(v as string))"
+                        Name="ai-hearing" data-test="ai-hearing" data-value="@(Sensing.Listening ? "on" : "off")"
+                        InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "What the microphone listens with" })">
+            <Template Context="key">@PickOption.Render((object)key, k => k == "on" ? "WHISPER · AST · WAVLM" : "Listening off")</Template>
+            <ValueTemplate Context="key">@PickOption.Text((object)key, k => k == "on" ? "WHISPER · AST · WAVLM" : "Listening off")</ValueTemplate>
+        </RadzenDropDown>
         @if (Sensing.Listening && Sensing.IsRunning && !Sensing.Live.Demo && Load("hearing") is { } hearing)
         {
             <ModelLoad Status="@hearing" Prefix="@(hearing.Model == "voice" ? "VOICES" : "WORDS · SOUNDS")" CpuByDesign="true" Test="ai-hearing-status" />
@@ -67,20 +69,13 @@
     </div>
     <div class="ai-model">
         <label for="ai-chat-model" title="Writes recaps and stories, answers questions. Auto picks local Ollama when it answers, else a cloud model; a failing model hands over to the next configured one.">WRITES</label>
-        <select id="ai-chat-model" @key="_chatRevision" value="@_models?.SelectedId" @onchange="SelectChatAsync"
-                disabled="@(_models is null || _saving)" data-test="ai-chat-model" aria-describedby="ai-chat-status">
-            @if (_models is null)
-            {
-                <option>@(_loadFailed ? "Unavailable" : "Loading models...")</option>
-            }
-            else
-            {
-                @foreach (var model in _models.Models)
-                {
-                    <option value="@model.Id">@model.Provider - @model.Model</option>
-                }
-            }
-        </select>
+        <RadzenDropDown TValue="string" @key="_chatRevision" Data="@ChatKeys" Value="@_models?.SelectedId" Change="@(v => SelectChatAsync(v as string))"
+                        Disabled="@(_models is null || _saving)" Placeholder="@(_loadFailed ? "Unavailable" : "Loading models...")"
+                        Name="ai-chat-model" data-test="ai-chat-model" data-value="@_models?.SelectedId"
+                        InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Server AI model", ["aria-describedby"] = "ai-chat-status" })">
+            <Template Context="id">@PickOption.Render((object)id, ChatLabel)</Template>
+            <ValueTemplate Context="id">@PickOption.Text((object)id, ChatLabel)</ValueTemplate>
+        </RadzenDropDown>
         <span id="ai-chat-status" class="ai-model-status" role="status">
             @(_saving ? "SAVING..." : _models?.SelectedId switch { "Template" => "TEMPLATE", "Ollama" => "SERVER · OLLAMA", "Auto" => "SERVER · AUTO", null => "SERVER", _ => "SERVER · CLOUD" })
         </span>
@@ -93,7 +88,7 @@
         @(_error ?? (_loadFailed ? "Could not load the AI choices." : CaptionHint))
     @if (_loadFailed)
     {
-        <button class="term-button" @onclick="LoadModelsAsync">Retry AI</button>
+        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="LoadModelsAsync">Retry AI</RadzenButton>
     }
     </div>
 }
@@ -218,14 +213,20 @@
     }
 
 
-    private async Task SelectHearingAsync(ChangeEventArgs args)
+    private static readonly string[] HearingKeys = ["on", "off"];
+
+    private string[] ChatKeys => _models is null ? [] : [.. _models.Models.Select(m => m.Id)];
+
+    private string ChatLabel(string id) => _models?.Models.FirstOrDefault(m => m.Id == id) is { } model ? $"{model.Provider} - {model.Model}" : id;
+
+    private async Task SelectHearingAsync(string? value)
     {
-        await Sensing.SetListeningAsync(args.Value?.ToString() != "off");
+        await Sensing.SetListeningAsync(value != "off");
     }
 
-    private async Task SelectChatAsync(ChangeEventArgs args)
+    private async Task SelectChatAsync(string? id)
     {
-        if (_saving || args.Value?.ToString() is not { } id) return;
+        if (_saving || id is null) return;
         _saving = true;
         var saved = await Api.SelectAiModelAsync(id, _stop.Token);
         if (saved is not null) _models = saved;

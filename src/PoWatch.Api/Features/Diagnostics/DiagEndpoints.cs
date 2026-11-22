@@ -1,9 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
 using PoWatch.Application.Contracts;
-using PoWatch.Application.Options;
 using PoWatch.Shared.Models;
 
 namespace PoWatch.Api.Features.Diagnostics;
@@ -31,9 +29,7 @@ internal static class DiagEndpoints
         app.MapGet("/api/diag", async (
                 HttpContext http,
                 HealthCheckService health,
-                IAiModelRegistry models,
-                IOptions<FeatureFlagsOptions> flags,
-                IConfiguration config,
+                ServiceProbes probes,
                 IWebHostEnvironment env,
                 TimeProvider time,
                 CancellationToken ct) =>
@@ -50,12 +46,13 @@ internal static class DiagEndpoints
                         "Serves this app, your stats and sign-in.", "Answering", 0, null),
                 ];
 
-                foreach (var (name, entry) in report.Entries)
+                // Storage (and any other registered health check) comes from the health checks; Key Vault is
+                // probed with the services below, so its health-check entry is not shown twice.
+                foreach (var (name, entry) in report.Entries.Where(e => e.Key != "azure-key-vault"))
                 {
                     var (group, label, purpose) = name switch
                     {
                         "azure-storage" => (DiagGroups.Data, "Storage", "Keeps your stats, sessions, regulars and snapshots."),
-                        "azure-key-vault" => (DiagGroups.Service, "Key Vault", "Holds the server's secrets and keys."),
                         _ => (DiagGroups.Service, name, "A dependency the server checks."),
                     };
                     var problem = entry.Status == HealthStatus.Healthy
@@ -67,22 +64,12 @@ internal static class DiagEndpoints
                         Math.Round(entry.Duration.TotalMilliseconds, 1), problem));
                 }
 
-                // Sign-in: Microsoft Entra when it is configured; the guest sign-in only outside Production.
-                var entra = !string.IsNullOrWhiteSpace(config["AzureAd:ClientId"]);
-                var guest = flags.Value.DeveloperBypassAuth && !env.IsProduction();
-                checks.Add(new("sign-in", DiagGroups.Service, "Sign-in", entra || guest ? "Healthy" : "Unhealthy",
-                    "Lets you sign in to see your own stats.",
-                    entra ? "Microsoft Entra" : guest ? "Guest sign-in (local use, no Microsoft tenant configured)" : "Not configured",
-                    0, entra || guest ? null : "No sign-in method is configured, so nobody can sign in."));
+                // Every external service, each reached with a live call (cached 60 s). "Off" rows are
+                // switched off on purpose and never count toward the overall status.
+                checks.AddRange(await probes.RunAsync(ct));
 
-                // AI: the server only rewords recaps and answers Ask; without a model the numbers still come through.
-                var configured = models.Models.Where(m => m.Provider is not ("Template" or "Auto")).Select(m => m.Provider).Distinct().ToList();
-                checks.Add(new("ai-models", DiagGroups.Service, "AI models", configured.Count > 0 ? "Healthy" : "Degraded",
-                    "Rewords recaps and answers Ask.",
-                    configured.Count > 0 ? $"Configured ({string.Join(", ", configured)})" : "None configured",
-                    0, configured.Count > 0 ? null : "No AI model is configured, so recaps use plain templates."));
-
-                var overall = checks.Any(c => c.Status == "Unhealthy") ? "Unhealthy" : checks.Any(c => c.Status == "Degraded") ? "Degraded" : "Healthy";
+                var counted = checks.Where(c => c.Status != ServiceProbes.Off).ToList();
+                var overall = counted.Any(c => c.Status == "Unhealthy") ? "Unhealthy" : counted.Any(c => c.Status == "Degraded") ? "Degraded" : "Healthy";
                 return Results.Ok(new DiagReportDto(overall, env.EnvironmentName, Version, time.GetUtcNow(),
                     Math.Round(time.GetElapsedTime(started).TotalMilliseconds, 1), [.. checks]));
             })

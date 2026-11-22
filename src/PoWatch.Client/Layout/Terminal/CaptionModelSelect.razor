@@ -4,15 +4,13 @@
 @* The camera's caption model, or captions off: one dropdown, rendered in the header (every page) and in
    Live's AI strip. Both read and write SensingSession, so a pick in one shows in the other at once, and
    the choice is kept in this browser (it depends on this device's GPU, not the account). *@
-<select id="@Id" class="@Class" @key="_revision" value="@(Sensing.Captions ? Sensing.CaptionModel : "off")"
-        @onchange="SelectAsync" data-test="@Test" aria-label="@(Id is null ? "Camera caption model" : null)"
-        aria-describedby="@DescribedBy" title="Describes what the camera sees. Ollama models run on this PC's Ollama server; WebGPU models run in this browser. Captions off saves the GPU.">
-    <option value="off">Captions off</option>
-    @foreach (var model in CaptionModels.All)
-    {
-        <option value="@model.Key">@model.Label</option>
-    }
-</select>
+<RadzenDropDown TValue="string" Data="@Keys" Value="@Current" Change="@(v => SelectAsync(v as string))"
+                class="@Class" data-test="@Test" data-value="@Current" Name="@Id"
+                InputAttributes="@InputAttributes"
+                title="Describes what the camera sees. Ollama models run on this PC's Ollama server; WebGPU models run in this browser. Captions off saves the GPU.">
+    <Template Context="key">@PickOption.Render((object)key, Label)</Template>
+    <ValueTemplate Context="key">@PickOption.Text((object)key, Label)</ValueTemplate>
+</RadzenDropDown>
 
 @code {
     /// <summary>The element id, for a visible &lt;label for&gt;; without one the select names itself.</summary>
@@ -27,8 +25,17 @@
     /// <summary>Told why a choice was refused, or null once one is taken.</summary>
     [Parameter] public EventCallback<string?> OnError { get; set; }
 
-    // Re-keyed after a refused choice, so the dropdown snaps back to what is really in use.
-    private int _revision;
+    private static readonly string[] Keys = ["off", .. CaptionModels.All.Select(m => m.Key)];
+
+    private string Current => Sensing.Captions ? Sensing.CaptionModel : "off";
+
+    private static string Label(string key) => key == "off" ? "Captions off" : CaptionModels.All.Where(m => m.Key == key).Select(m => m.Label).FirstOrDefault() ?? key;
+
+    private Dictionary<string, object> InputAttributes => new()
+    {
+        ["aria-label"] = "Camera caption model",
+        ["aria-describedby"] = DescribedBy ?? string.Empty,
+    };
 
     private object? _shown;
 
@@ -43,12 +50,10 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private async Task SelectAsync(ChangeEventArgs args)
+    private async Task SelectAsync(string? model)
     {
-        var model = args.Value?.ToString();
         if (model is null || (model != "off" && !CaptionModels.All.Any(m => m.Key == model)))
         {
-            _revision++;
             await OnError.InvokeAsync("Choose one of the offered camera models.");
             return;
         }

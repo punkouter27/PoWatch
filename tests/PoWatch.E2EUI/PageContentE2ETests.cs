@@ -264,6 +264,30 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         await page.GetByTestId("sign-out").ClickAsync();
 
         await Assertions.Expect(page.GetByTestId("login-shell")).ToBeVisibleAsync(new() { Timeout = 60000 });
+
+        // The sign-in page is the title and one sign-in button: no header Sign in, gear or nav beside it.
+        await Assertions.Expect(page.GetByTestId("login-card").Locator("button, a")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.GetByTestId("login-card").Locator("p")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("header-sign-in")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("settings-menu")).ToHaveCountAsync(0);
+
+        // Signed out anywhere else: title and Sign in only (no section keys, bottom bar, gear or session controls).
+        await page.GotoAsync($"{PlaywrightFixture.BaseUrl}/no-such-page");
+        await Assertions.Expect(page.GetByTestId("not-found")).ToBeVisibleAsync(new() { Timeout = 60000 });
+        await Assertions.Expect(page.GetByTestId("header-sign-in")).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByTestId("settings-menu")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("app-navbar")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("bottom-nav")).ToHaveCountAsync(0);
+
+        // On a phone the version stamp leaves the corner and comes after the page's content.
+        await page.SetViewportSizeAsync(390, 844);
+        await page.GotoAsync($"{PlaywrightFixture.BaseUrl}/diag");
+        await Assertions.Expect(page.GetByTestId("diag-about")).ToBeVisibleAsync(new() { Timeout = 60000 });
+        var stamp = page.GetByTestId("build-stamp-corner");
+        Assert.Equal("static", await stamp.EvaluateAsync<string>("el => getComputedStyle(el).position"));
+        var about = await page.GetByTestId("diag-about").BoundingBoxAsync();
+        var stampBox = await stamp.BoundingBoxAsync();
+        Assert.True(about is not null && stampBox is not null && stampBox.Y >= about.Y + about.Height, "the stamp sits below the page content");
     }
 
     [E2EFact]

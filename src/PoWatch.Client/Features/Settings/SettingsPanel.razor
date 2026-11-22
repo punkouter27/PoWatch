@@ -8,8 +8,8 @@
     <nav class="term-tabbar settings-tabs" aria-label="Settings sections">
         @foreach (var (key, label) in Sections)
         {
-            <button type="button" class="term-tab @(_section == key ? "term-tab--on" : null)" aria-pressed="@(_section == key ? "true" : "false")"
-                    @onclick="() => _section = key" data-test="@($"settings-tab-{key}")">@label</button>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_section == key ? "pw-plain term-tab term-tab--on" : "pw-plain term-tab")" aria-pressed="@(_section == key ? "true" : "false")"
+                    Click="() => _section = key" data-test="@($"settings-tab-{key}")">@label</RadzenButton>
         }
     </nav>
 
@@ -39,7 +39,7 @@
         <ErrorContent>
             <div class="panel-error" role="alert" data-test="settings-error">
                 <span>This settings panel hit an error.</span>
-                <button type="button" class="term-button" @onclick="() => _boundary?.Recover()">Retry</button>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="() => _boundary?.Recover()">Retry</RadzenButton>
             </div>
         </ErrorContent>
     </ErrorBoundary>

@@ -94,6 +94,9 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeHiddenAsync();
         await page.GetByTestId("ask-toggle").ClickAsync();
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeVisibleAsync();
+        // An empty question is stopped in the browser with the shared rule's message beside the box.
+        await page.GetByTestId("stats-ask").Locator("button[type=submit]").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("stats-ask").Locator(".form-error")).ToHaveTextAsync("Type a question first.");
         await page.GetByTestId("ask-toggle").ClickAsync();
         await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeHiddenAsync();
         await Assertions.Expect(page.GetByTestId("session-health")).ToHaveAttributeAsync("href", "diag");

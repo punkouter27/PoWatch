@@ -15,37 +15,25 @@
             @* An unguarded fetch used to leave this page on "Loading sign-in options…" forever when
                /auth/config was unreachable — the one screen where a dead end locks the user out. *@
             <p class="login-status" role="alert" data-test="login-error">@_error</p>
-            <button class="login-btn login-btn-guest" type="button" @onclick="LoadConfigAsync" data-test="login-retry">
-                <span aria-hidden="true" class="login-btn-icon">↻</span>
-                <span class="login-btn-text">Try again</span>
-            </button>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain login-btn login-btn-guest" Click="LoadConfigAsync" data-test="login-retry">Try again</RadzenButton>
         }
         else if (_config is null)
         {
             <p class="login-status" role="status" aria-live="polite" data-test="login-loading">Loading sign-in options…</p>
         }
+        else if (_config.MicrosoftEnabled)
+        {
+            @* The page is the title and one button (AGENTS.md): Microsoft wherever it is configured. *@
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain login-btn login-btn-ms" Click="@(() => Go("auth/login/microsoft"))" data-test="login-microsoft">Sign in with Microsoft</RadzenButton>
+        }
+        else if (_config.GuestEnabled)
+        {
+            @* Local and Test hosts without a Microsoft tenant: the guest sign-in is the one button. *@
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain login-btn login-btn-guest" Click="@(() => Go("auth/login/fake"))" data-test="login-guest">Continue as Guest</RadzenButton>
+        }
         else
         {
-            @if (_config.MicrosoftEnabled)
-            {
-                <a class="login-btn login-btn-ms" href="@LoginUrl("auth/login/microsoft")" data-test="login-microsoft">
-                    <span aria-hidden="true" class="login-btn-icon">⊞</span>
-                    <span class="login-btn-text">Sign in with Microsoft</span>
-                </a>
-                <p class="login-btn-hint">Microsoft Entra sign-in — your own account, your own stats.</p>
-            }
-            @if (_config.GuestEnabled)
-            {
-                <a class="login-btn login-btn-guest" href="@LoginUrl("auth/login/fake")" data-test="login-guest">
-                    <span aria-hidden="true" class="login-btn-icon">⌂</span>
-                    <span class="login-btn-text">Continue as Guest</span>
-                </a>
-                <p class="login-btn-hint login-btn-hint--muted">Local demo only — no real data, no Microsoft tenant required. Disabled in production.</p>
-            }
-            @if (!_config.MicrosoftEnabled && !_config.GuestEnabled)
-            {
-                <p class="login-status" role="alert">No sign-in method is configured for the <b>@_config.Environment</b> environment.</p>
-            }
+            <p class="login-status" role="alert">No sign-in method is configured for the <b>@_config.Environment</b> environment.</p>
         }
     </div>
 </div>
@@ -86,5 +74,6 @@
         }
     }
 
-    private string LoginUrl(string endpoint) => $"{endpoint}?returnUrl={Uri.EscapeDataString(_returnUrl)}";
+    // The sign-in endpoints are server routes (a redirect to Microsoft or the guest cookie), so a full load.
+    private void Go(string endpoint) => Nav.NavigateTo($"{endpoint}?returnUrl={Uri.EscapeDataString(_returnUrl)}", forceLoad: true);
 }

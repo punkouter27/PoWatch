@@ -16,7 +16,7 @@
             <ErrorContent>
                 <div class="panel-error" role="alert" data-test="panel-error">
                     <span>This panel hit an error.</span>
-                    <button type="button" class="term-button" @onclick="() => _boundary?.Recover()">Retry</button>
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="() => _boundary?.Recover()">Retry</RadzenButton>
                 </div>
             </ErrorContent>
         </ErrorBoundary>

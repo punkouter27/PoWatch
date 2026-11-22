@@ -37,16 +37,16 @@ else
             </ExportMenu>
             @if (_share is null)
             {
-                <button class="term-button" @onclick="ShareAsync" disabled="@_sharing" title="A read-only page of this recap that works without signing in, for 7 days" data-test="history-share">@(_sharing ? "Sharing…" : "Share ↗")</button>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="ShareAsync" Disabled="@_sharing" title="A read-only page of this recap that works without signing in, for 7 days" data-test="history-share">@(_sharing ? "Sharing…" : "Share ↗")</RadzenButton>
             }
         </div>
         @if (_share is { } share)
         {
             <div class="history-share" data-test="history-share-link">
                 <label class="visually-hidden" for="share-url">Link to this recap</label>
-                <input id="share-url" readonly value="@ShareUrl(share)" onfocus="this.select()" />
-                <button class="term-button" @onclick="() => CopyAsync(share)">@(_copied ? "Copied" : "Copy")</button>
-                <button class="term-button term-button--danger" @onclick="() => TakeDownAsync(share)" title="The link stops working at once">Take down</button>
+                <RadzenTextBox id="share-url" Name="share-url" ReadOnly="true" Value="@ShareUrl(share)" onfocus="this.select()" />
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="() => CopyAsync(share)">@(_copied ? "Copied" : "Copy")</RadzenButton>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button term-button--danger" Click="() => TakeDownAsync(share)" title="The link stops working at once">Take down</RadzenButton>
                 <span class="term-stat-hint">WORKS WITHOUT SIGNING IN UNTIL @share.ExpiresUtc.ToLocalTime().ToString("d MMM", CultureInfo.CurrentCulture).ToUpperInvariant() · NO CAMERA IMAGES</span>
             </div>
         }
