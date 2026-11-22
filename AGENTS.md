@@ -136,7 +136,8 @@ Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 | `SCREENSHOTS/` is git-ignored (before/after pages stay local) | keeps the repo small | — | un-ignore it |
 | App Service `app-powatch-win2` on `asp-PoWatch-f1` (standard `app-powatch`) | renaming means recreating | — | owner-approved recreate |
 
-**Hosting:** App Service F1 (Free, `asp-PoWatch-f1`): 165 MB of data out and 60 CPU-minutes per day. Never run test
+**Hosting:** App Service F1 (Free, Windows, `asp-PoWatch-f1`): 60 CPU-minutes and a data-out quota per day (Azure
+reported 855 MB on 2026-11-22; over it the site stops until 00:00 UTC). Never run test
 suites against the live site; live checks = at most 6 page loads + /diag + X-Commit.
 
 ---
