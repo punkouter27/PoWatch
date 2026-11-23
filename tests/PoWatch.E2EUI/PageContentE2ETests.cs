@@ -25,7 +25,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"demo-{Guid.NewGuid():N}");
 
-        await page.GetByTestId("start-demo").ClickAsync();
+        await page.StartDemoAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("OBSERVING");
 
         // nonzero live counters within 15 s, with no camera, GPU or model, and the comings and goings written down.
@@ -100,7 +100,7 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
         // A fresh user: storage persists (Azurite), so a reused guest already knows the walker and the cat.
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"names-{Guid.NewGuid():N}");
 
-        await page.GetByTestId("start-demo").ClickAsync();
+        await page.StartDemoAsync();
 
         // The demo walker and the cat each get an offer to be named, waiting behind the bell; nothing opens by itself.
         await page.GetByTestId("tray-toggle").ClickAsync();

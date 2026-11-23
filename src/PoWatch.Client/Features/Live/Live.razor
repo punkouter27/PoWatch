@@ -17,13 +17,9 @@
             <StartActions>
                 <RadzenButton Text="@(_starting ? "Starting..." : "Start camera")" Icon="videocam"
                               Disabled="@_starting" Click="@(() => StartAsync(demo: false))" data-test="start-camera" />
-                <RadzenButton Text="Try demo" ButtonStyle="ButtonStyle.Light" Disabled="@_starting"
-                              Click="@(() => StartAsync(demo: true))" data-test="start-demo" />
+                @* No demo button (owner, 2026-11-23): the demo scene starts from ?start=demo or Ctrl+K. *@
             </StartActions>
         </SessionControls>
-        <RadzenButton Text="Ask" Icon="chat_bubble_outline" ButtonStyle="ButtonStyle.Light"
-                      Click="@(() => _askOpen = !_askOpen)" aria-expanded="@(_askOpen ? "true" : "false")"
-                      aria-controls="session-ask" data-test="ask-toggle" />
         <a href="diag" class="term-button session-health" data-test="session-health">
             @(L.LastError is not null || L.LostTicks > 0 ? "Needs attention" : L.PendingBatches > 0 ? "Saving queued" : Sensing.IsRunning ? "Sensing active" : "System status")
         </a>
@@ -32,15 +28,6 @@
             <span class="live-error" role="status" data-test="session-missing">That session was not found, so this is your latest one.</span>
         }
 
-        <div class="stats-ask-row" id="session-ask" hidden="@(!_askOpen)">
-            <RadzenTemplateForm TItem="AskRequestDto" Data="@_ask" Submit="@(_ => AskAsync())" class="stats-ask" data-test="stats-ask">
-                <FluentValidationValidator TModel="AskRequestDto" Validator="@AskRules" />
-                <label class="visually-hidden" for="ask">Ask a question about your stats</label>
-                <RadzenTextBox id="ask" Name="Question" @bind-Value="_ask.Question" Immediate="true" MaxLength="@AskRequestDto.MaxLength" autocomplete="off" Placeholder="Ask: when is it usually busiest?" Disabled="@_asking" />
-                <RadzenButton ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@_asking">@(_asking ? "…" : "Ask")</RadzenButton>
-                <ValidationMessage For="@(() => _ask.Question)" class="form-error" />
-            </RadzenTemplateForm>
-        </div>
         @if (_error is not null)
         {
             <p class="live-error" role="alert" data-test="live-error">@_error</p>
@@ -87,7 +74,7 @@
                         {
                             <div class="live-standby" data-test="live-standby">
                                 <p>Point a camera at anything, press Start, walk away.</p>
-                                <p class="term-stat-hint">Use Start camera above, or try a private, scripted demo.</p>
+                                <p class="term-stat-hint">Use Start camera above.</p>
                             </div>
                         }
                         else if (Sensing.Live.Demo)

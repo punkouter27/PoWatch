@@ -26,9 +26,9 @@ public static class DependencyInjection
         services.AddSingleton<IShareStore, AzureShareStore>();
         services.AddSingleton<IStoryStore, AzureStoryStore>();
 
-        // One long-lived client for Open-Meteo; pooled connections are recycled so DNS changes still land.
+        // One long-lived client for Open-Meteo; a stalled TCP connect is retried (see RetryingConnectHandler).
         services.AddSingleton<IWeatherSource>(sp => new OpenMeteoWeatherSource(
-            new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(15) }) { Timeout = TimeSpan.FromSeconds(15) },
+            new HttpClient(RetryingConnectHandler.Create()) { Timeout = TimeSpan.FromSeconds(15) },
             sp.GetRequiredService<Microsoft.Extensions.Caching.Hybrid.HybridCache>(),
             sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<OpenMeteoWeatherSource>>()));

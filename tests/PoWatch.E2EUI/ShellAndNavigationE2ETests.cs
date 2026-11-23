@@ -16,10 +16,10 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("term-header")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("app-navbar")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("STANDBY");
-        // The Po shell: the name upper-left, the signed-in email and the gear (a link to /settings) upper-right.
+        // The Po shell: the name upper-left, the signed-in email upper-right, and no gear (owner removed it).
         await Assertions.Expect(page.GetByTestId("header-title")).ToHaveTextAsync("PoWatch");
         await Assertions.Expect(page.GetByTestId("header-email")).ToContainTextAsync("@");
-        await Assertions.Expect(page.GetByTestId("settings-menu")).ToHaveAttributeAsync("href", "/settings");
+        await Assertions.Expect(page.GetByTestId("settings-menu")).ToHaveCountAsync(0);
         // The build follows you to every page as v{YYMMDD}, so a bug report can name the build it came from.
         await Assertions.Expect(page.Locator(".po-version")).ToHaveCountAsync(1);
         await Assertions.Expect(page.GetByTestId("build-stamp-corner")).ToHaveTextAsync(new System.Text.RegularExpressions.Regex(@"^v\d{6}$"));
@@ -91,14 +91,9 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
     {
         await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
 
-        await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeHiddenAsync();
-        await page.GetByTestId("ask-toggle").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeVisibleAsync();
-        // An empty question is stopped in the browser with the shared rule's message beside the box.
-        await page.GetByTestId("stats-ask").Locator("button[type=submit]").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("stats-ask").Locator(".form-error")).ToHaveTextAsync("Type a question first.");
-        await page.GetByTestId("ask-toggle").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("stats-ask")).ToBeHiddenAsync();
+        // No Ask box, no demo button (owner, 2026-11-23); Explain on the metrics panel is the one question left.
+        await Assertions.Expect(page.GetByTestId("ask-toggle")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("start-demo")).ToHaveCountAsync(0);
         await Assertions.Expect(page.GetByTestId("session-health")).ToHaveAttributeAsync("href", "diag");
         await Assertions.Expect(page.GetByTestId("live-metrics").Locator("table")).ToHaveCountAsync(0);
         await Assertions.Expect(page.GetByTestId("live-pipeline")).ToHaveCountAsync(0);

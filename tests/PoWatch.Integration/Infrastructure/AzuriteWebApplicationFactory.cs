@@ -71,7 +71,7 @@ public sealed class AzuriteWebApplicationFactory : WebApplicationFactory<Program
 
 /// <summary>
 /// Stands in for every service /api/diag probes: Open-Meteo finds a place (or fails with the given status),
-/// Azure OpenAI lists models, nothing listens on localhost (a local Ollama that is not running), and
+/// Azure OpenAI lists its deployments, nothing listens on localhost (a local Ollama that is not running), and
 /// anything else is a 404.
 /// </summary>
 internal sealed class ProbeStub(HttpStatusCode weather) : HttpMessageHandler
@@ -83,8 +83,8 @@ internal sealed class ProbeStub(HttpStatusCode weather) : HttpMessageHandler
             throw new HttpRequestException("Connection refused (stub).");
         if (uri.Host.Contains("open-meteo", StringComparison.OrdinalIgnoreCase))
             return Task.FromResult(weather == HttpStatusCode.OK ? Json("""{"results":[{"name":"London"}]}""") : new HttpResponseMessage(weather));
-        if (uri.AbsolutePath.EndsWith("/openai/v1/models", StringComparison.Ordinal))
-            return Task.FromResult(Json("""{"data":[]}"""));
+        if (uri.AbsolutePath.EndsWith("/openai/deployments", StringComparison.Ordinal))
+            return Task.FromResult(Json("""{"data":[{"id":"gpt-5.4-nano"}]}"""));
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }
 

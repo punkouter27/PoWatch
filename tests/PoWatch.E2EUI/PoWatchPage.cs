@@ -111,8 +111,15 @@ internal static class PoWatchPage
         Assertions.Expect(page.GetByTestId($"nav-{section.ToLowerInvariant()}"))
             .ToHaveClassAsync(new System.Text.RegularExpressions.Regex(@"\bactive\b"), new() { Timeout = timeoutMs });
 
-    /// <summary>Settings opens from the header's gear (a link to the /settings page), on its Recording tab.</summary>
-    public static Task OpenSettingsAsync(this IPage page) => page.GetByTestId("settings-menu").ClickAsync();
+    /// <summary>Settings has no gear (owner, 2026-11-23): it opens the way Ctrl+K does, on its Recording tab.</summary>
+    public static async Task OpenSettingsAsync(this IPage page)
+    {
+        await page.EvaluateAsync("Blazor.navigateTo('settings')");
+        await page.WaitForURLAsync("**/settings");
+    }
+
+    /// <summary>The demo scene has no button (owner, 2026-11-23): it starts the way Ctrl+K does, ?start=demo.</summary>
+    public static Task StartDemoAsync(this IPage page) => page.EvaluateAsync("Blazor.navigateTo('?start=demo')");
 
     /// <summary>Opens Settings at one of its tabs: recording, people or account (look, alerts, sharing and your data).</summary>
     public static async Task OpenSettingsAsync(this IPage page, string section)

@@ -19,7 +19,6 @@ public sealed partial class Live
     private static readonly AskRequestValidator AskRules = new();
     private string? _answer;
     private bool _asking;
-    private bool _askOpen;
 
     private ElementReference _slot;
     private ElementReference _demoCanvas;
@@ -108,9 +107,9 @@ public sealed partial class Live
         _asking = false;
     }
 
+    /// <summary>The metrics panel's Explain: the one question the Live page still asks (the free Ask box is gone).</summary>
     private Task ExplainAsync()
     {
-        _askOpen = true;
         _ask.Question = "Which of today's numbers are unusual against my usual day, and what stands out about today?";
         return AskAsync();
     }

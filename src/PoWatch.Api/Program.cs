@@ -66,7 +66,8 @@ builder.Services.AddPoWatchTelemetry(builder.Configuration);
 // Health checks: Azure Storage, plus Key Vault when it is enabled (served at /health).
 builder.Services.AddPoWatchHealthChecks(featureFlags);
 // /api/diag's live service probes: one short-timeout client, results cached 60 s (ServiceProbes).
-builder.Services.AddHttpClient(PoWatch.Api.Features.Diagnostics.ServiceProbes.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(8));
+builder.Services.AddHttpClient(PoWatch.Api.Features.Diagnostics.ServiceProbes.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(8))
+    .ConfigurePrimaryHttpMessageHandler(() => PoWatch.Infrastructure.Runtime.RetryingConnectHandler.Create());
 builder.Services.AddSingleton<PoWatch.Api.Features.Diagnostics.ServiceProbes>();
 builder.Services.AddPoWatchRateLimiting(builder.Environment);
 

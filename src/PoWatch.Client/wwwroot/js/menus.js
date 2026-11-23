@@ -14,9 +14,9 @@
     const commands = () => [
         ...Object.entries(SECTIONS).map(([key, name]) => ({ label: `Go to ${name}`, hint: `g ${key}`, run: () => click(`nav-${name}`) })),
         { label: 'Start or stop observing', hint: 'Space', run: toggleSession },
-        { label: 'Start the demo scene', hint: '', run: () => click('start-demo') || Blazor.navigateTo('?start=demo') },
+        { label: 'Start the demo scene', hint: '', run: () => Blazor.navigateTo('?start=demo') },
         { label: 'Notifications', hint: '', run: () => click('tray-toggle') },
-        { label: 'Settings: recording, people, alerts, AI models, your data', hint: '', run: () => click('settings-menu') },
+        { label: 'Settings: recording, people, alerts, AI models, your data', hint: '', run: () => Blazor.navigateTo('settings') },
         { label: 'System status', hint: '', run: () => Blazor.navigateTo('diag') },
         { label: 'Journal: today', hint: '', run: () => Blazor.navigateTo('journal') },
         { label: 'Journal: this week', hint: '', run: () => Blazor.navigateTo('journal?view=week') },

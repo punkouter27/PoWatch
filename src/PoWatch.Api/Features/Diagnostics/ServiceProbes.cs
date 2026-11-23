@@ -188,14 +188,15 @@ public sealed class ServiceProbes(
         return Outcome.Healthy("Listed secret names (live call)");
     }
 
-    // ── Azure OpenAI: lists the models on the resource (free) with the same credential the app uses,
-    //    its API key or, without one, the app's Entra identity.
+    // ── Azure OpenAI: lists the resource's deployments (free) with the same credential the app uses,
+    //    its API key or, without one, the app's Entra identity. Not /openai/v1/models: the app's
+    //    least-privilege role (Cognitive Services OpenAI User) may chat but not list models (403 there).
     private async Task<Outcome> AzureOpenAiAsync(HttpClient http, CancellationToken ct)
     {
         if (!Uri.TryCreate(Setting("AzureOpenAi:Endpoint"), UriKind.Absolute, out var endpoint))
             return Outcome.SwitchedOff("Off (no endpoint configured)");
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(endpoint, "openai/v1/models"));
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(endpoint, "openai/deployments?api-version=2023-03-15-preview"));
         if (Setting("AzureOpenAi:ApiKey") is { } key)
         {
             request.Headers.Add("api-key", key);
@@ -207,9 +208,19 @@ public sealed class ServiceProbes(
         }
 
         using var response = await http.SendAsync(request, ct);
+        if (response.StatusCode == HttpStatusCode.OK && Setting("AzureOpenAi:DeploymentName") is { } deployment)
+        {
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+            var found = json.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array
+                && data.EnumerateArray().Any(d => d.TryGetProperty("id", out var id) && string.Equals(id.GetString(), deployment, StringComparison.OrdinalIgnoreCase));
+            return found
+                ? Outcome.Healthy($"Found deployment {deployment} (live call)")
+                : Outcome.Degraded($"Azure OpenAI has no deployment named {deployment}, so recaps fall back to plain templates.");
+        }
+
         return response.StatusCode switch
         {
-            HttpStatusCode.OK => Outcome.Healthy("Listed models (live call)"),
+            HttpStatusCode.OK => Outcome.Healthy("Listed deployments (live call)"),
             HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => Outcome.Degraded("Azure OpenAI refused the app's credential, so recaps fall back to plain templates."),
             _ => Outcome.Degraded($"Azure OpenAI answered {(int)response.StatusCode}, so recaps may fall back to plain templates."),
         };
