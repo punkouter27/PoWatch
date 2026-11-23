@@ -34,8 +34,6 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
     /// <summary>A track must be this old before we ask who it is, so the look has settled.</summary>
     private static readonly TimeSpan RecogniseAfter = TimeSpan.FromSeconds(3);
 
-    /// <summary>Only these get a naming prompt; everything else is still tracked as a regular.</summary>
-    private static readonly HashSet<string> Nameable = new(StringComparer.OrdinalIgnoreCase) { "person", "cat", "dog" };
     private SyntheticScene? _scene;
     private DotNetObjectReference<SensingSession>? _self;
 

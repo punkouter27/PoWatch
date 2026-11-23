@@ -7,37 +7,14 @@ using PoWatch.Shared.Validation;
 
 namespace PoWatch.Api.Features.Ask;
 
+/// <summary>Watch-rule drafting and alert relay. There is no free-form Ask: PoWatch answers no questions.</summary>
 internal static class AskEndpoints
 {
     public const string AlertMethod = "alert";
-    private static readonly AskRequestValidator AskRules = new();
     private static readonly RuleDraftRequestValidator RuleRules = new();
 
     internal static IEndpointRouteBuilder MapAskFeature(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/ask", async (AskRequestDto request, UserId userId, AskService ask, ILogger<AskService> logger, CancellationToken ct) =>
-            {
-                if (ApiParsing.Invalid(AskRules, request) is { } invalid) return invalid;
-                var question = request.Question.Trim();
-
-                try
-                {
-                    return await ask.AskAsync(userId, question, request.TimeZoneId, ct) is { } answer
-                        ? Results.Ok(new AskAnswerDto { Answer = answer })
-                        : Results.Problem("No AI provider is configured on this server.", statusCode: StatusCodes.Status503ServiceUnavailable);
-                }
-                catch (Exception ex) when (!ct.IsCancellationRequested)
-                {
-                    // Timeouts and provider errors: the question simply goes unanswered.
-                    logger.LogWarning(ex, "Ask failed.");
-                    return Results.Problem("The model did not answer.", statusCode: StatusCodes.Status503ServiceUnavailable);
-                }
-            })
-            .WithTags("Ask")
-            .RequireAuthorization()
-            .WithName("Ask")
-            .WithSummary("Answer a plain-language question from the caller's own statistics.");
-
         app.MapPost("/api/ask/rule", async (RuleDraftRequestDto request, UserId _, AssistService assist, CancellationToken ct) =>
             {
                 if (ApiParsing.Invalid(RuleRules, request) is { } invalid) return invalid;

@@ -67,29 +67,13 @@
 
 /* Cards flow as many across as fit; the name is edited in place; the merge bar floats over the page. */
 .regulars-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border-bottom: 1px solid var(--term-line); font: var(--fs-sm) var(--term-mono); }
-.regulars-bar .rz-textbox, .regulars-merge .rz-dropdown { min-height: 32px; padding: 0 8px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: var(--fs-sm) var(--term-mono); }
-.regulars-bar .rz-textbox { width: min(220px, 100%); }
-.regulars-merge {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 8px;
-    margin-left: auto;
-    padding: 2px 8px;
-    border-left: 2px solid var(--term-accent);
-    animation: fx-pop 0.35s var(--spring);
-}
-.regulars-merge .term-button { min-height: 32px; padding: 0 10px; }
 .regulars-cards { list-style: none; margin: 0; padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--term-gap); }
 .regular-card { display: grid; gap: 8px; align-content: start; padding: 10px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-panel); }
-.regular-card--on { border-color: var(--term-accent); box-shadow: 0 0 0 1px var(--term-accent) inset; }
 .regular-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .regular-kind { font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; color: var(--term-accent); background: var(--term-panel-2); }
 .regular-voice { margin-right: auto; font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.1em; padding: 2px 6px; border-radius: 2px; color: var(--term-bg); background: var(--term-accent); }
 .regular-card input[type="checkbox"] { width: 24px; height: 24px; margin: 0; accent-color: var(--term-accent); }
-.regular-name input { box-sizing: border-box; width: 100%; min-height: 34px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: 600 var(--fs-md) var(--term-font); padding: 0 8px; }
-.regular-name { display: grid; gap: 8px; }
-.regular-edit-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.regular-name { margin: 0; color: var(--term-text); font: 600 var(--fs-md) var(--term-font); }
 .regular-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 0; }
 .regular-stats dt { font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-dim); }
 .regular-stats dd { margin: 0; font: 600 var(--fs-md) var(--term-mono); font-variant-numeric: tabular-nums; color: var(--term-text); }
@@ -144,14 +128,12 @@
 
 @media (pointer: coarse) {
     .term-button, .term-header .term-button, .term-icon-button, .term-key, .term-menu-item,
-    .history-nav .term-button, .stats-toolbar .term-button, .regulars-merge .term-button,
+    .history-nav .term-button, .stats-toolbar .term-button,
     .rule-row .term-icon-button, .rule-form .term-button, .away-bar .term-icon-button,
     .settings-search .term-button, .moment-filters .term-button, .history-share .term-button { min-height: 44px; }
     .term-icon-button, .rule-row .term-icon-button, .away-bar .term-icon-button { min-width: 44px; }
     .term-key { font-size: 12px; }
-    .regulars-bar .rz-textbox, .regulars-merge .rz-dropdown, .regular-name input, .stats-ask input,
-    .rule-form .rz-dropdown, .rule-form input, .name-prompt input, .settings-search input, .history-share input { min-height: 44px; }
-    .regular-card input[type="checkbox"] { width: 24px; height: 24px; }
+    .rule-form .rz-dropdown, .rule-form input, .settings-search input, .history-share input { min-height: 44px; }
 }
 
 /* ── Safety nets, build stamp ───────────────────────────────── */

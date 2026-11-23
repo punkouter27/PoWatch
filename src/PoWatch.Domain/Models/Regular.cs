@@ -2,7 +2,7 @@ namespace PoWatch.Domain.Models;
 
 /// <summary>
 /// A recurring entity — a person, pet, car or object — recognised by how it looks, not by any
-/// biometric. Unnamed regulars read "Person 3", "Cat 1" until someone names them.
+/// biometric. Regulars are never named: they read "Person 3", "Cat 1".
 /// </summary>
 public sealed record Regular
 {
@@ -12,8 +12,6 @@ public sealed record Regular
 
     /// <summary>Per-class counter behind the automatic name ("Person 3").</summary>
     public int Number { get; init; }
-
-    public string? Name { get; init; }
 
     /// <summary>Appearance signature: a normalised colour histogram (see RegularMatcher).</summary>
     public IReadOnlyList<float> Signature { get; init; } = [];
@@ -26,7 +24,5 @@ public sealed record Regular
     public long Visits { get; init; }
     public double DwellSeconds { get; init; }
 
-    public bool IsNamed => !string.IsNullOrWhiteSpace(Name);
-
-    public string DisplayName => IsNamed ? Name! : $"{char.ToUpperInvariant(Class[0])}{Class[1..]} {Number}";
+    public string DisplayName => $"{char.ToUpperInvariant(Class[0])}{Class[1..]} {Number}";
 }

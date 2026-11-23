@@ -134,7 +134,8 @@ Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 | Phones: the stamp is the last child of `<main>`, static after the content; on wide screens it stays fixed | a fixed stamp covered /diag cards (overrides the older fixed rule) | `9e0cffd` 2026-11-21 | `git revert 9e0cffd` (stamp part) |
 | `/login` shows one Microsoft button (guest only where no tenant is set); no gear signed out | one-button sign-in rule | `9e0cffd` 2026-11-21 | — |
 | No settings gear in the header, even signed in; `/settings` opens from Ctrl+K and the bell's links | owner removed it | 2026-11-23 | restore the `settings-menu` link in `Layout/PoHeader.razor` |
-| Live has no "Try demo" or "Ask" buttons; the demo starts from `?start=demo` / Ctrl+K, Explain is the only question | owner removed them | 2026-11-23 | restore them in `Features/Live/Live.razor` |
+| Live has no "Try demo" button; the demo starts from `?start=demo` / Ctrl+K | owner removed it | 2026-11-23 | restore it in `Features/Live/Live.razor` |
+| No questions either way: no Ask (`/api/ask`, Live box, Explain, mobile Journal) and no naming. Regulars stay anonymous ("Person 3"): no rename/merge routes, no "name them?" prompts, People is read-only | owner's concept change: observe, don't identify or converse | 2026-11-23 | `git revert` the concept-change commit |
 | Key Vault off in production (`FeatureFlags__EnableKeyVault=false`); the app's identity has no vault access | the shared vault would load every app's secrets into config; PoWatch keeps none there | 2026-11-23 | grant get/list (`$KeyVaultAccess`), set `KeyVault__Uri`, flag on |
 | `SCREENSHOTS/` is git-ignored (before/after pages stay local) | keeps the repo small | — | un-ignore it |
 | App Service `app-powatch-win2` on `asp-PoWatch-f1` (standard `app-powatch`) | renaming means recreating | — | owner-approved recreate |

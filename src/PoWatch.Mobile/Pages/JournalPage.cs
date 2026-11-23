@@ -47,17 +47,6 @@ public sealed class JournalPage : ContentPage
                 Ui.Muted($"{w.DaysObserved} days · {TimeSpan.FromSeconds(w.SecondsObserved).TotalHours:F1} h observed · {w.Visits} visits · occupied {w.Occupancy:P0}{(digest.NewRegulars.Count > 0 ? $" · new: {string.Join(", ", digest.NewRegulars)}" : string.Empty)}"))));
         }
 
-        Entry question = new() { Placeholder = "Ask about your room (e.g. when is it busiest?)", MaxLength = AskRequestDto.MaxLength };
-        Label answer = Ui.Text(null);
-        _body.Add(Ui.Card(Ui.Stack(6, Ui.H2("Ask"), question, Ui.Secondary("Ask", async () =>
-        {
-            if (!string.IsNullOrWhiteSpace(question.Text))
-            {
-                answer.Text = "Thinking…";
-                answer.Text = await _api.AskAsync(question.Text.Trim()) ?? "No answer — the AI may be off on this server.";
-            }
-        }), answer)));
-
         IReadOnlyList<SessionDto> sessions = await sessionsTask;
         if (sessions.Count == 0)
         {

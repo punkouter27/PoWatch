@@ -274,9 +274,9 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         using var client = ClientFor(user);
         var session = await ObserveAsync(client);
 
-        // T1 came in unrecognised and left as Sam: the replay names the entrance too.
+        // T1 came in unrecognised and left as Person 1: the replay labels the entrance too.
         await factory.Services.GetRequiredService<IRegularStore>().UpsertAsync(
-            new Regular { Id = "sam", UserId = user, Class = "person", Number = 1, Name = "Sam" }, CancellationToken.None);
+            new Regular { Id = "sam", UserId = user, Class = "person", Number = 1 }, CancellationToken.None);
         var exit = await client.PostAsJsonAsync($"/api/sessions/{session.Id}/batches", new IngestBatchDto
         {
             BatchKey = Guid.NewGuid(),
@@ -292,8 +292,8 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal(255, grids[40]); // the busiest cell
         Assert.Contains(replay.Events, e => e is { Kind: "caption", Text: "A person crosses the room." });
         Assert.Contains(replay.Events, e => e is { Kind: "moment" });
-        Assert.Contains(replay.Events, e => e is { Kind: "enter", Class: "person", Who: "Sam" });
-        Assert.Contains(replay.Events, e => e is { Kind: "exit", Who: "Sam" });
+        Assert.Contains(replay.Events, e => e is { Kind: "enter", Class: "person", Who: "Person 1" });
+        Assert.Contains(replay.Events, e => e is { Kind: "exit", Who: "Person 1" });
 
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/stats/replay?date=yesterday")).StatusCode);
     }
@@ -307,7 +307,7 @@ public sealed class FeatureEndpointTests(AzuriteWebApplicationFactory factory) :
         Assert.Equal(HttpStatusCode.BadRequest,
             (await client.PostAsJsonAsync("/api/ask/rule", new RuleDraftRequestDto { Text = new string('a', RuleDraftRequestDto.MaxLength + 1) })).StatusCode);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.PostAsJsonAsync("/api/ask/rule", new RuleDraftRequestDto { Text = "a dog at night" })).StatusCode);
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.PostAsJsonAsync("/api/ask", new AskRequestDto { Question = "When is it busiest?" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync("/api/ask", new { Question = "When is it busiest?" })).StatusCode);
 
         // The digest still answers, from the template alone.
         await ObserveAsync(client);

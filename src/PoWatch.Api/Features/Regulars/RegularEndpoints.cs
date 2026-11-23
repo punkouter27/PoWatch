@@ -1,23 +1,18 @@
-using PoWatch.Api.Features.Stats;
 using PoWatch.Api.Security;
 using PoWatch.Application.Features.Regulars;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 using PoWatch.Shared.Models;
-using PoWatch.Shared.Validation;
 
 namespace PoWatch.Api.Features.Regulars;
 
 internal static class RegularEndpoints
 {
-    private static readonly RenameRegularRequestValidator RenameRules = new();
-
     internal static RegularDto ToDto(this Regular regular) => new()
     {
         Id = regular.Id,
         Class = regular.Class,
         DisplayName = regular.DisplayName,
-        IsNamed = regular.IsNamed,
         FirstSeenUtc = regular.FirstSeenUtc,
         LastSeenUtc = regular.LastSeenUtc,
         Visits = regular.Visits,
@@ -46,25 +41,7 @@ internal static class RegularEndpoints
                 return Results.Ok(new ObserveRegularResultDto { Regular = observation.Regular.ToDto(), IsNew = observation.IsNew });
             })
             .WithName("ObserveRegular")
-            .WithSummary("Recognise a tracked person, pet or object by its look, or start a new unnamed regular.");
-
-        group.MapPatch("/{id}", async (string id, RenameRegularRequestDto request, UserId userId, RegularsService service, CancellationToken ct) =>
-            {
-                if (ApiParsing.Invalid(RenameRules, request) is { } invalid) return invalid;
-                var renamed = await service.RenameAsync(userId, id, request.Name, ct);
-                return renamed is null ? Results.NotFound() : Results.Ok(renamed.ToDto());
-            })
-            .WithName("RenameRegular")
-            .InvalidatesStats();
-
-        group.MapPost("/merge", async (MergeRegularsRequestDto request, UserId userId, RegularsService service, CancellationToken ct) =>
-            {
-                var merged = await service.MergeAsync(userId, request.PrimaryId, request.DuplicateId, ct);
-                return merged is null ? Results.NotFound() : Results.Ok(merged.ToDto());
-            })
-            .WithName("MergeRegulars")
-            .WithSummary("Fold a duplicate regular into another; their visits and time add up.")
-            .InvalidatesStats();
+            .WithSummary("Recognise a tracked person, pet or object by its look, or start a new regular (Person 4); regulars are never named.");
 
         return app;
     }

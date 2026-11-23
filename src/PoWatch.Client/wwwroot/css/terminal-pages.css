@@ -215,21 +215,8 @@
 .away-actions { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 
 
-/* ── Naming prompts ───────────────────────────────────────────────────── */
-
-.name-prompt {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 10px;
-}
-
-.name-prompt img { width: 72px; height: 72px; object-fit: cover; border-radius: 2px; }
-.name-prompt form { display: grid; gap: 6px; }
-.name-prompt label { font: 600 12px var(--term-mono); color: var(--term-text); }
-.name-prompt input { min-height: 36px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: 13px var(--term-font); padding: 0 8px; }
 /* Text inputs show focus with their border, not a ring. */
-.name-prompt input:focus-visible, .term-palette input:focus-visible, .stats-ask input:focus-visible, .regular-name input:focus-visible { outline: none; border-color: var(--term-accent); }
-.name-prompt-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.term-palette input:focus-visible { outline: none; border-color: var(--term-accent); }
 
 
 
@@ -265,4 +252,4 @@
 
 /* Inline form errors (FluentValidationValidator + ValidationMessage) sit on their own line under the field. */
 .form-error { flex-basis: 100%; color: var(--term-red); font: 12px var(--term-mono); margin: 2px 0 0; }
-.stats-ask, .rule-form { flex-wrap: wrap; }
+.rule-form { flex-wrap: wrap; }

@@ -60,10 +60,6 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
         ReadAsync(ct => httpClient.GetAsync($"{DayRecapPath(day, timeZoneId, pdf: false)}&ai={(ai ? "true" : "false")}", ct), Json.RecapDto, cancellationToken);
 
     /// <summary>An answer from "Ask PoWatch", or null when the server has no model or it did not answer.</summary>
-    public async Task<string?> AskAsync(string question, CancellationToken cancellationToken = default) =>
-        (await ReadAsync(ct => httpClient.PostAsJsonAsync("api/ask",
-            new AskRequestDto { Question = question, TimeZoneId = TimeZoneInfo.Local.Id }, Json.AskRequestDto, ct), Json.AskAnswerDto, cancellationToken))?.Answer;
-
     public Task<AiModelsDto?> GetAiModelsAsync(CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.GetAsync("api/ai/models", ct), Json.AiModelsDto, cancellationToken);
 
@@ -114,19 +110,6 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
 
     public Task<ObserveRegularResultDto?> ObserveRegularAsync(ObserveRegularRequestDto request, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.PostAsJsonAsync("api/regulars/observe", request, Json.ObserveRegularRequestDto, ct), Json.ObserveRegularResultDto, cancellationToken);
-
-    public async Task<RegularDto?> RenameRegularAsync(string regularId, string? name, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Patch, $"api/regulars/{Uri.EscapeDataString(regularId)}")
-        {
-            Content = JsonContent.Create(new RenameRegularRequestDto { Name = name }, Json.RenameRegularRequestDto)
-        };
-        return await ReadAsync(ct => httpClient.SendAsync(message, ct), Json.RegularDto, cancellationToken);
-    }
-
-    public Task<RegularDto?> MergeRegularsAsync(string primaryId, string duplicateId, CancellationToken cancellationToken = default) =>
-        ReadAsync(ct => httpClient.PostAsJsonAsync("api/regulars/merge",
-            new MergeRegularsRequestDto { PrimaryId = primaryId, DuplicateId = duplicateId }, Json.MergeRegularsRequestDto, ct), Json.RegularDto, cancellationToken);
 
     public Task<PresenceStatsDto?> GetPresenceAsync(StatsQuery query, CancellationToken cancellationToken = default) =>
         GetStatsAsync("presence", query, Json.PresenceStatsDto, cancellationToken);

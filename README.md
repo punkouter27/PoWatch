@@ -11,6 +11,10 @@ model) against the device camera. Frames never leave the device except chosen hi
 Compact 10-second ticks are posted through the BFF boundary, stored in Azure Table Storage (Azurite
 locally), and rolled up into minute/hour/day/all-time stats.
 
+PoWatch observes; it does not identify or converse. Recurring people, pets and objects are recognised
+only by look and stay anonymous ("Person 3", "Cat 1"): nothing names them and nothing prompts you to.
+There is no Ask box: the app tells you what happened, it does not answer questions (since 2026-11-23).
+
 ### Phone sensor (`src/PoWatch.Mobile`)
 
 A native .NET MAUI app (Android/iOS; not in `PoWatch.slnx`, not built by CI) turns a phone — an old
@@ -35,9 +39,9 @@ one on a shelf is the point — into the same sensor, posting the same ticks:
   bumped). They are validated (`Tick.Validate`), stored on the tick row only when present, and the
   scene narrator mentions them (light-meter range, a pressure swing ≥ 2 hPa, the camera moving).
 
-Pages: Live (preview, readings, outbox counters, sensor mode), Journal (week digest, Ask, days and
+Pages: Live (preview, readings, outbox counters, sensor mode), Journal (week digest, days and
 sessions → day recap with moments and snapshots, presence, objects, light; session story), Settings
-(profile, regulars rename/merge, watch rules per phone, share links, AI model, CSV export, delete
+(profile, regulars list, watch rules per phone, share links, AI model, CSV export, delete
 data, server), System status. Sign-in: Microsoft (Entra PKCE → bearer, needs redirect
 `powatch://auth`) or, in Debug, the dev guest. Dev loop: run the API with
 `--urls http://localhost:5560`, then `pwsh scripts/mobile-dev.ps1 -ApiPort 5560 -Run`.

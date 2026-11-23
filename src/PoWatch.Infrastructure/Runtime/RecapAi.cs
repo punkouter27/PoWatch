@@ -19,7 +19,7 @@ namespace PoWatch.Infrastructure.Runtime;
 /// SDK serves them all: Azure OpenAI's v1 endpoint, with an API key or, when none is set, the app's
 /// Entra identity (managed identity in App Service, the az CLI login locally); Gemini's with an AI
 /// Studio key; a local Ollama server with none. Responses are cached by prompt, so the same facts
-/// never cost twice. The same client answers "Ask PoWatch", which is why it can call functions.
+/// never cost twice.
 /// </summary>
 public static class RecapAi
 {

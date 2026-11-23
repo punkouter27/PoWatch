@@ -95,56 +95,26 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
     }
 
     [E2EFact]
-    public async Task New_people_can_be_named_from_a_passive_prompt_or_left_unnamed()
+    public async Task New_people_are_recognised_anonymously_and_nobody_is_asked_to_name_them()
     {
         // A fresh user: storage persists (Azurite), so a reused guest already knows the walker and the cat.
-        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"names-{Guid.NewGuid():N}");
+        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"anon-{Guid.NewGuid():N}");
 
         await page.StartDemoAsync();
 
-        // The demo walker and the cat each get an offer to be named, waiting behind the bell; nothing opens by itself.
+        // The demo walker is recognised as "Person 1" in frame; the bell never offers to name anyone.
+        await Assertions.Expect(page.GetByTestId("live-tracks")).ToContainTextAsync("Person 1", new() { Timeout = 25_000 });
         await page.GetByTestId("tray-toggle").ClickAsync();
-        var person = page.GetByTestId("name-prompt").Filter(new() { HasText = "New person spotted" });
-        var cat = page.GetByTestId("name-prompt").Filter(new() { HasText = "New cat spotted" });
-        await Assertions.Expect(person).ToBeVisibleAsync(new() { Timeout = 20_000 });
-        await Assertions.Expect(cat).ToBeVisibleAsync(new() { Timeout = 20_000 });
-
-        await person.GetByTestId("name-input").FillAsync("Bob");
-        await person.GetByTestId("name-save").ClickAsync();
-        await Assertions.Expect(person).Not.ToBeVisibleAsync();
-        await cat.GetByTestId("name-skip").ClickAsync();
-        await Assertions.Expect(cat).Not.ToBeVisibleAsync();
-
-        // Bob is recognised by name in frame, and listed in Settings' "Who PoWatch knows"; the cat stays unnamed.
-        await Assertions.Expect(page.GetByTestId("live-tracks")).ToContainTextAsync("Bob", new() { Timeout = 25_000 });
+        await Assertions.Expect(page.GetByTestId("tray-panel")).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator("[data-test=tray-panel] input")).ToHaveCountAsync(0);
         await page.Keyboard.PressAsync("Escape");
         await page.GetByTestId("header-stop").ClickAsync();
+
+        // Settings' "Who PoWatch knows" is a read-only list: labels, counts, no name boxes or merge.
         await page.OpenSettingsAsync("people");
-        await Assertions.Expect(page.GetByTestId("regulars-table")).ToBeVisibleAsync();
-        ILocator NameBox(string who) => page.Locator(".regular-name").Filter(new() { HasText = $"Name for {who}" }).Locator("input");
-        await Assertions.Expect(NameBox("Bob")).ToHaveValueAsync("Bob");
-        await Assertions.Expect(NameBox("Cat 1")).ToHaveValueAsync("");
-        var bob = page.Locator(".regular-card").Filter(new() { Has = NameBox("Bob") });
-        await NameBox("Bob").FillAsync("Robert");
-        await Assertions.Expect(bob.GetByTestId("regular-save")).ToBeEnabledAsync();
-        // A draft is not saved by blur; an explicit save survives reopening People.
-        await NameBox("Bob").BlurAsync();
-        await Assertions.Expect(bob.Locator(".regular-first")).ToBeVisibleAsync();
-        await page.RouteAsync("**/api/regulars/*", async route =>
-        {
-            if (route.Request.Method == "PATCH") await route.FulfillAsync(new() { Status = 503 });
-            else await route.ContinueAsync();
-        });
-        await bob.GetByTestId("regular-save").ClickAsync();
-        await Assertions.Expect(bob.GetByRole(AriaRole.Alert)).ToContainTextAsync("Your draft is still here");
-        await Assertions.Expect(NameBox("Bob")).ToHaveValueAsync("Robert");
-        await page.UnrouteAsync("**/api/regulars/*");
-        page.ClearErrors();
-        await bob.GetByTestId("regular-save").ClickAsync();
-        await Assertions.Expect(NameBox("Robert")).ToHaveValueAsync("Robert");
-        await page.GetByTestId("settings-tab-recording").ClickAsync();
-        await page.GetByTestId("settings-tab-people").ClickAsync();
-        await Assertions.Expect(NameBox("Robert")).ToHaveValueAsync("Robert");
+        var board = page.GetByTestId("regulars-board");
+        await Assertions.Expect(page.GetByTestId("regulars-table")).ToContainTextAsync("Person 1");
+        await Assertions.Expect(board.Locator(".regular-card input")).ToHaveCountAsync(0);
         await page.AssertNoBlazorErrorAsync();
     }
 

@@ -2,7 +2,6 @@
 
 /* ── Live: shader grid, composite metric cells ────────────────────────── */
 
-.live-explain { margin: 0 10px 10px; min-height: 28px; font-size: var(--fs-xs); }
 .metric-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 10px; padding: 12px; }
 .metric-card.rz-card { padding: 14px; background: var(--term-panel-2); border: 1px solid var(--term-line); box-shadow: none; }
 .metric-card .term-stat { padding: 0; border: 0; }
@@ -39,10 +38,6 @@
 
 /* One bar: range · question + download · what the range covers (on the right, wide screens only). */
 .stats-toolbar { position: sticky; top: 0; z-index: 8; display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 12px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-surface); }
-.stats-ask-row { display: flex; gap: 6px; flex-basis: 100%; min-width: 0; }
-.stats-ask-row[hidden] { display: none; }
-.stats-ask { display: flex; gap: 6px; flex: 1; min-width: 0; }
-.stats-ask input { flex: 1; min-width: 0; min-height: 32px; padding: 0 8px; background: var(--term-bg); border: 1px solid var(--term-line); border-radius: var(--term-radius); color: var(--term-text); font: var(--fs-sm) var(--term-font); }
 .stats-toolbar .term-button { min-height: 32px; padding: 0 10px; flex: none; }
 .stats-toolbar .rz-button.rz-light { color: var(--term-text); background: var(--term-panel-2); border: 1px solid var(--term-line); }
 .stats-window { margin-right: auto; }
@@ -51,8 +46,6 @@
 .ai-config-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 12px; cursor: pointer; }
 .ai-config-summary > :last-child { margin-left: auto; }
 .ai-config .ai-models { border: 0; border-top: 1px solid var(--term-line); border-radius: 0; padding: 12px; }
-.stats-answer { margin: 0 2px; color: var(--term-text); font-family: var(--term-font); font-size: var(--fs-md); }
-.stats-answer b { font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; color: var(--term-accent); margin-right: 6px; }
 
 /* The live panels and the stat panels share one grid. */
 .dash-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); }
@@ -96,7 +89,6 @@
 /* A phone keeps the session identity visible above the controls. */
 @media (max-width: 719.98px) {
     .stats-window { flex-basis: 100%; }
-    .stats-ask-row { flex-basis: 100%; max-width: none; }
 }
 
 .live-stage { background: #05070a; }

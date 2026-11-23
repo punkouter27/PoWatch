@@ -39,11 +39,6 @@
 
     <AwayCard />
 
-    @if (_answer is not null)
-    {
-        <p class="stats-answer" role="status" data-test="stats-answer"><b>ANSWER</b> @_answer</p>
-    }
-
     <div class="dash-grid">
         <TerminalPanel Title="Camera" Class="live-camera" Test="live-camera" Flush="true">
             <Aside>
@@ -86,8 +81,7 @@
             </ChildContent>
         </TerminalPanel>
 
-        <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend"
-                    OnExplain="@EventCallback.Factory.Create(this, ExplainAsync)" Asking="@_asking" />
+        <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend" />
         <InFrame Objects="@_objects" Presence="@_presence" />
 
         @* What the camera and the microphone are turning into words, newest first, with the session's map. *@

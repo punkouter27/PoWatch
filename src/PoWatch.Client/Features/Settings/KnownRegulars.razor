@@ -1,48 +1,22 @@
 @inject PoWatchApiClient Api
 @inject SensingSession Sensing
 
-@* Who PoWatch recognises (by look, never by face), so the stories can say "Sam came in" instead of
-   "a person". One card per regular: filter by name, sort, explicitly save a new name,
-   and tick two or more of the same kind to merge them — a change of clothes can make someone
-   new. New ones are offered for naming from the bell as they are first seen. *@
+@* Who PoWatch recognises by look (never by face), read-only: regulars are never named, so the
+   stories say "Person 3 came back", not who they are. One card per regular, sorted. *@
 <TerminalPanel Title="Who PoWatch knows" Test="regulars-board" Flush="true">
-    <Aside>@_regulars.Count KNOWN · @_regulars.Count(r => r.IsNamed) NAMED</Aside>
+    <Aside>@_regulars.Count KNOWN · ANONYMOUS</Aside>
     <ChildContent>
         <div class="regulars-bar">
-            <label class="visually-hidden" for="regulars-filter">Filter by name</label>
-            <RadzenTextBox id="regulars-filter" Name="regulars-filter" Placeholder="Filter by name…" @bind-Value="_filter" Immediate="true" autocomplete="off" data-test="regulars-filter" />
             <RadzenSelectBar TValue="string" @bind-Value="_sort" Size="ButtonSize.Small" aria-label="Sort by">
                 <Items>
                     <RadzenSelectBarItem Text="RECENT" Value="@("recent")" />
                     <RadzenSelectBarItem Text="VISITS" Value="@("visits")" />
                     <RadzenSelectBarItem Text="TIME" Value="@("time")" />
-                    <RadzenSelectBarItem Text="NAME" Value="@("name")" />
                 </Items>
             </RadzenSelectBar>
-            @if (_selected.Count > 0)
-            {
-                @* Ticking a card turns the rest of this bar into the merge controls. *@
-                <div class="regulars-merge" role="group" aria-label="Merge" data-test="regulars-merge">
-                    @if (MergeBlocker is { } blocker)
-                    {
-                        <span class="term-stat-hint">@_selected.Count SELECTED · @blocker</span>
-                    }
-                    else
-                    {
-                        <label for="merge-into">Merge @_selected.Count into</label>
-                        <RadzenDropDown TValue="string" Data="@(Selected.Select(r => r.Id).ToList())" @bind-Value="_primaryId" Name="merge-into" data-test="merge-into"
-                                        InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Merge into" })">
-                            <Template Context="id">@PickOption.Render((object)id, NameOf)</Template>
-                            <ValueTemplate Context="id">@PickOption.Text((object)id, NameOf)</ValueTemplate>
-                        </RadzenDropDown>
-                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button term-button--primary" Click="MergeAsync" Disabled="@_busy" data-test="merge-selected">@(_busy ? "Merging…" : "Merge")</RadzenButton>
-                    }
-                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="() => _selected.Clear()" Disabled="@_busy">Clear</RadzenButton>
-                </div>
-            }
             @if (Sensing.Voices.Prints.Count > 0)
             {
-                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="ForgetVoicesAsync" Disabled="@_busy" title="Voiceprints are kept only in this browser" data-test="forget-voices">Forget voices (@Sensing.Voices.Prints.Count)</RadzenButton>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="ForgetVoicesAsync" title="Voiceprints are kept only in this browser" data-test="forget-voices">Forget voices (@Sensing.Voices.Prints.Count)</RadzenButton>
             }
             @if (_message is not null)
             {
@@ -56,7 +30,7 @@
         }
         else if (_regulars.Count == 0)
         {
-            <p class="term-empty">Nobody recognised yet. People and animals seen more than once are remembered by look, offered for naming from the bell, and named in the stories.</p>
+            <p class="term-empty">Nobody recognised yet. People and animals seen more than once are remembered by look as "Person 1", "Cat 1" and so on, never by name.</p>
         }
         else
         {
@@ -64,39 +38,15 @@
                 @foreach (var regular in Shown)
                 {
                     var today = Today(regular);
-                    var edit = Edit(regular);
-                    <li class="regular-card @(_selected.Contains(regular.Id) ? "regular-card--on" : null)" @key="regular.Id">
+                    <li class="regular-card" @key="regular.Id" data-test="regular-row">
                         <div class="regular-card-head">
                             <span class="regular-kind">@regular.Class</span>
                             @if (Sensing.Voices.Knows(regular.Id))
                             {
                                 <span class="regular-voice" title="Their voice is known in this browser, so the stories can say what they said" data-test="regular-voice">VOICE</span>
                             }
-                            <RadzenCheckBox TValue="bool" Value="@_selected.Contains(regular.Id)" Change="@(on => Select(regular, on))" Name="@($"select-{regular.Id}")"
-                                            InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = $"Select {regular.DisplayName} to merge" })"
-                                            title="Tick two or more of the same kind to merge them" data-test="regular-select" />
                         </div>
-                        <RadzenTemplateForm TItem="RenameRegularRequestDto" Data="@edit" Submit="@(_ => RenameAsync(regular))" class="regular-name" data-test="regular-row">
-                            <FluentValidationValidator TModel="RenameRegularRequestDto" Validator="@RenameRules" />
-                            <label class="visually-hidden" for="rename-@regular.Id">Name for @regular.DisplayName</label>
-                            <RadzenTextBox id="@($"rename-{regular.Id}")" Name="Name" @bind-Value="edit.Name" Immediate="true"
-                                           Placeholder="@regular.DisplayName" MaxLength="@RenameRegularRequestDto.MaxLength" autocomplete="off" Disabled="@_busy" />
-                            <ValidationMessage For="@(() => edit.Name)" class="form-error" />
-                            <div class="regular-edit-actions">
-                                <RadzenButton Text="@(_busy && _savingId == regular.Id ? "Saving..." : "Save name")"
-                                              ButtonType="ButtonType.Submit" Size="ButtonSize.Small"
-                                              Disabled="@(_busy || !IsDirty(regular))" data-test="regular-save" />
-                                @if (IsDirty(regular))
-                                {
-                                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@_busy"
-                                            Click="() => edit.Name = regular.IsNamed ? regular.DisplayName : null">Cancel</RadzenButton>
-                                }
-                            </div>
-                            @if (_savingId == regular.Id && _message is not null)
-                            {
-                                <span class="@(_failed ? "live-error" : "term-stat-hint")" role="@(_failed ? "alert" : "status")">@_message</span>
-                            }
-                        </RadzenTemplateForm>
+                        <p class="regular-name">@regular.DisplayName</p>
                         <dl class="regular-stats">
                             <div><dt>Visits</dt><dd>@regular.Visits.ToString(CultureInfo.InvariantCulture)</dd></div>
                             <div><dt>In frame</dt><dd>@DisplayText.Duration(regular.DwellSeconds)</dd></div>
@@ -107,63 +57,31 @@
                     </li>
                 }
             </ul>
-            @if (!Shown.Any())
-            {
-                <p class="term-empty">Nobody by that name.</p>
-            }
         }
     </ChildContent>
 </TerminalPanel>
 
 @code {
     private List<RegularDto> _regulars = [];
-    private static readonly RenameRegularRequestValidator RenameRules = new();
-    // One form model per card: the draft name each regular's form edits.
-    private readonly Dictionary<string, RenameRegularRequestDto> _edits = new(StringComparer.Ordinal);
-    private readonly HashSet<string> _selected = new(StringComparer.Ordinal);
     private ObjectStatsDto? _today;
-    private string _filter = string.Empty;
-    private string? _primaryId;
     private string? _message;
     private bool _failed;
-    private bool _busy;
     private bool _loaded;
     private string _sort = "recent";
-    private string? _savingId;
-
-    private RenameRegularRequestDto Edit(RegularDto regular) =>
-        _edits.TryGetValue(regular.Id, out var edit) ? edit : _edits[regular.Id] = new() { Name = regular.IsNamed ? regular.DisplayName : null };
-
-    private static string? Draft(RenameRegularRequestDto edit) => string.IsNullOrWhiteSpace(edit.Name) ? null : edit.Name.Trim();
-
-    private bool IsDirty(RegularDto regular) => Draft(Edit(regular)) != (regular.IsNamed ? regular.DisplayName : null);
 
     private IEnumerable<RegularDto> Shown
     {
         get
         {
-            var shown = string.IsNullOrWhiteSpace(_filter)
-                ? _regulars
-                : _regulars.Where(r => r.DisplayName.Contains(_filter.Trim(), StringComparison.OrdinalIgnoreCase));
+            IEnumerable<RegularDto> shown = _regulars;
             return _sort switch
             {
                 "visits" => shown.OrderByDescending(r => r.Visits),
                 "time" => shown.OrderByDescending(r => r.DwellSeconds),
-                "name" => shown.OrderBy(r => r.DisplayName, StringComparer.CurrentCultureIgnoreCase),
                 _ => shown.OrderByDescending(r => r.LastSeenUtc)
             };
         }
     }
-
-    private List<RegularDto> Selected => _regulars.Where(r => _selected.Contains(r.Id)).ToList();
-
-    /// <summary>Why the selection cannot be merged yet, or null when it can.</summary>
-    private string? MergeBlocker => Selected switch
-    {
-        { Count: < 2 } => "TICK ANOTHER TO MERGE",
-        var chosen when chosen.Select(r => r.Class).Distinct().Count() > 1 => "ONLY THE SAME KIND CAN MERGE",
-        _ => null
-    };
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
@@ -172,9 +90,6 @@
         if (await Api.ListRegularsAsync() is { } regulars) _regulars = [.. regulars];
         else Say("COULD NOT LOAD THE REGULARS — THE SERVER DID NOT ANSWER", failed: true);
 
-        _edits.Clear();
-        foreach (var regular in _regulars) _edits[regular.Id] = new() { Name = regular.IsNamed ? regular.DisplayName : null };
-        _selected.IntersectWith(_regulars.Select(r => r.Id));
         _today = await Api.GetObjectsAsync(StatsQuery.For("today"));
         _loaded = true;
     }
@@ -183,17 +98,6 @@
 
     private static string When(DateTimeOffset utc) => utc.ToLocalTime().ToString("dd MMM HH:mm", CultureInfo.CurrentCulture);
 
-    private string NameOf(string id) => _regulars.FirstOrDefault(r => r.Id == id)?.DisplayName ?? id;
-
-    private void Select(RegularDto regular, bool on)
-    {
-        if (on) _selected.Add(regular.Id);
-        else _selected.Remove(regular.Id);
-        // Merge into the one seen most, unless the user picks another.
-        if (_primaryId is null || !_selected.Contains(_primaryId))
-            _primaryId = Selected.OrderByDescending(r => r.Visits).FirstOrDefault()?.Id;
-    }
-
     private void Say(string message, bool failed = false) => (_message, _failed) = (message, failed);
 
     private async Task ForgetVoicesAsync()
@@ -201,60 +105,5 @@
         Sensing.Voices.Clear();
         await Sensing.SaveVoicesAsync();
         Say("VOICES FORGOTTEN IN THIS BROWSER");
-    }
-
-    private async Task RenameAsync(RegularDto regular)
-    {
-        var name = Draft(Edit(regular));
-        if (_busy || name == (regular.IsNamed ? regular.DisplayName : null) || !RenameRules.Validate(Edit(regular)).IsValid) return;
-
-        _busy = true;
-        (_savingId, _message) = (regular.Id, null);
-        try
-        {
-            if (await Api.RenameRegularAsync(regular.Id, name) is { } renamed)
-            {
-                Sensing.Live.Rename(renamed);
-                Say($"SAVED “{renamed.DisplayName}”");
-                _regulars[_regulars.FindIndex(r => r.Id == regular.Id)] = renamed;
-                _edits[regular.Id] = new() { Name = renamed.IsNamed ? renamed.DisplayName : null };
-            }
-            else
-            {
-                Say($"Could not save {regular.DisplayName}. Your draft is still here; try again.", failed: true);
-            }
-        }
-        finally
-        {
-            _busy = false;
-        }
-    }
-
-    private async Task MergeAsync()
-    {
-        if (_busy || MergeBlocker is not null || _primaryId is not { } primaryId) return;
-
-        _busy = true;
-        try
-        {
-            RegularDto? merged = null;
-            foreach (var duplicate in Selected.Where(r => r.Id != primaryId))
-            {
-                merged = await Api.MergeRegularsAsync(primaryId, duplicate.Id);
-                if (merged is null) break;
-            }
-
-            foreach (var duplicate in Selected.Where(r => r.Id != primaryId)) Sensing.Voices.Merge(primaryId, duplicate.Id);
-            await Sensing.SaveVoicesAsync();
-            if (merged is null) Say("COULD NOT MERGE ALL OF THOSE — CHECK THE LIST", failed: true);
-            else Say($"MERGED INTO {merged.DisplayName.ToUpperInvariant()}");
-        }
-        finally
-        {
-            _selected.Clear();
-            _primaryId = null;
-            await LoadAsync();
-            _busy = false;
-        }
     }
 }

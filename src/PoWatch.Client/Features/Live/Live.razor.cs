@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using PoWatch.Client.Services;
 using PoWatch.Shared.Models;
-using PoWatch.Shared.Validation;
 
 namespace PoWatch.Client.Features.Live;
 
@@ -15,10 +14,6 @@ public sealed partial class Live
 
     private Guid _sessionId;
     private StatsQuery _query = StatsQuery.For("session");
-    private readonly AskRequestDto _ask = new();
-    private static readonly AskRequestValidator AskRules = new();
-    private string? _answer;
-    private bool _asking;
 
     private ElementReference _slot;
     private ElementReference _demoCanvas;
@@ -96,23 +91,6 @@ public sealed partial class Live
     }
 
     private void Apply() => _query = StatsQuery.For("session", _sessionId == Guid.Empty ? null : _sessionId);
-
-    private async Task AskAsync()
-    {
-        if (_asking || !AskRules.Validate(_ask).IsValid) return;
-        _asking = true;
-        _answer = "Thinking…";
-        _answer = await Api.AskAsync(_ask.Question.Trim())
-            ?? "No answer: this server has no AI model configured, or it did not reply.";
-        _asking = false;
-    }
-
-    /// <summary>The metrics panel's Explain: the one question the Live page still asks (the free Ask box is gone).</summary>
-    private Task ExplainAsync()
-    {
-        _ask.Question = "Which of today's numbers are unusual against my usual day, and what stands out about today?";
-        return AskAsync();
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

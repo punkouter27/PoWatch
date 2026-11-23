@@ -1,7 +1,6 @@
-@* The one place the app tells you things: sensing problems, watch-rule alerts, "name this
-   newcomer" prompts and, once a week, the week in review, behind a bell with a count. They open in a
-   side drawer, by themselves only for a problem or an alert; the rest just raise the count. Watch rules
-   are edited in Settings. *@
+@* The one place the app tells you things: sensing problems, watch-rule alerts and, once a week, the
+   week in review, behind a bell with a count. It never asks you anything (no naming prompts). They open
+   in a side drawer, by themselves only for a problem or an alert. Watch rules are edited in Settings. *@
 @implements IDisposable
 @inject SensingSession Sensing
 @inject StatsFeed Feed
@@ -40,29 +39,6 @@
                 </p>
             }
 
-            @foreach (var prompt in Sensing.Live.Prompts.TakeLast(3))
-            {
-                <section class="tray-item name-prompt" data-test="name-prompt" @key="prompt.Regular.Id">
-                    @if (prompt.SnapshotDataUrl is { } image)
-                    {
-                        <img src="@image" alt="The new @prompt.Regular.Class" />
-                    }
-                    @{ var draft = Draft(prompt.Regular.Id); }
-                    <RadzenTemplateForm TItem="RenameRegularRequestDto" Data="@draft" Submit="@(_ => SaveNameAsync(prompt.Regular.Id))">
-                        <FluentValidationValidator TModel="RenameRegularRequestDto" Validator="@NameRules" />
-                        <label for="name-@prompt.Regular.Id">New @prompt.Regular.Class spotted — name them?</label>
-                        <RadzenTextBox id="@($"name-{prompt.Regular.Id}")" Name="Name" data-test="name-input" autocomplete="off" MaxLength="@RenameRegularRequestDto.MaxLength"
-                                       Placeholder="@prompt.Regular.DisplayName" @bind-Value="draft.Name" Immediate="true" Disabled="@_naming.Contains(prompt.Regular.Id)" />
-                        <ValidationMessage For="@(() => draft.Name)" class="form-error" />
-                        <div class="name-prompt-actions">
-                            <RadzenButton ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button term-button--primary" Disabled="@_naming.Contains(prompt.Regular.Id)" data-test="name-save">@(_naming.Contains(prompt.Regular.Id) ? "Saving…" : "Save")</RadzenButton>
-                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="() => Sensing.NameAsync(prompt.Regular.Id, null)" data-test="name-skip">Not now</RadzenButton>
-                            <span class="term-stat-hint">stays “@prompt.Regular.DisplayName” if you skip</span>
-                        </div>
-                    </RadzenTemplateForm>
-                </section>
-            }
-
             @if (_week is { } week)
             {
                 <a class="tray-item tray-item--week" href="@StoryLinks.Period("week", _weekEnd)" @onclick="DismissWeekAsync" data-test="tray-week">
@@ -80,10 +56,6 @@
                 <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="Clear" data-test="tray-clear"><span>Clear</span><b>@(_alerts.Count + (_week is null ? 0 : 1))</b></RadzenButton>
             }
 
-            @if (Sensing.Live.Prompts.Count > 0)
-            {
-                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="@(() => Drawers.ShowSettings("people"))" data-test="tray-people-link"><span>Name everyone at once</span><b>PEOPLE →</b></RadzenButton>
-            }
             <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Click="@(() => Drawers.ShowSettings("alerts"))" data-test="tray-rules-link"><span>Watch rules</span><b>ALERTS →</b></RadzenButton>
         </ChildContent>
     </Drawer>
@@ -92,30 +64,7 @@
 @code {
     private const int Kept = 5;
     private readonly List<AlertDto> _alerts = [];
-    // One form model per newcomer; a name is required here (skipping is the "Not now" button).
-    private static readonly RenameRegularRequestValidator NameRules = new(requireName: true);
-    private readonly Dictionary<string, RenameRegularRequestDto> _names = new(StringComparer.Ordinal);
-    private readonly HashSet<string> _naming = new(StringComparer.Ordinal);
-
-    private RenameRegularRequestDto Draft(string regularId) =>
-        _names.TryGetValue(regularId, out var draft) ? draft : _names[regularId] = new();
-
-    /// <summary>Saves once: the button is disabled until the server answers, so a double press sends one rename.</summary>
-    private async Task SaveNameAsync(string regularId)
-    {
-        if (!_naming.Add(regularId)) return;
-        try
-        {
-            await Sensing.NameAsync(regularId, Draft(regularId).Name?.Trim());
-        }
-        finally
-        {
-            _naming.Remove(regularId);
-        }
-    }
-    private Timer? _expiry;
     private bool _takeFocus = true;
-    private int _prompts;
     private string? _lastError;
     private string? _announce;
 
@@ -125,18 +74,13 @@
 
     private bool Open => Drawers.IsOpen(DrawerState.Tray);
 
-    private int Count => _alerts.Count + Sensing.Live.Prompts.Count + (_week is null ? 0 : 1) + (Sensing.IsRunning && Sensing.Live.LastError is not null ? 1 : 0);
+    private int Count => _alerts.Count + (_week is null ? 0 : 1) + (Sensing.IsRunning && Sensing.Live.LastError is not null ? 1 : 0);
 
     protected override async Task OnInitializedAsync()
     {
         Sensing.Changed += OnSensingChanged;
         Feed.Alerted += OnAlerted;
         Drawers.Changed += OnDrawersChanged;
-        // Ignored naming prompts fade after a minute even when no detections arrive to expire them.
-        _expiry = new Timer(_ => InvokeAsync(() =>
-        {
-            if (Sensing.Live.ExpirePrompts(Time.GetUtcNow())) StateHasChanged();
-        }), null, 5000, 5000);
 
         // Alerts and last week's review are login-only: a signed-out visitor never requests them.
         if ((await Auth.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
@@ -197,21 +141,18 @@
         StateHasChanged();
     });
 
-    // Sensing fires several times a second; only a new prompt or a new problem is worth a render.
+    // Sensing fires several times a second; only a new problem is worth a render.
     private void OnSensingChanged()
     {
-        var prompts = Sensing.Live.Prompts.Count;
         var error = Sensing.IsRunning ? Sensing.Live.LastError : null;
-        if (prompts == _prompts && error == _lastError) return;
+        if (error == _lastError) return;
 
-        var newError = error is not null && error != _lastError;
-        var announce = newError ? error : prompts > _prompts ? "Someone new can be named" : null;
-        (_prompts, _lastError) = (prompts, error);
+        var newError = error is not null;
+        _lastError = error;
         InvokeAsync(() =>
         {
-            foreach (var prompt in Sensing.Live.Prompts) _names.TryAdd(prompt.Regular.Id, new());
-            if (announce is not null) _announce = announce;
-            // A problem opens the tray; a newcomer only raises the count.
+            if (newError) _announce = error;
+            // A problem opens the tray.
             if (newError) OpenByItself();
             StateHasChanged();
         });
@@ -222,6 +163,5 @@
         Sensing.Changed -= OnSensingChanged;
         Feed.Alerted -= OnAlerted;
         Drawers.Changed -= OnDrawersChanged;
-        _expiry?.Dispose();
     }
 }

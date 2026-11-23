@@ -58,8 +58,8 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   email (`DigestMailer`) on timers; both are off in the `Test` environment, so tests call the services directly.
 - **Recaps:** `TemplateRecap` always writes the numbers; an optional `IChatClient` (`AiProvider:Provider`
   = `AzureOpenAi`, `Gemini` or `Ollama`, built in `Infrastructure/Runtime/RecapAi.cs`) may only reword them, and
-  `RecapPrompt.KeepsToFacts` rejects any invented number, digits or words. The same client serves Ask
-  (`AskService`, four tools) and `AssistService` (watch-rule drafts, the digest headline).
+  `RecapPrompt.KeepsToFacts` rejects any invented number, digits or words. The same client serves
+  `AssistService` (watch-rule drafts, the digest headline). There is no free-form Ask (removed 2026-11-23).
 
 ## Things that are easy to get wrong
 

@@ -41,7 +41,6 @@ public sealed class AzureRegularStore(AzureStorageClients clients, IOptions<Azur
             ["Visits"] = regular.Visits,
             ["DwellSeconds"] = regular.DwellSeconds
         };
-        if (regular.Name is not null) entity["Name"] = regular.Name;
         await _table.UpsertEntityAsync(entity, TableUpdateMode.Replace, cancellationToken);
     }
 
@@ -54,7 +53,6 @@ public sealed class AzureRegularStore(AzureStorageClients clients, IOptions<Azur
         UserId = e.GetString("UserId"),
         Class = e.GetString("Class"),
         Number = e.GetInt32("Number") ?? 0,
-        Name = e.GetString("Name"),
         Signature = StatsEntityMapper.Unpack(e.GetBinary("Signature")),
         Sightings = e.GetInt32("Sightings") ?? 0,
         FirstSeenUtc = e.GetDateTimeOffset("FirstSeenUtc")!.Value,

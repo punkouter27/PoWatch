@@ -11,7 +11,7 @@ namespace PoWatch.Client.Services;
 
 /// <summary>
 /// What the browser reports (pixels, detector boxes, captions, sound and speech) and what the session does with it:
-/// tracks, highlights and snapshots, watch-rule alerts, naming prompts, and the demo scene.
+/// tracks, highlights and snapshots, watch-rule alerts, and the demo scene.
 /// </summary>
 public sealed partial class SensingSession
 {
@@ -141,7 +141,6 @@ public sealed partial class SensingSession
         Consider(_highlights.OnDetections(frame), atUtc);
         NudgeIfSittingLong(atUtc, frame);
         RecogniseStableTracks(frame);
-        Live.ExpirePrompts(time.GetUtcNow());
         Notify();
     }
 
@@ -253,29 +252,8 @@ public sealed partial class SensingSession
         // Unanswered (offline or refused): this track stays unrecognised; it is asked again when it next enters.
         var result = await api.ObserveRegularAsync(new ObserveRegularRequestDto { Class = track.Label, Signature = [.. track.Signature] });
         if (result is null || !IsRunning) return;
+        // Regulars stay anonymous ("Person 3"): nobody is asked to name them.
         Live.AssignRegular(track.TrackId, result.Regular);
-
-        if (result.IsNew && Nameable.Contains(track.Label))
-        {
-            var snapshot = _scene is null && _video is not null ? await js.TryInvokeAsync<string>("powatchPixels.snapshot", _video) : null;
-            Live.AddPrompt(new NamingPrompt(result.Regular, snapshot, time.GetUtcNow()));
-            Cue("regular");
-        }
-
-        Notify();
-    }
-
-    /// <summary>Saves a name from a prompt (or dismisses it when blank) and relabels live tracks.</summary>
-    public async Task NameAsync(string regularId, string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            Live.DismissPrompt(regularId);
-            Notify();
-            return;
-        }
-
-        if (await api.RenameRegularAsync(regularId, name) is { } renamed) Live.Rename(renamed);
         Notify();
     }
 

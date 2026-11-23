@@ -115,7 +115,6 @@
 .tray-item--alert { border-left-color: var(--term-cyan); }
 .tray-kicker { font: 600 11px var(--term-mono); letter-spacing: 0.08em; color: var(--term-accent); }
 .tray-item--alert .tray-kicker { color: var(--term-cyan); }
-.tray-item.name-prompt { grid-template-columns: auto 1fr; gap: 10px; }
 
 .rule-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--term-text); }
 .rule-row .term-icon-button { min-width: 28px; min-height: 28px; }

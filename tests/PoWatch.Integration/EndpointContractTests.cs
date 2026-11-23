@@ -122,7 +122,6 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
     {
         foreach (var (route, payload, field) in new (string, object, string)[]
         {
-            ("/api/ask", new AskRequestDto { Question = "  " }, "Question"),
             ("/api/ask/rule", new RuleDraftRequestDto { Text = new string('a', RuleDraftRequestDto.MaxLength + 1) }, "Text"),
         })
         {
@@ -131,9 +130,8 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
             Assert.Contains($"\"{field}\"", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
         }
 
-        var rename = await _client.PatchAsJsonAsync("/api/regulars/anyone", new RenameRegularRequestDto { Name = new string('b', RenameRegularRequestDto.MaxLength + 1) });
-        Assert.Equal(HttpStatusCode.BadRequest, rename.StatusCode);
-        Assert.Contains("\"Name\"", await rename.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        // Regulars are never named: there is no rename or merge route.
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.PatchAsJsonAsync("/api/regulars/anyone", new { Name = "Bob" })).StatusCode);
     }
 
     [DockerFact]

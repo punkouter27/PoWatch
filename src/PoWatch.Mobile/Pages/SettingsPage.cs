@@ -120,9 +120,9 @@ public sealed class SettingsPage : ContentPage
             }));
     }
 
-    private View Regulars(List<RegularDto> regulars)
+    private static View Regulars(List<RegularDto> regulars)
     {
-        VerticalStackLayout box = Ui.Stack(6, Ui.H2("Regulars"), Ui.Muted("People and pets PoWatch recognises by colours only — no faces."));
+        VerticalStackLayout box = Ui.Stack(6, Ui.H2("Regulars"), Ui.Muted("People and pets PoWatch recognises by colours only — no faces, never named."));
         if (regulars.Count == 0)
         {
             box.Add(Ui.Muted("None yet."));
@@ -130,23 +130,9 @@ public sealed class SettingsPage : ContentPage
 
         foreach (RegularDto r in regulars.OrderByDescending(r => r.Visits))
         {
-            Entry name = new() { Text = r.IsNamed ? r.DisplayName : null, Placeholder = r.DisplayName, MaxLength = RenameRegularRequestDto.MaxLength };
-            Picker merge = new() { Title = "Same as…", ItemsSource = regulars.Where(o => o.Id != r.Id && o.Class == r.Class).Select(o => o.DisplayName).ToList() };
             box.Add(Ui.Stack(4,
                 new Label { Text = $"{r.DisplayName} · {r.Class}", FontAttributes = FontAttributes.Bold },
-                Ui.Muted($"{r.Visits} visits · last seen {r.LastSeenUtc.LocalDateTime:MMM d, t}"),
-                name,
-                Ui.Row(
-                    Ui.Secondary("Rename", async () => { await _api.RenameRegularAsync(r.Id, string.IsNullOrWhiteSpace(name.Text) ? null : name.Text.Trim()); await RenderAsync(); }),
-                    merge,
-                    Ui.Secondary("Merge", async () =>
-                    {
-                        if (merge.SelectedItem is string dup && regulars.FirstOrDefault(o => o.DisplayName == dup && o.Id != r.Id) is { } other)
-                        {
-                            await _api.MergeRegularsAsync(r.Id, other.Id);
-                            await RenderAsync();
-                        }
-                    }))));
+                Ui.Muted($"{r.Visits} visits · last seen {r.LastSeenUtc.LocalDateTime:MMM d, t}")));
         }
 
         return box;

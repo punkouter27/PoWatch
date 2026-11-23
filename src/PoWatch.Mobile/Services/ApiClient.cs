@@ -92,26 +92,11 @@ public sealed class ApiClient(HttpClient http, MobileConfig config)
     private Task<T?> StatsAsync<T>(string family, string range, Guid? sessionId, DateOnly? date, JsonTypeInfo<T> type) =>
         ReadAsync(ct => http.GetAsync(U($"api/stats/{family}?range={range}&tz={Tz}{(sessionId is { } s ? $"&sessionId={s}" : string.Empty)}{(date is { } d ? $"&date={Day(d)}" : string.Empty)}"), ct), type);
 
-    public async Task<string?> AskAsync(string question) =>
-        (await ReadAsync(ct => http.PostAsJsonAsync(U("api/ask"), new AskRequestDto { Question = question, TimeZoneId = TimeZoneInfo.Local.Id }, Json.AskRequestDto, ct), Json.AskAnswerDto))?.Answer;
-
     // ── Regulars ──
     public Task<List<RegularDto>?> ListRegularsAsync() => ReadAsync(ct => http.GetAsync(U("api/regulars"), ct), Json.ListRegularDto);
 
     public Task<ObserveRegularResultDto?> ObserveRegularAsync(string label, IReadOnlyList<float> signature) =>
         ReadAsync(ct => http.PostAsJsonAsync(U("api/regulars/observe"), new ObserveRegularRequestDto { Class = label, Signature = [.. signature] }, Json.ObserveRegularRequestDto, ct), Json.ObserveRegularResultDto);
-
-    public Task<RegularDto?> RenameRegularAsync(string id, string? name)
-    {
-        HttpRequestMessage message = new(HttpMethod.Patch, U($"api/regulars/{Uri.EscapeDataString(id)}"))
-        {
-            Content = JsonContent.Create(new RenameRegularRequestDto { Name = name }, Json.RenameRegularRequestDto),
-        };
-        return ReadAsync(async ct => { using (message) { return await http.SendAsync(message, ct); } }, Json.RegularDto);
-    }
-
-    public Task<RegularDto?> MergeRegularsAsync(string primaryId, string duplicateId) =>
-        ReadAsync(ct => http.PostAsJsonAsync(U("api/regulars/merge"), new MergeRegularsRequestDto { PrimaryId = primaryId, DuplicateId = duplicateId }, Json.MergeRegularsRequestDto, ct), Json.RegularDto);
 
     // ── Settings ──
     public Task<ProfileDto?> GetProfileAsync() => ReadAsync(ct => http.GetAsync(U("api/profile"), ct), Json.ProfileDto);

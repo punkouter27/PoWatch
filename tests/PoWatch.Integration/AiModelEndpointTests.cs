@@ -37,7 +37,7 @@ public sealed class AiModelEndpointTests(AzuriteWebApplicationFactory factory) :
 
         await browser.PutAsJsonAsync("/api/ai/models", new SelectAiModelDto("Template"));
         Assert.Equal("Template", (await browser.GetFromJsonAsync<AiModelsDto>("/api/ai/models"))!.SelectedId);
-        var noAi = await browser.PostAsJsonAsync("/api/ask", new AskRequestDto { Question = "What happened?", TimeZoneId = "UTC" });
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, noAi.StatusCode);
+        // PoWatch answers no questions: there is no Ask endpoint.
+        Assert.Equal(HttpStatusCode.NotFound, (await browser.PostAsJsonAsync("/api/ask", new { Question = "What happened?" })).StatusCode);
     }
 }

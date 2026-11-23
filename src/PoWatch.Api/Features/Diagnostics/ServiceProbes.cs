@@ -64,9 +64,9 @@ public sealed class ServiceProbes(
             var rows = await Task.WhenAll(
                 Run("sign-in", "Microsoft sign-in", "Lets you sign in to see your own stats.", MicrosoftSignInAsync, cancellationToken),
                 Run("key-vault", "Key Vault", "Holds the server's secrets.", KeyVaultAsync, cancellationToken),
-                Run("azure-openai", "Azure OpenAI", "Rewords recaps and answers Ask.", AzureOpenAiAsync, cancellationToken),
-                Run("gemini", "Gemini", "A second cloud model for recaps and Ask.", GeminiAsync, cancellationToken),
-                Run("ollama", "Ollama (local model)", "A free local model for recaps and Ask.", OllamaAsync, cancellationToken),
+                Run("azure-openai", "Azure OpenAI", "Rewords recaps and stories.", AzureOpenAiAsync, cancellationToken),
+                Run("gemini", "Gemini", "A second cloud model for recaps and stories.", GeminiAsync, cancellationToken),
+                Run("ollama", "Ollama (local model)", "A free local model for recaps and stories.", OllamaAsync, cancellationToken),
                 Run("weather", "Weather (Open-Meteo)", "Adds the day's weather to the journal.", WeatherAsync, cancellationToken),
                 Run("digest-email", "Digest email", "Sends the weekly digest email.", DigestEmailAsync, cancellationToken),
                 Run("telemetry", "Telemetry", "Sends logs and traces to Application Insights.", TelemetryAsync, cancellationToken));

@@ -31,11 +31,6 @@
                 <Sparkline Values="@L.MotionHistory" Label="Activity over the last minute" />
             </RadzenCard>
         </div>
-        @if (OnExplain.HasDelegate && Patterns?.Anomalies.Any(a => a.Flagged) == true)
-        {
-            @* The σ chips say how unusual today is; the model says what stands out, from the same tools Ask uses. *@
-            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button live-explain" Click="OnExplain" Disabled="@Asking" data-test="metrics-explain">✦ Explain today</RadzenButton>
-        }
     </ChildContent>
 </TerminalPanel>
 
@@ -48,10 +43,6 @@
     [Parameter] public PatternStatsDto? Patterns { get; set; }
     [Parameter] public IReadOnlyList<double> OccupancyTrend { get; set; } = [];
     [Parameter] public IReadOnlyList<double> VisitsTrend { get; set; } = [];
-
-    /// <summary>Unset hides "Explain today" (the simple app has no Ask).</summary>
-    [Parameter] public EventCallback OnExplain { get; set; }
-    [Parameter] public bool Asking { get; set; }
 
     private LiveSensingState L => Sensing.Live;
 

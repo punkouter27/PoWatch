@@ -294,7 +294,7 @@ public static class SceneNarrator
     private static List<string> Sounds(IEnumerable<SceneEvent> beat) =>
         [.. beat.Where(e => e.Kind == SceneEventKind.Sound && !Untold(e.Text!)).Select(e => SoundPhrase(e.Text!)).Distinct()];
 
-    /// <summary>Who in the beat, each once, in order: a regular by name, anyone else as "a dog".</summary>
+    /// <summary>Who in the beat, each once, in order: a regular by label ("Person 3"), anyone else as "a dog".</summary>
     private static List<string> Who(IEnumerable<SceneEvent> tracks, IReadOnlyDictionary<string, string> names) =>
         [.. tracks
             .GroupBy(e => e.RegularId is { } id && names.TryGetValue(id, out var known) ? known : e.Class!.ToLowerInvariant())

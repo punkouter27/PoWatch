@@ -76,6 +76,6 @@ public sealed class HeardLineDto
     public DateTimeOffset AtUtc { get; init; }
     public string Text { get; init; } = string.Empty;
 
-    /// <summary>The regular who said it, by name, when their voice was known; null for "someone".</summary>
+    /// <summary>The regular who said it, by label ("Person 3"), when their voice was known; null for "someone".</summary>
     public string? Speaker { get; init; }
 }

@@ -20,7 +20,7 @@ public sealed class ReplayEventDto
     public string? Text { get; init; }
     public string? Class { get; init; }
 
-    /// <summary>The regular who spoke, came in or left, by name, once they were recognised; null for "someone".</summary>
+    /// <summary>The regular who spoke, came in or left, by label ("Person 3"), once they were recognised; null for "someone".</summary>
     public string? Who { get; init; }
 }
 

@@ -142,14 +142,10 @@ public sealed class LiveSensingState
     }
 
     private readonly Dictionary<string, RegularDto> _regularByTrack = new(StringComparer.Ordinal);
-    private readonly List<NamingPrompt> _prompts = [];
-
-    /// <summary>New people and pets waiting (passively) for a name; ignored ones expire.</summary>
-    public IReadOnlyList<NamingPrompt> Prompts => _prompts;
 
     public RegularDto? RegularFor(string trackId) => _regularByTrack.GetValueOrDefault(trackId);
 
-    /// <summary>The regulars recognised this session, one per person, in the order they were first named.</summary>
+    /// <summary>The regulars recognised this session, one per person, in the order they were first recognised.</summary>
     public IReadOnlyList<RegularDto> Regulars =>
         _regularByTrack.Values.DistinctBy(r => r.Id).ToList();
 
@@ -163,28 +159,6 @@ public sealed class LiveSensingState
     }
 
     public void ForgetTrack(string trackId) => _regularByTrack.Remove(trackId);
-
-    public void AddPrompt(NamingPrompt prompt)
-    {
-        _prompts.RemoveAll(p => p.Regular.Id == prompt.Regular.Id);
-        _prompts.Add(prompt);
-    }
-
-    public void DismissPrompt(string regularId) => _prompts.RemoveAll(p => p.Regular.Id == regularId);
-
-    /// <summary>Drops prompts nobody answered; they stay unnamed ("Person N").</summary>
-    public bool ExpirePrompts(DateTimeOffset nowUtc) => _prompts.RemoveAll(p => nowUtc - p.SeenUtc > NamingPrompt.Lifetime) > 0;
-
-    /// <summary>A name was given: every live track of that regular shows it straight away.</summary>
-    public void Rename(RegularDto regular)
-    {
-        foreach (var trackId in _regularByTrack.Where(kv => kv.Value.Id == regular.Id).Select(kv => kv.Key).ToList())
-        {
-            _regularByTrack[trackId] = regular;
-            NameLines(trackId, regular.DisplayName);
-        }
-        _prompts.RemoveAll(p => p.Regular.Id == regular.Id);
-    }
 
     public void RecordCaption(ParsedCaption caption, DateTimeOffset atUtc)
     {
@@ -204,15 +178,6 @@ public sealed class LiveSensingState
         while (times.Count > 0 && nowUtc - times.Peek() > RateWindow) times.Dequeue();
         return times.Count / RateWindow.TotalSeconds;
     }
-}
-
-/// <summary>
-/// "New person spotted — name them?" A passive offer: it waits for <see cref="Lifetime"/> and then
-/// quietly goes away, leaving the regular unnamed. The snapshot is a local data URL shown only here.
-/// </summary>
-public sealed record NamingPrompt(RegularDto Regular, string? SnapshotDataUrl, DateTimeOffset SeenUtc)
-{
-    public static readonly TimeSpan Lifetime = TimeSpan.FromSeconds(60);
 }
 
 /// <summary>

@@ -57,26 +57,4 @@ public static class RegularMatcher
         var weight = Math.Min(sightings, 20);
         return current.Select((v, i) => ((v * weight) + incoming[i]) / (weight + 1)).ToArray();
     }
-
-    /// <summary>Combines a duplicate into the primary: the primary's id survives, histories add up.</summary>
-    public static Regular Merge(Regular primary, Regular duplicate)
-    {
-        ArgumentNullException.ThrowIfNull(primary);
-        ArgumentNullException.ThrowIfNull(duplicate);
-        var total = primary.Sightings + duplicate.Sightings;
-        var signature = primary.Signature.Count == duplicate.Signature.Count && total > 0
-            ? primary.Signature.Select((v, i) => ((v * primary.Sightings) + (duplicate.Signature[i] * duplicate.Sightings)) / total).ToArray()
-            : primary.Signature;
-
-        return primary with
-        {
-            Name = primary.IsNamed ? primary.Name : duplicate.Name,
-            Signature = signature,
-            Sightings = total,
-            Visits = primary.Visits + duplicate.Visits,
-            DwellSeconds = primary.DwellSeconds + duplicate.DwellSeconds,
-            FirstSeenUtc = primary.FirstSeenUtc < duplicate.FirstSeenUtc ? primary.FirstSeenUtc : duplicate.FirstSeenUtc,
-            LastSeenUtc = primary.LastSeenUtc > duplicate.LastSeenUtc ? primary.LastSeenUtc : duplicate.LastSeenUtc
-        };
-    }
 }
