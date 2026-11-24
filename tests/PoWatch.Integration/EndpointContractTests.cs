@@ -51,6 +51,20 @@ public sealed class EndpointContractTests(AzuriteWebApplicationFactory factory)
     }
 
     [DockerFact]
+    public async Task Health_and_diag_read_one_report_cached_for_a_minute()
+    {
+        // Two loads inside a minute show the same check time: the dependencies were called once, not twice.
+        var first = await _client.GetFromJsonAsync<DiagReportDto>("/api/diag", JsonSerializerOptions.Web);
+        using var health = JsonDocument.Parse(await _client.GetStringAsync("/health"));
+        var second = await _client.GetFromJsonAsync<DiagReportDto>("/api/diag", JsonSerializerOptions.Web);
+
+        Assert.Equal(first!.CheckedAt, second!.CheckedAt);
+        Assert.Equal(first.Checks.Select(c => (c.Name, c.Status, c.LatencyMs)), second.Checks.Select(c => (c.Name, c.Status, c.LatencyMs)));
+        var storage = health.RootElement.GetProperty("checks").EnumerateArray().Single(c => c.GetProperty("name").GetString() == "azure-storage");
+        Assert.Equal(first.Checks.Single(c => c.Name == "azure-storage").Status, storage.GetProperty("status").GetString());
+    }
+
+    [DockerFact]
     public async Task A_browser_can_report_an_unhandled_error_to_the_server_log()
     {
         var response = await _client.PostAsJsonAsync("/api/diag/client-error",

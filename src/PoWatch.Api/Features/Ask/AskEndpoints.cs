@@ -3,7 +3,7 @@ using PoWatch.Api.Features.Stats;
 using PoWatch.Api.Security;
 using PoWatch.Application.Features.Ask;
 using PoWatch.Shared.Models;
-using PoWatch.Shared.Validation;
+using FluentValidation;
 
 namespace PoWatch.Api.Features.Ask;
 
@@ -11,13 +11,12 @@ namespace PoWatch.Api.Features.Ask;
 internal static class AskEndpoints
 {
     public const string AlertMethod = "alert";
-    private static readonly RuleDraftRequestValidator RuleRules = new();
 
     internal static IEndpointRouteBuilder MapAskFeature(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/ask/rule", async (RuleDraftRequestDto request, UserId _, AssistService assist, CancellationToken ct) =>
+        app.MapPost("/api/ask/rule", async (RuleDraftRequestDto request, UserId _, AssistService assist, IValidator<RuleDraftRequestDto> rules, CancellationToken ct) =>
             {
-                if (ApiParsing.Invalid(RuleRules, request) is { } invalid) return invalid;
+                if (ApiParsing.Invalid(rules, request) is { } invalid) return invalid;
                 var text = request.Text.Trim();
                 if (!assist.IsAvailable)
                     return Results.Problem("No AI provider is configured on this server.", statusCode: StatusCodes.Status503ServiceUnavailable);

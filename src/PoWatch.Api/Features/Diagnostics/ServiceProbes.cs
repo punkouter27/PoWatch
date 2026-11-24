@@ -19,8 +19,9 @@ namespace PoWatch.Api.Features.Diagnostics;
 /// <summary>
 /// The service rows of <c>/api/diag</c>: every external service the server really calls is reached
 /// over the network here, never just looked up in configuration. Each probe costs nothing (a model
-/// listing, a metadata read, a geocoding lookup, a status read of an id that does not exist), and the
-/// rows are cached for <see cref="CacheFor"/> so an anonymous visitor pressing Refresh cannot hammer a
+/// listing, a metadata read, a geocoding lookup, a status read of an id that does not exist). Each probe
+/// has its own deadline (<see cref="HealthSnapshot.PerCheckTimeout"/>), and the rows are cached with the
+/// health checks in <see cref="HealthSnapshot"/>, so an anonymous visitor pressing Refresh cannot hammer a
 /// dependency.
 /// <para>
 /// A service switched off on purpose (no key, no connection string, a local run without Key Vault or
@@ -35,7 +36,7 @@ public sealed class ServiceProbes(
     IHostEnvironment environment,
     IOptions<FeatureFlagsOptions> flags,
     TimeProvider timeProvider,
-    ILogger<ServiceProbes> logger) : IDisposable
+    ILogger<ServiceProbes> logger)
 {
     /// <summary>Status of a service that is switched off on purpose. Never counts toward the banner.</summary>
     public const string Off = "Off";
@@ -43,42 +44,20 @@ public sealed class ServiceProbes(
     /// <summary>The named HttpClient every probe uses (short timeout, no retries).</summary>
     public const string HttpClientName = "diag-probes";
 
-    internal static readonly TimeSpan CacheFor = TimeSpan.FromSeconds(60);
-
     // One credential for the process: building a DefaultAzureCredential chain per probe is slow.
     private static readonly Lazy<DefaultAzureCredential> s_credential = new(() => new DefaultAzureCredential());
 
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    private (DateTimeOffset At, DiagCheckDto[] Rows)? _cache;
-
-    public void Dispose() => _gate.Dispose();
-
-    public async Task<DiagCheckDto[]> RunAsync(CancellationToken cancellationToken)
-    {
-        await _gate.WaitAsync(cancellationToken);
-        try
-        {
-            if (_cache is { } cached && timeProvider.GetUtcNow() - cached.At < CacheFor)
-                return cached.Rows;
-
-            var rows = await Task.WhenAll(
-                Run("sign-in", "Microsoft sign-in", "Lets you sign in to see your own stats.", MicrosoftSignInAsync, cancellationToken),
-                Run("key-vault", "Key Vault", "Holds the server's secrets.", KeyVaultAsync, cancellationToken),
-                Run("azure-openai", "Azure OpenAI", "Rewords recaps and stories.", AzureOpenAiAsync, cancellationToken),
-                Run("gemini", "Gemini", "A second cloud model for recaps and stories.", GeminiAsync, cancellationToken),
-                Run("ollama", "Ollama (local model)", "A free local model for recaps and stories.", OllamaAsync, cancellationToken),
-                Run("weather", "Weather (Open-Meteo)", "Adds the day's weather to the journal.", WeatherAsync, cancellationToken),
-                Run("digest-email", "Digest email", "Sends the weekly digest email.", DigestEmailAsync, cancellationToken),
-                Run("telemetry", "Telemetry", "Sends logs and traces to Application Insights.", TelemetryAsync, cancellationToken));
-
-            _cache = (timeProvider.GetUtcNow(), rows);
-            return rows;
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
+    /// <summary>Calls every service once, all at the same time. Not cached here: <see cref="HealthSnapshot"/> caches the rows.</summary>
+    public Task<DiagCheckDto[]> RunAsync(CancellationToken cancellationToken) =>
+        Task.WhenAll(
+            Run("sign-in", "Microsoft sign-in", "Lets you sign in to see your own stats.", MicrosoftSignInAsync, cancellationToken),
+            Run("key-vault", "Key Vault", "Holds the server's secrets.", KeyVaultAsync, cancellationToken),
+            Run("azure-openai", "Azure OpenAI", "Rewords recaps and stories.", AzureOpenAiAsync, cancellationToken),
+            Run("gemini", "Gemini", "A second cloud model for recaps and stories.", GeminiAsync, cancellationToken),
+            Run("ollama", "Ollama (local model)", "A free local model for recaps and stories.", OllamaAsync, cancellationToken),
+            Run("weather", "Weather (Open-Meteo)", "Adds the day's weather to the journal.", WeatherAsync, cancellationToken),
+            Run("digest-email", "Digest email", "Sends the weekly digest email.", DigestEmailAsync, cancellationToken),
+            Run("telemetry", "Telemetry", "Sends logs and traces to Application Insights.", TelemetryAsync, cancellationToken));
 
     /// <summary>A probe's verdict.</summary>
     internal readonly record struct Outcome(string Status, string Detail, string? Problem = null)
@@ -98,7 +77,9 @@ public sealed class ServiceProbes(
         try
         {
             using var http = httpClientFactory.CreateClient(HttpClientName);
-            outcome = await probe(http, cancellationToken);
+            outcome = await SnapshotCache.WithTimeoutAsync(
+                ct => probe(http, ct), HealthSnapshot.PerCheckTimeout,
+                () => Outcome.Degraded($"No answer within {HealthSnapshot.PerCheckTimeout.TotalSeconds:0} s."), timeProvider, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {

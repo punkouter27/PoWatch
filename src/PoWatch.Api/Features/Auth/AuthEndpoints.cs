@@ -10,7 +10,8 @@ namespace PoWatch.Api.Features.Auth;
 
 /// <summary>
 /// BFF auth surface. Environment behaviour:
-/// Prod → Microsoft only. Dev → Microsoft + guest. Test → guest bypass.
+/// Every environment's sign-in page has one button, Microsoft. Dev/Test hosts with DeveloperBypassAuth also answer
+/// the developer URL <c>/auth/login/fake</c> (AGENTS.md); Production answers it 404.
 /// </summary>
 internal static class AuthEndpoints
 {
@@ -85,7 +86,7 @@ internal static class AuthEndpoints
             return Results.Redirect(SafeLocalUrl(returnUrl));
         })
         .WithName("AuthLoginFake")
-        .WithSummary("Continue as Guest (dev/test only).");
+        .WithSummary("Developer sign-in for local and Test hosts (no button; 404 in Production).");
 
         group.MapPost("/logout", async (HttpContext http, IConfiguration config) =>
         {
@@ -100,11 +101,14 @@ internal static class AuthEndpoints
         return app;
     }
 
-    // Prevent open-redirect: only same-site absolute paths are honoured.
-    private static string SafeLocalUrl(string? returnUrl) =>
+    // Prevent open-redirect: only a path on this site is honoured. "//host" and "/\host" are other sites to a
+    // browser (it reads a backslash as a slash), and a control character could split the Location header.
+    internal static string SafeLocalUrl(string? returnUrl) =>
         !string.IsNullOrWhiteSpace(returnUrl)
         && returnUrl.StartsWith('/')
         && !returnUrl.StartsWith("//", StringComparison.Ordinal)
+        && !returnUrl.Contains('\\', StringComparison.Ordinal)
+        && !returnUrl.Any(char.IsControl)
             ? returnUrl
             : "/";
 }

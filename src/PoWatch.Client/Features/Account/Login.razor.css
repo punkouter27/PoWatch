@@ -1,5 +1,5 @@
 /* Sign-in card, on the same Terminal tokens as the rest of the app (terminal-tokens.css), in the page
-   body under the Po shell header (BareLayout). */
+   body under the Po shell header (MainLayout, signed out). */
 
 .login-shell {
     display: grid;
@@ -27,12 +27,6 @@
     margin: 0 0 24px;
 }
 
-.login-status {
-    color: var(--term-muted);
-    font: 13px var(--term-mono);
-    margin: 16px 0 0;
-}
-
 ::deep .login-btn {
     display: flex;
     align-items: center;
@@ -53,6 +47,3 @@
 
 ::deep .login-btn-ms { background: var(--term-accent); color: var(--term-accent-ink); border: 1px solid var(--term-accent); }
 ::deep .login-btn-ms:hover { filter: brightness(1.08); }
-
-::deep .login-btn-guest { background: var(--term-panel-2); color: var(--term-text); border: 1px solid var(--term-line); }
-::deep .login-btn-guest:hover { border-color: var(--term-muted); }

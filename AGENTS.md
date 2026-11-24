@@ -106,15 +106,15 @@ Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 | Format | `dotnet format PoWatch.slnx --verify-no-changes` | — |
 | Build | `dotnet build PoWatch.slnx -c Release` | warnings are errors (the client is trim-analysed) |
 | Hygiene / caps | `pwsh scripts/check-hygiene.ps1` and `pwsh scripts/check-test-caps.ps1` | after a Release build |
-| Unit | `dotnet test tests/PoWatch.Unit -c Release` | nothing (58 tests) |
-| Integration | `dotnet test tests/PoWatch.Integration -c Release` | Docker (Testcontainers Azurite); skips with one message without it (24) |
-| E2E API | `dotnet test tests/PoWatch.E2EAPI -c Release` | Docker; skips without it (14) |
+| Unit | `dotnet test tests/PoWatch.Unit -c Release` | nothing (63 tests) |
+| Integration | `dotnet test tests/PoWatch.Integration -c Release` | Docker (Testcontainers Azurite); skips with one message without it (25) |
+| E2E API | `dotnet test tests/PoWatch.E2EAPI -c Release` | Docker; skips without it (15; `StatsE2ETests` holds a time budget, so it runs alone after the others) |
 | E2E UI (the release gate) | `pwsh scripts/run-browser-tests.ps1 -Repeat 3` | publishes the trimmed Release build (what deploys), starts Azurite (Docker) and the published app on :7429, runs the tier 3 times in a row against it, stops everything; needs Playwright Chromium (25) |
 | E2E UI (quick, untrimmed) | `dotnet test tests/PoWatch.E2EUI -c Release` | hosts the app in-process (Docker) or tests `E2E_BASE_URL`; skips with the reason otherwise |
 | Node checks | `node --test scripts/sensory-audio.test.cjs scripts/sensory-visual.test.cjs` | Node |
 | Caption eval (syntax) | `node --check scripts/caption-eval/eval.mjs` | Node; a real evaluation is `pwsh scripts/caption-eval.ps1 -Count 5` (installs its npm packages, downloads the models) |
 | Azurite for a local run | `docker run -d --rm -p 21000:10000 -p 21001:10001 -p 21002:10002 mcr.microsoft.com/azure-storage/azurite:latest azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --skipApiVersionCheck --loose` | Docker |
-| Run locally (guest sign-in) | `AzureStorage__ConnectionString="<Azurite connection string, ports 21000-21002>" FeatureFlags__DeveloperBypassAuth=true FeatureFlags__EnableKeyVault=false ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:7428 dotnet run --project src/PoWatch.Api --no-launch-profile` | → http://localhost:7428 and http://localhost:7428/diag |
+| Run locally (developer sign-in) | `AzureStorage__ConnectionString="<Azurite connection string, ports 21000-21002>" FeatureFlags__DeveloperBypassAuth=true FeatureFlags__EnableKeyVault=false ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:7428 dotnet run --project src/PoWatch.Api --no-launch-profile` | → http://localhost:7428 and http://localhost:7428/diag; sign in at http://localhost:7428/auth/login/fake?returnUrl=/ |
 
 - **Deploy:** push to `master` runs `.github/workflows/deploy.yml` (format, build, Unit, Integration, publish,
   deploy; the `mobile` job builds the Android client beside it). `*.md` changes do not deploy.
@@ -132,7 +132,8 @@ Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 | Replay scrubber `<input type="range" data-replay="scrub">` (`Features/Journal/TimelineReplay.razor`) stays native | `js/replay.js` drives it every frame as a media seek bar; **awaiting owner confirmation** | `9e0cffd` 2026-11-21 | swap for `RadzenSlider` and rewire `replay.js` |
 | /diag: a service switched off on purpose is **Off** (grey, not counted in the banner or overall status) | opt-in services left off are not faults | `9e0cffd` 2026-11-21 | `ServiceProbes.cs` |
 | Phones: the stamp is the last child of `<main>`, static after the content; on wide screens it stays fixed | a fixed stamp covered /diag cards (overrides the older fixed rule) | `9e0cffd` 2026-11-21 | `git revert 9e0cffd` (stamp part) |
-| `/login` shows one Microsoft button (guest only where no tenant is set); no gear signed out | one-button sign-in rule | `9e0cffd` 2026-11-21 | — |
+| `/login` is the title and one **Microsoft** button in every environment; no gear signed out. Local/Test hosts sign in at the developer URL `/auth/login/fake?returnUrl=/` (no button; only `DeveloperBypassAuth` hosts; returns only to a local path; 404 in Production, `AuthFlowE2ETests`) | one-button sign-in rule | 2026-11-23 | — |
+| Radzen's theme is the first stylesheet, but as `@import … layer(vendor)` in the first `<style>` of `index.html`, not a `<link>` | the `pw-plain` reset (`terminal-base.css`, `@layer plain`) and every app rule win over Radzen only because Radzen sits in the lowest cascade layer; a `<link>` cannot be layered, and unlayered Radzen would beat the app's selectors on ~every control. `ShellAndNavigationE2ETests` asserts it loads once and first | 2026-11-23 | move every app sheet into layers above `vendor`, then switch to a `<link>` |
 | No settings gear in the header, even signed in; `/settings` opens from Ctrl+K and the bell's links | owner removed it | 2026-11-23 | restore the `settings-menu` link in `Layout/PoHeader.razor` |
 | Live has no "Try demo" button; the demo starts from `?start=demo` / Ctrl+K | owner removed it | 2026-11-23 | restore it in `Features/Live/Live.razor` |
 | No questions either way: no Ask (`/api/ask`, Live box, Explain, mobile Journal) and no naming. Regulars stay anonymous ("Person 3"): no rename/merge routes, no "name them?" prompts, People is read-only | owner's concept change: observe, don't identify or converse | 2026-11-23 | `git revert` the concept-change commit |

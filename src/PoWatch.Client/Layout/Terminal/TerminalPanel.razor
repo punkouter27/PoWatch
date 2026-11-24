@@ -1,7 +1,14 @@
 @* A Terminal panel: accent bar, title, optional right-aligned meta, then content. *@
 <section class="term-panel @Class" data-test="@Test" aria-labelledby="@_headingId">
     <header class="term-panel-head">
-        <h2 id="@_headingId">@Title</h2>
+        @if (HeadingLevel == 1)
+        {
+            <h1 id="@_headingId">@Title</h1>
+        }
+        else
+        {
+            <h2 id="@_headingId">@Title</h2>
+        }
         @if (Aside is not null)
         {
             <span class="term-panel-meta">@Aside</span>
@@ -32,6 +39,9 @@
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public string? Class { get; set; }
     [Parameter] public string? Test { get; set; }
+
+    /// <summary>1 when the panel is the page's only content and its title is the page's h1 (the not-found page).</summary>
+    [Parameter] public int HeadingLevel { get; set; } = 2;
 
     /// <summary>No inner padding — for tables and camera feeds that run edge to edge.</summary>
     [Parameter] public bool Flush { get; set; }

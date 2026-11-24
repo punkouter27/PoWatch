@@ -5,13 +5,17 @@
 @inject SensingSession Sensing
 @inject DrawerState Drawers
 
+@* The app's one layout, for every page signed in or out (sign-in, /diag and the not-found page included).
+   Signed out it is the bare Po shell: the title and Sign in, the page, the stamp; no section keys, bottom
+   tab bar, session controls or camera, and nothing login-only is requested. Signed in it is the full
+   terminal shell. The page sits at the same place in both, so signing in state settling never rebuilds it. *@
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
-<div class="term-shell">
-    <PoHeader ShowStart="@(!_live)" />
+<div class="@(_signedIn ? "term-shell" : "po-shell-bare")" data-test="app-shell">
+    <PoHeader Bare="@(!_signedIn)" ShowStart="@(!_live)" />
 
     @* App.razor moves focus here after every navigation, so keyboard and screen-reader users land in the page. *@
-    <main class="term-body" id="main-content" tabindex="-1">
+    <main class="@(_signedIn ? "term-body" : null)" id="main-content" tabindex="-1">
         @* Keyed on the section, not the full URI: a query change (?range=, ?start=) or a deeper
            segment (/journal/2026-10-03) must not rebuild the page. *@
         <ErrorBoundary @key="Section(Nav.Uri)">
@@ -21,7 +25,7 @@
             <ErrorContent>
                 @* Without a boundary a single component exception tears down the whole render tree
                    and leaves a blank page with no way back. *@
-                <div class="po-error-panel term-panel" role="alert">
+                <div class="po-error-panel @(_signedIn ? "term-panel" : null)" role="alert">
                     <h2>Something went wrong</h2>
                     <p>This page hit an unexpected error. Reload the page to try again.</p>
                 </div>
@@ -31,13 +35,19 @@
         <BuildVersion />
     </main>
 
-    @* Phones only: the sections as a bottom tab bar (the header's key bar hides at that width). *@
-    <BottomNav />
+    @if (_signedIn)
+    {
+        @* Phones only: the sections as a bottom tab bar (the header's key bar hides at that width). *@
+        <BottomNav />
+    }
 </div>
 
-@* The camera feed lives here, not on the Live page, so it keeps playing (and the session keeps
-   sampling) on every page; Live docks it over its camera panel. *@
-<video @ref="_feed" class="term-feed" autoplay muted playsinline aria-label="Live camera feed"></video>
+@if (_signedIn)
+{
+    @* The camera feed lives here, not on the Live page, so it keeps playing (and the session keeps
+       sampling) on every page; Live docks it over its camera panel. *@
+    <video @ref="_feed" class="term-feed" autoplay muted playsinline aria-label="Live camera feed"></video>
+}
 @* Host for chart hover tooltips; without it RadzenChart never shows one. *@
 <RadzenChartTooltip />
 @* Host for DialogService confirmations (deleting data, keeping less of it). *@
@@ -45,6 +55,10 @@
 <RadzenNotification />
 
 @code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private bool _signedIn;
+    private bool _sessionReady;
     private bool _live = true;
     private ElementReference _feed;
 
@@ -54,9 +68,17 @@
         _live = IsLive(Nav.Uri);
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        _signedIn = AuthState is not null && (await AuthState).User.Identity?.IsAuthenticated == true;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        // The menus (Ctrl+K) and the sensing session belong to a signed-in user; on a public page the sign-in
+        // may settle after the first render, so this runs on the first render that has the camera element.
+        if (!_signedIn || _sessionReady) return;
+        _sessionReady = true;
         Sensing.Feed = _feed;
         await JS.TryInvokeVoidAsync("powatchMenus.setup");
         // Remembered per browser: whether camera sessions also run the caption model.

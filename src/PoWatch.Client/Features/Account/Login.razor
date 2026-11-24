@@ -1,79 +1,24 @@
 @page "/login"
 @attribute [AllowAnonymous]
-@layout PoWatch.Client.Layout.BareLayout
-@inject PoWatchApiClient Api
 @inject NavigationManager Nav
 
 <PageTitle>Sign in · PoWatch</PageTitle>
 
+@* The sign-in page is the title and one button, Microsoft, in every environment (AGENTS.md). Local and Test
+   hosts sign in through the developer URL /auth/login/fake instead (AGENTS.md, Verification); it has no
+   button here and answers 404 in Production. *@
 <div class="login-shell" data-test="login-shell">
     <div class="login-card" data-test="login-card">
         <h1>Sign in to PoWatch</h1>
-
-        @if (_error is not null)
-        {
-            @* An unguarded fetch used to leave this page on "Loading sign-in options…" forever when
-               /auth/config was unreachable — the one screen where a dead end locks the user out. *@
-            <p class="login-status" role="alert" data-test="login-error">@_error</p>
-            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain login-btn login-btn-guest" Click="LoadConfigAsync" data-test="login-retry">Try again</RadzenButton>
-        }
-        else if (_config is null)
-        {
-            <p class="login-status" role="status" aria-live="polite" data-test="login-loading">Loading sign-in options…</p>
-        }
-        else if (_config.MicrosoftEnabled)
-        {
-            @* The page is the title and one button (AGENTS.md): Microsoft wherever it is configured. *@
-            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain login-btn login-btn-ms" Click="@(() => Go("auth/login/microsoft"))" data-test="login-microsoft">Sign in with Microsoft</RadzenButton>
-        }
-        else if (_config.GuestEnabled)
-        {
-            @* Local and Test hosts without a Microsoft tenant: the guest sign-in is the one button. *@
-            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain login-btn login-btn-guest" Click="@(() => Go("auth/login/fake"))" data-test="login-guest">Continue as Guest</RadzenButton>
-        }
-        else
-        {
-            <p class="login-status" role="alert">No sign-in method is configured for the <b>@_config.Environment</b> environment.</p>
-        }
+        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain login-btn login-btn-ms" Click="SignIn" data-test="login-microsoft">Sign in with Microsoft</RadzenButton>
     </div>
 </div>
 
 @code {
-    private PoWatch.Shared.Models.AuthConfigDto? _config;
-    private string? _error;
-    private string _returnUrl = "/";
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-        var uri = Nav.ToAbsoluteUri(Nav.Uri);
-        foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var kv = pair.Split('=', 2);
-            if (kv.Length == 2 && kv[0] == "returnUrl" && !string.IsNullOrWhiteSpace(kv[1]))
-                _returnUrl = Uri.UnescapeDataString(kv[1]);
-        }
-
-        await LoadConfigAsync();
-    }
-
-    private async Task LoadConfigAsync()
-    {
-        _error = null;
-        _config = null;
-        StateHasChanged();
-
-        try
-        {
-            _config = await Api.GetAuthConfigAsync();
-            if (_config is null)
-                _error = "The server did not return any sign-in options. Try again in a moment.";
-        }
-        catch (Exception ex)
-        {
-            _error = $"Couldn't reach the sign-in service. {ex.Message}";
-        }
-    }
-
-    // The sign-in endpoints are server routes (a redirect to Microsoft or the guest cookie), so a full load.
-    private void Go(string endpoint) => Nav.NavigateTo($"{endpoint}?returnUrl={Uri.EscapeDataString(_returnUrl)}", forceLoad: true);
+    // A server route (the redirect to Microsoft), so a full load. The server keeps only local return paths.
+    private void SignIn() =>
+        Nav.NavigateTo($"auth/login/microsoft?returnUrl={Uri.EscapeDataString(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl)}", forceLoad: true);
 }

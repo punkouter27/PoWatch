@@ -10,7 +10,7 @@ namespace PoWatch.Api.Features.Diagnostics;
 /// The one diagnostics surface, <c>/api/diag</c> (the /diag contract in AGENTS.md):
 /// <list type="bullet">
 /// <item><c>GET /api/diag</c> — anonymous <see cref="DiagReportDto"/> behind the /diag page. It reads the
-/// same registered health checks as <c>/health</c> but rewrites every entry in plain words of its own, so
+/// same cached report as <c>/health</c> (<see cref="HealthSnapshot"/>, 60 s) but rewrites every entry in plain words of its own, so
 /// a check's description (which may name an endpoint or quote an exception) never leaves the server.</item>
 /// <item><c>GET /api/diag/runtime</c> — signed in only: the masked server runtime snapshot that /diag
 /// adds below the three sections for a signed-in operator.</item>
@@ -28,16 +28,15 @@ internal static class DiagEndpoints
     {
         app.MapGet("/api/diag", async (
                 HttpContext http,
-                HealthCheckService health,
-                ServiceProbes probes,
+                HealthSnapshot snapshot,
                 IWebHostEnvironment env,
-                TimeProvider time,
                 CancellationToken ct) =>
             {
-                // A cached report would show a stale status on Refresh.
+                // The report itself is cached on the server for a minute (HealthSnapshot); the browser must
+                // not keep an older copy on top of that.
                 http.Response.Headers.CacheControl = "no-store";
-                var started = time.GetTimestamp();
-                var report = await health.CheckHealthAsync(ct);
+                var taken = await snapshot.GetAsync(ct);
+                var report = taken.Value.Health;
 
                 List<DiagCheckDto> checks =
                 [
@@ -64,14 +63,14 @@ internal static class DiagEndpoints
                         Math.Round(entry.Duration.TotalMilliseconds, 1), problem));
                 }
 
-                // Every external service, each reached with a live call (cached 60 s). "Off" rows are
-                // switched off on purpose and never count toward the overall status.
-                checks.AddRange(await probes.RunAsync(ct));
+                // Every external service, each reached with a live call (cached with the checks above). "Off"
+                // rows are switched off on purpose and never count toward the overall status.
+                checks.AddRange(taken.Value.Services);
 
                 var counted = checks.Where(c => c.Status != ServiceProbes.Off).ToList();
                 var overall = counted.Any(c => c.Status == "Unhealthy") ? "Unhealthy" : counted.Any(c => c.Status == "Degraded") ? "Degraded" : "Healthy";
-                return Results.Ok(new DiagReportDto(overall, env.EnvironmentName, Version, time.GetUtcNow(),
-                    Math.Round(time.GetElapsedTime(started).TotalMilliseconds, 1), [.. checks]));
+                return Results.Ok(new DiagReportDto(overall, env.EnvironmentName, Version, taken.At,
+                    Math.Round(taken.Took.TotalMilliseconds, 1), [.. checks]));
             })
             .WithTags("Diagnostics")
             .WithName("Diag")

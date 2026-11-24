@@ -235,8 +235,13 @@ public sealed class PageContentE2ETests(PlaywrightFixture fixture)
 
         await Assertions.Expect(page.GetByTestId("login-shell")).ToBeVisibleAsync(new() { Timeout = 60000 });
 
-        // The sign-in page is the title and one sign-in button: no header Sign in, gear or nav beside it.
+        // The sign-in page is the title and one sign-in button, Microsoft, in every environment (this Test host
+        // has no tenant; it signs in through the developer URL): no header Sign in, gear or nav beside it.
+        await Assertions.Expect(page.Locator("h1")).ToHaveTextAsync("Sign in to PoWatch");
         await Assertions.Expect(page.GetByTestId("login-card").Locator("button, a")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.GetByTestId("login-microsoft")).ToHaveTextAsync("Sign in with Microsoft");
+        await Assertions.Expect(page.GetByTestId("app-navbar")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("bottom-nav")).ToHaveCountAsync(0);
         await Assertions.Expect(page.GetByTestId("login-card").Locator("p")).ToHaveCountAsync(0);
         await Assertions.Expect(page.GetByTestId("header-sign-in")).ToHaveCountAsync(0);
         await Assertions.Expect(page.GetByTestId("settings-menu")).ToHaveCountAsync(0);

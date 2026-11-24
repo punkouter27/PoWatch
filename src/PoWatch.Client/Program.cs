@@ -26,6 +26,9 @@ builder.Services.AddScoped<SensingSession>();
 builder.Services.AddScoped<StatsFeed>();
 builder.Services.AddScoped<DrawerState>();
 builder.Services.AddRadzenComponents();
+// Form rules (PoWatch.Shared/Validation), registered by type and injected where a form needs them.
+builder.Services.AddScoped<FluentValidation.IValidator<PoWatch.Shared.Models.WatchRuleInputDto>, PoWatch.Shared.Validation.WatchRuleInputValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<PoWatch.Shared.Models.RuleDraftRequestDto>, PoWatch.Shared.Validation.RuleDraftRequestValidator>();
 
 // BFF auth: server cookie holds the session; client derives state from /auth/me.
 builder.Services.AddAuthorizationCore();

@@ -35,9 +35,12 @@ public sealed class ApiE2EFactory : WebApplicationFactory<Program>, IAsyncLifeti
         await base.DisposeAsync();
     }
 
+    /// <summary>The host's environment; a test that checks Production behaviour builds its own factory with "Production".</summary>
+    public string EnvironmentName { get; init; } = "Test";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Test");
+        builder.UseEnvironment(EnvironmentName);
         builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {

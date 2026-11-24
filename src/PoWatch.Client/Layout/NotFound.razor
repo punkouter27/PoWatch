@@ -1,12 +1,11 @@
 @page "/not-found"
 @attribute [AllowAnonymous]
-@layout DiagLayout
 @inject NavigationManager Navigation
 
 <PageTitle>Page not found · PoWatch</PageTitle>
 
 @* The key bar above already lists every section, so this only says what went wrong and offers Live. *@
-<TerminalPanel Title="Page not found" Test="not-found">
+<TerminalPanel Title="Page not found" Test="not-found" HeadingLevel="1">
     <p>That address isn't part of PoWatch@(RequestedPath is null ? "." : ":") @if (RequestedPath is not null) { <code>@RequestedPath</code> }</p>
     <p><a class="term-button term-button--primary" href="">Back to Live</a> <span class="term-stat-hint">or pick a section from the key bar above.</span></p>
 </TerminalPanel>

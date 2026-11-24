@@ -46,6 +46,32 @@ public sealed class AuthFlowE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE
         Assert.Equal("Guest", after.Name);
     }
 
+    [DockerFact]
+    public async Task The_developer_sign_in_returns_only_to_local_paths_and_is_a_404_in_production()
+    {
+        var client = HttpsClient(followRedirects: false);
+        foreach (var (returnUrl, expected) in new[]
+        {
+            ("/journal?view=week", "/journal?view=week"),
+            ("//evil.example/", "/"),
+            ("/\\evil.example/", "/"),
+            ("https://evil.example/", "/"),
+            ("/x\r\nSet-Cookie:a=b", "/"),
+        })
+        {
+            var login = await client.GetAsync($"/auth/login/fake?returnUrl={Uri.EscapeDataString(returnUrl)}");
+            Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+            Assert.Equal(expected, login.Headers.Location?.OriginalString);
+        }
+
+        // Production has no developer sign-in at all, whatever the configuration says.
+        await using var production = new ApiE2EFactory { EnvironmentName = "Production" };
+        await ((IAsyncLifetime)production).InitializeAsync();
+        using var live = production.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        Assert.Equal(HttpStatusCode.NotFound, (await live.GetAsync("/auth/login/fake?returnUrl=/")).StatusCode);
+        await ((IAsyncLifetime)production).DisposeAsync();
+    }
+
     private sealed record ConfigResponse(bool MicrosoftEnabled, bool GuestEnabled, string Environment);
     private sealed record MeResponse(bool IsAuthenticated, string? Name, string[]? Roles);
 }

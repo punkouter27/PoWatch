@@ -5,8 +5,8 @@
 @inject NavigationManager Navigation
 
 @* The page shell header (AGENTS.md, Page shell): the app name upper-left, the signed-in email (or
-   the Sign in button) and the settings gear upper-right, on every page signed in and out. Bare (BareLayout: sign-in and
-   /diag) keeps just those; the full header adds the section keys, the caption model, recording
+   the Sign in button) and the settings gear upper-right, on every page signed in and out. Bare (MainLayout signed out:
+   sign-in, /diag, not-found) keeps just those; the full header adds the section keys, the caption model, recording
    controls, the bell and the outbox chips. Section keys become the phone's bottom tab bar. *@
 <header class="term-header po-header" data-test="term-header">
     <a class="term-brand po-header__title" href="/" data-test="header-title">PoWatch</a>
@@ -82,7 +82,7 @@
     /// <summary>False on Live, where the camera panel has its own start controls.</summary>
     [Parameter] public bool ShowStart { get; set; } = true;
 
-    /// <summary>BareLayout (sign-in, /diag): title, email or Sign in, and the gear only.</summary>
+    /// <summary>Signed out (MainLayout): the title and Sign in only; no section keys or session controls.</summary>
     [Parameter] public bool Bare { get; set; }
 
     private bool OnSignInPage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').Equals("/login", StringComparison.OrdinalIgnoreCase);

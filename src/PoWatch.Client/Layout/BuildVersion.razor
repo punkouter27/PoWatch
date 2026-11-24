@@ -1,10 +1,10 @@
 @using System.Reflection
-@* The version badge, v{YYMMDD} (the HEAD commit's UTC date), pinned to the bottom-right of every page
+@* The version badge, v{YYMMDD} (the HEAD commit's UTC date), a <footer> pinned to the bottom-right of every page
    (po-tokens.css .po-version), so a bug report can say which build it came from. Directory.Build.props
    stamps it into every assembly as [AssemblyMetadata("BuildVersion")]; /api/diag reports the same value. *@
 @if (Stamp.Length > 0)
 {
-    <span class="po-version" title="Build version (vYYMMDD)" data-test="build-stamp-corner">v@(Stamp)</span>
+    <footer class="po-version" title="Build version (vYYMMDD)" data-test="build-stamp-corner">v@(Stamp)</footer>
 }
 
 @code {

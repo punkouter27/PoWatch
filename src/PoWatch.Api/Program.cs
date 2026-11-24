@@ -63,9 +63,10 @@ builder.Services.AddHybridCache();
 // OpenTelemetry tracing (passes config so Azure Monitor exporter can be gated on connection string)
 builder.Services.AddPoWatchTelemetry(builder.Configuration);
 
-// Health checks: Azure Storage, plus Key Vault when it is enabled (served at /health).
+// Health checks: Azure Storage, plus Key Vault when it is enabled; one cached report (HealthSnapshot, 60 s)
+// feeds /health and /api/diag.
 builder.Services.AddPoWatchHealthChecks(featureFlags);
-// /api/diag's live service probes: one short-timeout client, results cached 60 s (ServiceProbes).
+// /api/diag's live service probes: one short-timeout client, each probe its own deadline, cached in HealthSnapshot.
 builder.Services.AddHttpClient(PoWatch.Api.Features.Diagnostics.ServiceProbes.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(8))
     .ConfigurePrimaryHttpMessageHandler(() => PoWatch.Infrastructure.Runtime.RetryingConnectHandler.Create());
 builder.Services.AddSingleton<PoWatch.Api.Features.Diagnostics.ServiceProbes>();
@@ -84,7 +85,9 @@ if (!builder.Environment.IsEnvironment("Test"))
     builder.Services.AddHostedService<RetentionJob>();
     builder.Services.AddHostedService<DigestJob>();
 }
-builder.Services.AddSingleton<FluentValidation.IValidator<PoWatch.Shared.Models.IngestBatchDto>, IngestBatchValidator>();
+// Request validators, registered by type (no assembly scanning) and injected into the endpoints.
+builder.Services.AddScoped<FluentValidation.IValidator<PoWatch.Shared.Models.IngestBatchDto>, IngestBatchValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<PoWatch.Shared.Models.RuleDraftRequestDto>, PoWatch.Shared.Validation.RuleDraftRequestValidator>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, CurrentUserIdProvider>();
 

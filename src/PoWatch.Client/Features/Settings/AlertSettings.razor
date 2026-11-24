@@ -74,9 +74,9 @@
 @code {
     private List<WatchRule> _rules = [];
     private string? _notifications;
-    private static readonly WatchRuleInputValidator RuleRules = new();
+    [Inject] private FluentValidation.IValidator<WatchRuleInputDto> RuleRules { get; set; } = default!;
     private static readonly string[] RuleClasses = ["person", "cat", "dog", WatchRules.Any];
-    private static readonly RuleDraftRequestValidator WordsRules = new();
+    [Inject] private FluentValidation.IValidator<RuleDraftRequestDto> WordsRules { get; set; } = default!;
     private readonly WatchRuleInputDto _rule = new();
     private readonly RuleDraftRequestDto _words = new();
     private bool _adding;

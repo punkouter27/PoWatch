@@ -64,23 +64,25 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
 ## Things that are easy to get wrong
 
 - **Page shell (AGENTS.md).** `Layout/PoHeader.razor` is the one header, `.po-header`,
-  on every page signed in and out (`BareLayout` renders it `Bare`: sign-in, and `/diag` and not-found when signed out): `PoWatch`
+  on every page signed in and out (`Layout/MainLayout.razor` is the one layout; signed out it renders the header `Bare`, with no section keys, bottom bar, session controls or camera): `PoWatch`
   upper-left, then the signed-in email (`.po-header__email`; the dev guest is `guest@guest.localhost`) and the gear
   (`.po-header__settings`, a link to `/settings`), or signed out only the Sign in button (`po-link-btn filled small`)
-  upper-right. The sign-in page itself shows the title and one button (Microsoft; the guest button only where no
-  Microsoft tenant is configured), with nothing in the header's right side. The bell's links
+  upper-right. The sign-in page itself shows the title and one button, Microsoft, in every environment, with nothing in
+  the header's right side (local and Test hosts sign in at `/auth/login/fake`, which has no button). The bell's links
   still open Settings in the drawer. `css/po-tokens.css` is this repo's copy of the Po conventions: Inter + Space Grotesk self-hosted in `wwwroot/fonts/`, one indigo accent,
   light/dark follow `prefers-color-scheme` (no theme switch, no `data-theme`; the canvases listen to the
   media query). `css/terminal-tokens.css` aliases the `--term-*` palette onto `--po-*`. The version badge
-  is one `<span class="po-version">v{YYMMDD}</span>` (`Layout/BuildVersion.razor`; the HEAD commit's UTC date,
+  is one `<footer class="po-version">v{YYMMDD}</footer>` (`Layout/BuildVersion.razor`; the HEAD commit's UTC date,
   `PoBuildStamp` in `Directory.Build.props`, read as `BuildVersion` metadata by the client and `/api/diag`), the last
   thing in `<main>`: fixed in the corner on wide screens, in the page flow after the content on phones. Tab with nothing focused opens `/po-dev.html`
   (`js/po-devwindow.js`).
 - **Diagnostics: one page, one API.** `/diag` ("System status", `Features/Diagnostics/Diag.razor`, anonymous,
-  `DiagLayout`: the bare shell signed out, the full app shell signed in) follows the /diag contract in AGENTS.md: banner, then API / Data / Services from the anonymous
+  the bare shell signed out, the full app shell signed in) follows the /diag contract in AGENTS.md: banner, then API / Data / Services from the anonymous
   `GET /api/diag` (`DiagReportDto`). Storage comes from the health checks; every external service (Microsoft
   sign-in, Key Vault, Azure OpenAI, Gemini, Ollama, Open-Meteo, the digest email, Application Insights) is a free
-  live call in `Features/Diagnostics/ServiceProbes.cs`, cached 60 s. A service switched off on purpose is `Off`
+  live call in `Features/Diagnostics/ServiceProbes.cs`. Each check has a 10 s deadline, and the whole report (health
+  checks + probes) is run once and cached 60 s in `Features/Diagnostics/HealthSnapshot.cs`, which feeds both `/health`
+  and `/api/diag`: two loads inside a minute show the same `checkedAt`. A service switched off on purpose is `Off`
   (grey, no latency, never counted in the banner). The endpoint rewrites every check in its own words: never return a check's
   description or exception message there (exception type at most; `EndpointContractTests` checks). A
   signed-in operator also gets `DiagOperator` under the sections: server runtime (`GET /api/diag/runtime`),
@@ -94,7 +96,8 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   binder in the trimmed build); tests pick them with `PickAsync` / `ExpectPickedAsync` (`PoWatchPage.cs`).
   Exceptions are listed in AGENTS.md.
 - **Forms (2026-11-17).** Every form that submits data uses `RadzenTemplateForm` + `FluentValidationValidator`
-  (`Client/Layout`) with a validator from `PoWatch.Shared/Validation`; the endpoint runs the same validator
+  (`Client/Layout`) with a validator from `PoWatch.Shared/Validation`, registered by type (`AddScoped<IValidator<X>, XValidator>` in
+  both `Program.cs` files) and injected, never `new`ed; the endpoint runs the same validator
   through `ApiParsing.Invalid` and answers `Results.ValidationProblem`. Errors show inline
   (`ValidationMessage`), and the submit button is disabled while saving.
 - **Phone navigation.** Under 720 px the header's key bar (`NavBar`, `nav-*` test ids) hides and

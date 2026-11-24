@@ -379,7 +379,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .term-panel-head .term-panel-meta { margin-left: auto; color: var(--term-dim); font-weight: 400; letter-spacing: 0.02em; text-transform: none; }
 .term-panel-body { padding: 10px; flex: 1; min-height: 0; overflow: auto; }
 .term-panel-body--flush { padding: 0; }
-.term-panel-head h2 { font: inherit; margin: 0; }
+.term-panel-head :is(h1, h2) { font: inherit; margin: 0; }
 .term-panel-body--flush > .term-empty { padding: 10px; }
 .term-panel-body--flush > .term-stat-hint { display: block; padding: 0 10px 10px; }
 .term-grid + .term-grid, .term-grid + .term-panel { margin-top: var(--term-gap); }

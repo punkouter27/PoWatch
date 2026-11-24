@@ -18,11 +18,22 @@ public sealed class ShellAndNavigationE2ETests(PlaywrightFixture fixture)
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("STANDBY");
         // The Po shell: the name upper-left, the signed-in email upper-right, and no gear (owner removed it).
         await Assertions.Expect(page.GetByTestId("header-title")).ToHaveTextAsync("PoWatch");
-        await Assertions.Expect(page.GetByTestId("header-email")).ToContainTextAsync("@");
+        // The exact signed-in email (the developer sign-in's guest), not just something with an @ in it.
+        await Assertions.Expect(page.GetByTestId("header-email")).ToHaveTextAsync("guest@guest.localhost");
         await Assertions.Expect(page.GetByTestId("settings-menu")).ToHaveCountAsync(0);
         // The build follows you to every page as v{YYMMDD}, so a bug report can name the build it came from.
         await Assertions.Expect(page.Locator(".po-version")).ToHaveCountAsync(1);
         await Assertions.Expect(page.GetByTestId("build-stamp-corner")).ToHaveTextAsync(new System.Text.RegularExpressions.Regex(@"^v\d{6}$"));
+        Assert.Equal("FOOTER", await page.GetByTestId("build-stamp-corner").EvaluateAsync<string>("el => el.tagName"));
+
+        // Radzen's theme loads once, as the very first stylesheet, before every sheet of the app's own (in the
+        // lowest cascade layer, so the app's rules win; index.html). A second copy or a late one would flip
+        // which rules win.
+        var sheets = await page.EvaluateAsync<string[]>("""
+            () => [...document.styleSheets].flatMap(s => [s.href, ...[...s.cssRules].filter(r => r.href).map(r => r.href)]).filter(h => h)
+            """);
+        Assert.Matches(@"(^|/)_content/Radzen\.Blazor/css/material-base\.css$", sheets[0]);
+        Assert.Single(sheets, h => h.Contains("_content/Radzen.Blazor/css/", StringComparison.Ordinal));
 
         await page.GetByTestId("nav-journal").ClickAsync();
         await page.ExpectSectionAsync("JOURNAL");

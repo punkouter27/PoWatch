@@ -5,6 +5,8 @@ using PoWatch.Shared.Models;
 
 namespace PoWatch.E2EAPI;
 
+/// <summary>Holds a time budget, so it runs on its own after the other classes, never beside their hosts and containers.</summary>
+[Collection(nameof(TimedCollection))]
 public sealed class StatsE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE2EFactory>
 {
     private HttpClient ClientFor(string user)
@@ -120,3 +122,7 @@ public sealed class StatsE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE2EF
         return (body!, watch.ElapsedMilliseconds);
     }
 }
+
+/// <summary>Classes with a time budget: xUnit runs this collection alone, after the parallel ones.</summary>
+[CollectionDefinition(nameof(TimedCollection), DisableParallelization = true)]
+public sealed class TimedCollection;
