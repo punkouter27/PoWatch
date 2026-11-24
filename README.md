@@ -106,6 +106,8 @@ variables `AZURE_WEBAPP_NAME` and `AZURE_RESOURCE_GROUP`.
 - `AGENTS.md` — the Po web app standard this repo follows, and the rules for any agent (or human) working in it.
 - `docs/development.md` — where the pipeline lives (sensing, ingest, reads, storage, API) and what is easy to get wrong.
 - `CLAUDE.md` — one line pointing at `AGENTS.md`.
+- `SCREENSHOTS/` — before/after pages of UI changes (`{YYMMDD}-{feature}.html` + one annotated `.png`), made by
+  `pwsh scripts/screenshots.ps1 -Feature <name>`. Git-ignored: local review aids, not committed.
 
 This `README.md` stays at the level of "what is this app and how do I run it".
 

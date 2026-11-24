@@ -111,6 +111,7 @@ Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 | E2E API | `dotnet test tests/PoWatch.E2EAPI -c Release` | Docker; skips without it (15; `StatsE2ETests` holds a time budget, so it runs alone after the others) |
 | E2E UI (the release gate) | `pwsh scripts/run-browser-tests.ps1 -Repeat 3` | publishes the trimmed Release build (what deploys), starts Azurite (Docker) and the published app on :7429, runs the tier 3 times in a row against it, stops everything; needs Playwright Chromium (25) |
 | E2E UI (quick, untrimmed) | `dotnet test tests/PoWatch.E2EUI -c Release` | hosts the app in-process (Docker) or tests `E2E_BASE_URL`; skips with the reason otherwise |
+| Before/after page (UI changes) | `pwsh scripts/screenshots.ps1 -Feature <kebab-name>` (`-Before <ref>`, default `HEAD~1`; `-After <ref>`, default the working tree; or `-BeforeDir <folder of PNGs>`; `-Screens name=in:/route,...`; `-Notes "..."`) | Docker + Playwright Chromium. Publishes each side locally (trimmed Release, Test env, developer sign-in, its own Azurite, http://localhost:7439; never the live site), shoots every screen at 1366x768 and 390x844, writes `SCREENSHOTS/{YYMMDD}-{feature}.html` and one annotated `.png` (changed areas boxed red, <= ~300 KB), stops what it started. `SCREENSHOTS/` is git-ignored: give the two paths |
 | Node checks | `node --test scripts/sensory-audio.test.cjs scripts/sensory-visual.test.cjs` | Node |
 | Caption eval (syntax) | `node --check scripts/caption-eval/eval.mjs` | Node; a real evaluation is `pwsh scripts/caption-eval.ps1 -Count 5` (installs its npm packages, downloads the models) |
 | Azurite for a local run | `docker run -d --rm -p 21000:10000 -p 21001:10001 -p 21002:10002 mcr.microsoft.com/azure-storage/azurite:latest azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --skipApiVersionCheck --loose` | Docker |
@@ -172,7 +173,7 @@ Every button, text box, dropdown, number box, checkbox, tab set and chart is a R
 (docs/development.md, "Radzen controls"). The native elements left on purpose are in "Deliberate deviations" above.
 
 ### 4. UI & Output Rules
-* **UI Previews:** For visual changes, save before-and-after HTML mockups to `SCREENSHOTS/{YYMMDD}-{feature}.html` / Annotate screenshots and show in a single PNG the before and after with notes
+* **UI Previews:** For visual changes, save before-and-after HTML mockups to `SCREENSHOTS/{YYMMDD}-{feature}.html` / Annotate screenshots and show in a single PNG the before and after with notes (one command: `pwsh scripts/screenshots.ps1 -Feature <feature>`, section 3)
 * **Clarifying Questions:** If modifying more than 100 lines and no pending questions exist, list 3 key follow-up questions about future direction or logic.
 * **Problems Found:** If there are problems found, propose a solution as well for the user to approve.
 * **Required Footers:**
