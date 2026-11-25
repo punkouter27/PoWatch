@@ -1,19 +1,58 @@
 @* Face readings: the temporary labels the camera gives the people in front of it, and what its landmarks
-   say about them. Nothing is read until a face model runs, and nothing about a face is ever stored — the
-   labels last one session (docs/adr/0002-session-scoped-face-labels.md). *@
+   and the face models say about them. Read on this device and never stored — the labels last one
+   session (docs/adr/0001-face-statistics-on-device.md, docs/adr/0002-session-scoped-face-labels.md). *@
+@using PoWatch.Shared.Services
+@implements IDisposable
 @inject SensingSession Sensing
 
 <TerminalPanel Title="Faces" Class="cell-faces" Test="live-faces" Flush="true">
-    <Aside>ON DEVICE</Aside>
+    <Aside>ON DEVICE@(Sensing.FacesLabelled > 0 ? $" · {Sensing.FacesLabelled} LABELLED" : null)</Aside>
     <ChildContent>
         @if (!Sensing.IsRunning)
         {
             <p class="term-empty" data-test="faces-idle">Faces are read while the camera runs.</p>
         }
+        else if (Sensing.Live.Demo)
+        {
+            <p class="term-empty" data-test="faces-idle">The demo has no camera, so there are no faces to read.</p>
+        }
         else
         {
-            <p class="term-empty" data-test="faces-idle">No face model is loaded yet, so nobody is being read.</p>
+            <WhoList Rows="@Rows()" Label="Faces in view" Test="faces-list" Empty="No face in view." />
+            @if (!Sensing.FacesRead && Sensing.Faces.Count > 0)
+            {
+                <p class="term-stat-hint" data-test="faces-loading">Loading the face models (about 190 MB the first time) for age, presentation and labels.</p>
+            }
         }
-        <p class="term-stat-hint">Temporary labels, traditional beauty, age band and presentation appear here. Landmarks never leave this device and are never stored.</p>
+        <p class="term-stat-hint">Beauty is the classical canon (symmetry, thirds, fifths, φ) read from the landmarks. Age and presentation are model estimates and can be wrong. Nothing about a face leaves this device or is stored.</p>
     </ChildContent>
 </TerminalPanel>
+
+@code {
+    // Live passes this panel no parameters, so its re-renders skip it: it follows the session itself.
+    protected override void OnInitialized() => Sensing.Changed += OnSensingChanged;
+
+    private void OnSensingChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Sensing.Changed -= OnSensingChanged;
+
+    private List<WhoList.Row> Rows() =>
+        [.. Sensing.Faces.Select(f => new WhoList.Row(f.Label ?? "Reading…", Note(f)))];
+
+    private static string Note(FaceReadout face)
+    {
+        var ic = CultureInfo.InvariantCulture;
+        var parts = new List<string>(3)
+        {
+            face.Beauty is { } beauty ? string.Create(ic, $"beauty {beauty:0}") : "beauty —",
+        };
+        if (face.AgeBand is { } age) parts.Add(string.Create(ic, $"age {age} ({face.AgeConfidence * 100:0}%)"));
+        if (face.Readings > 0)
+        {
+            parts.Add(face.Presentation is { } presentation
+                ? string.Create(ic, $"{presentation}-presenting ({face.PresentationConfidence * 100:0}%)")
+                : "presentation unclear");
+        }
+        return string.Join(" · ", parts);
+    }
+}

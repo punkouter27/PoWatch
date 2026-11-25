@@ -13,7 +13,7 @@
         <span class="term-stat-hint">Captions @(Sensing.Captions ? "on" : "off") · Listening @(Sensing.Listening ? "on" : "off")</span>
         @foreach (var pending in _loads.Where(s => s.Phase is "downloading" or "warming" or "lost" or "failed"))
         {
-            <ModelLoad Status="@pending" Prefix="@(pending.Name == "detector" ? "Camera" : "Listening")" />
+            <ModelLoad Status="@pending" Prefix="@(pending.Name switch { "detector" => "Camera", "faces" => "Faces", _ => "Listening" })" />
         }
         <span class="term-stat-hint">Configure</span>
     </summary>

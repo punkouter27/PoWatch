@@ -15,7 +15,7 @@ One of the 17 body joints the pose model returns, used to read **posture**.
 _Avoid_: Joint, pose point
 
 **Landmark**:
-One of the 68 points the face model returns on a face, in the iBUG layout; the raw material for a **traditional beauty** score.
+One of the 68 points of the iBUG layout on a face, read from the face model's 478-point mesh; the raw material for a **traditional beauty** score.
 _Avoid_: Keypoint, facial point, face print
 
 **Face reading**:

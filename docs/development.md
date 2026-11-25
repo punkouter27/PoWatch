@@ -58,11 +58,17 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
 - **Browser sensing:** `PoWatch.Client/wwwroot/js/sensing/` (pixel layer, RF-DETR detector worker) and
   `js/sensing/inference-worker.js` (captions: models in `js/caption-models.js`, keep/reject rules in
   `js/caption-quality.js`, MiniLM embeddings in `js/embedder.js`), driven from `Client/Services/SensingSession.cs`.
-  Faces go through `js/face-overlay.js` (canvas over the feed) and `js/sensing/face-worker.js` (MediaPipe
-  Face Landmarker, 478 points, names in [GLOSSARY.md](../GLOSSARY.md)); its runtime is vendored at
-  `wwwroot/lib/mediapipe-1.2.3/` and only the ~4 MB `.task` model is downloaded at run time. The
+  Faces go through `js/face-overlay.js` (a fixed canvas laid over the docked video; follows each face
+  as a slot) and `js/sensing/face-worker.js` (MediaPipe Face Landmarker, 478 points, names in
+  [GLOSSARY.md](../GLOSSARY.md)); its runtime is vendored at `wwwroot/lib/mediapipe-1.2.3/` and only the
+  ~4 MB `.task` model is downloaded at run time. It is a module worker, so it must load the `_module_`
+  wasm pair (`forVisionTasks(WASM, true)`); the classic pair fails every frame with "ModuleFactory not set."
+  Every 1.5 s one face crop goes to `js/sensing/face-reader-worker.js` (CPU, ~190 MB on first use): age
+  band, presentation and a DINOv2 descriptor. Both reach `Client/Services/SensingSession.Faces.cs` as
+  `[JSExport]` typed arrays and live in `FaceReadings` for the session only; `MediaPipeFace` maps the
+  mesh to the 68 iBUG points `FaceGeometry` scores. The
   browser-safe C# parts (`CentroidTracker`, `TickBatcher`, `VlmScheduler`, `AdaptiveCadence`,
-  `HighlightRules`, `PostureRules`, `FaceGeometry`, `FaceLabeler`, `ReelPlanner`) sit in `PoWatch.Shared/Services` so unit tests can cover them. Unsent batches wait
+  `HighlightRules`, `PostureRules`, `FaceGeometry`, `FaceLabeler`, `MediaPipeFace`, `FaceReadings`, `ReelPlanner`) sit in `PoWatch.Shared/Services` so unit tests can cover them. Unsent batches wait
   in the IndexedDB outbox (`js/outbox.js`).
 - **Ingest:** `Api/Features/Ingest` → `Application/Features/Ingest/IngestService.cs`. It claims each `batchKey`
   once in `PoWatchIngestLedger`, writes raw rows and merges minute/hour/day/all rollups; the endpoint

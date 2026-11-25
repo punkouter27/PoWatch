@@ -15,7 +15,10 @@ let _lastAt = 0;
 
 function load() {
   _loading ??= (async () => {
-    const fileset = await FilesetResolver.forVisionTasks(WASM);
+    // `true` picks the ES-module loader (vision_wasm_module_internal.*): this is a module worker, where
+    // the classic loader is import()ed, keeps ModuleFactory to itself, and every frame fails with
+    // "ModuleFactory not set." The classic pair stays vendored for a classic worker.
+    const fileset = await FilesetResolver.forVisionTasks(WASM, true);
     return FaceLandmarker.createFromOptions(fileset, {
       baseOptions: { modelAssetPath: MODEL, delegate: 'GPU' },
       runningMode: 'VIDEO',
@@ -39,7 +42,8 @@ self.onmessage = async (event) => {
     const started = performance.now();
     const result = _landmarker.detectForVideo(bitmap, _lastAt);
     const faces = (result.faceLandmarks ?? []).map((points) => points.map((p) => [p.x, p.y]));
-    self.postMessage({ faces, latencyMs: Math.round(performance.now() - started) });
+    // Points are normalised to each side; the page needs the frame's shape to make lengths compare.
+    self.postMessage({ faces, aspect: bitmap.height / bitmap.width, latencyMs: Math.round(performance.now() - started) });
   } catch (err) {
     self.postMessage({ faces: [], error: String(err?.message ?? err) });
   } finally {

@@ -10,3 +10,11 @@ camera runs and a stranger to the app the next time. Matching happens on a runni
 distance of 0.35, and the session labels at most 20 people. The rejected alternatives were storing
 descriptors alongside **Regular** (a permanent biometric gallery, which is the thing this repo has
 always refused) and labelling nothing (which is not what was asked for).
+
+Amended 2026-11-25, when a model was wired up: no face-recognition model ships for the browser from a
+source this repo trusts, so the descriptor is DINOv2-small's view of a face crop, a general image
+model. On 40 LFW photos it could not separate people on its own (half of same-person pairs were past
+0.39, 5% of different-person pairs within 0.3), so a face keeps its label by being **followed** from
+frame to frame, and the descriptor only decides whether a new face is someone who came back (0.2,
+excluding labels already in view) or whether a followed spot now holds someone else (past 0.45). A
+miss gives a returning person a new number; it never gives them someone else's.

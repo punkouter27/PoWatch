@@ -11,13 +11,20 @@ public readonly record struct FaceMatch(string Label, double Distance);
 /// only "which of the people in front of me right now is which".
 /// </summary>
 /// <remarks>One instance per session, driven from the sensing loop: not thread-safe.</remarks>
-public sealed class FaceLabeler
+/// <param name="threshold">
+/// The cosine distance this labeler matches under: <see cref="MatchDistance"/> unless the descriptor's
+/// model needs a tighter one.
+/// </param>
+public sealed class FaceLabeler(double threshold = FaceLabeler.MatchDistance)
 {
     /// <summary>
-    /// Cosine distance under which two descriptors count as the same person. Tight enough that a
-    /// different face is a new label; loose enough to survive a turned head or new light.
+    /// The default cosine distance under which two descriptors count as the same person. Tight enough
+    /// that a different face is a new label; loose enough to survive a turned head or new light.
     /// </summary>
     public const double MatchDistance = 0.35;
+
+    /// <summary>The cosine distance this labeler matches under.</summary>
+    public double Threshold { get; } = threshold;
 
     /// <summary>How many people one session labels before the rest go unlabelled.</summary>
     public const int MaxLabels = 20;
@@ -33,7 +40,70 @@ public sealed class FaceLabeler
     /// the descriptor cannot describe a face (empty, not finite, all zeros, a different width than
     /// the ones already seen, or a session that has met <see cref="MaxLabels"/> people).
     /// </summary>
-    public FaceMatch? Observe(IReadOnlyList<float> descriptor)
+    /// <param name="descriptor">The face model's descriptor.</param>
+    /// <param name="exclude">
+    /// Labels this face cannot have: the people already in view, so two faces side by side never share one.
+    /// </param>
+    public FaceMatch? Observe(IReadOnlyList<float> descriptor, IReadOnlyCollection<string>? exclude = null)
+    {
+        if (Unit(descriptor) is not { } unit) return null;
+
+        Known? nearest = null;
+        var nearestDistance = double.MaxValue;
+        foreach (var known in _known)
+        {
+            // One model produces one width; a mixed feed means two descriptors of different kinds
+            // arrived, and matching across them would be nonsense.
+            if (known.Centroid.Length != unit.Length) return null;
+            if (exclude?.Contains(known.Label) == true) continue;
+            var distance = 1 - Dot(known.Centroid, unit);
+            if (distance < nearestDistance)
+            {
+                (nearest, nearestDistance) = (known, distance);
+            }
+        }
+
+        if (nearest is not null && nearestDistance <= Threshold)
+        {
+            nearest.Learn(unit);
+            return new FaceMatch(nearest.Label, Math.Round(nearestDistance, 3));
+        }
+
+        if (_known.Count >= MaxLabels) return null;
+
+        var label = $"Person {++_issued}";
+        _known.Add(new Known(label, unit));
+        return new FaceMatch(label, 0);
+    }
+
+    /// <summary>
+    /// Folds another sighting into <paramref name="label"/>, for a face already known by other means
+    /// (it has been followed from frame to frame), so the label is easier to recognise when they come
+    /// back. False when the label is unknown or the descriptor cannot describe a face.
+    /// </summary>
+    public bool Learn(string label, IReadOnlyList<float> descriptor)
+    {
+        if (Unit(descriptor) is not { } unit) return false;
+        var known = _known.Find(k => k.Label == label);
+        if (known is null || known.Centroid.Length != unit.Length) return false;
+        known.Learn(unit);
+        return true;
+    }
+
+    /// <summary>
+    /// How far <paramref name="descriptor"/> sits from <paramref name="label"/>'s face (cosine distance),
+    /// or null when the label is unknown or the descriptor cannot describe a face.
+    /// </summary>
+    public double? DistanceTo(string label, IReadOnlyList<float> descriptor)
+    {
+        if (Unit(descriptor) is not { } unit) return null;
+        var known = _known.Find(k => k.Label == label);
+        if (known is null || known.Centroid.Length != unit.Length) return null;
+        return 1 - Dot(known.Centroid, unit);
+    }
+
+    /// <summary>The descriptor scaled to length 1, or null when it is empty, not finite or all zeros.</summary>
+    private static double[]? Unit(IReadOnlyList<float> descriptor)
     {
         if (descriptor is null || descriptor.Count == 0) return null;
 
@@ -49,32 +119,7 @@ public sealed class FaceLabeler
         var length = Math.Sqrt(squares);
         if (length <= 1e-9) return null;
         for (var i = 0; i < unit.Length; i++) unit[i] /= length;
-
-        Known? nearest = null;
-        var nearestDistance = double.MaxValue;
-        foreach (var known in _known)
-        {
-            // One model produces one width; a mixed feed means two descriptors of different kinds
-            // arrived, and matching across them would be nonsense.
-            if (known.Centroid.Length != unit.Length) return null;
-            var distance = 1 - Dot(known.Centroid, unit);
-            if (distance < nearestDistance)
-            {
-                (nearest, nearestDistance) = (known, distance);
-            }
-        }
-
-        if (nearest is not null && nearestDistance <= MatchDistance)
-        {
-            nearest.Learn(unit);
-            return new FaceMatch(nearest.Label, Math.Round(nearestDistance, 3));
-        }
-
-        if (_known.Count >= MaxLabels) return null;
-
-        var label = $"Person {++_issued}";
-        _known.Add(new Known(label, unit));
-        return new FaceMatch(label, 0);
+        return unit;
     }
 
     private static double Dot(double[] a, double[] b)

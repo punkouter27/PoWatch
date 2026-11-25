@@ -11,7 +11,7 @@ public sealed class FaceGeometryTests
     /// nominal — this is a fixture, not a rendering — but every pair <see cref="FaceGeometry"/> mirrors
     /// is mirrored here, so the base face is exactly symmetric.
     /// </summary>
-    private static double[] Face(
+    internal static double[] Face(
         double faceWidth = 0.28,
         double eyeWidth = 0.056,
         double noseWidth = 0.04,
