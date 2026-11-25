@@ -79,6 +79,18 @@
                         {
                             <div class="live-demo-note" aria-hidden="true">DEMO SCENE · SYNTHETIC</div>
                         }
+                        @if (Sensing.IsRunning)
+                        {
+                            @* A broadcast-style corner readout: on air, the clock, who is in view, how long it has run. *@
+                            <div class="live-hud" aria-hidden="true" data-test="live-hud">
+                                <span class="live-hud-rec">●</span> @DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture)
+                                · @L.PeopleNow IN VIEW
+                                @if (L.Session?.StartedUtc is { } began)
+                                {
+                                    <text> · @DisplayText.Duration((DateTimeOffset.UtcNow - began).TotalSeconds)</text>
+                                }
+                            </div>
+                        }
                     </div>
                 </div>
             </ChildContent>
@@ -127,6 +139,10 @@
                     @* Which edge of the frame is the door: entries and exits together, per edge. *@
                     <ShareBar Label="Comings and goings by frame edge today" Test="space-edges"
                               Parts="@([.. space.Entries.Keys.Union(space.Exits.Keys).Select(edge => new ShareBar.Part(edge.ToLowerInvariant(), space.Entries.GetValueOrDefault(edge) + space.Exits.GetValueOrDefault(edge), Note: $"{space.Entries.GetValueOrDefault(edge)} in · {space.Exits.GetValueOrDefault(edge)} out")).OrderByDescending(p => p.Value)])" />
+                }
+                else
+                {
+                    <p class="term-empty" data-test="space-empty">Spots and doors appear after the first minute of watching today.</p>
                 }
             </ChildContent>
         </TerminalPanel>

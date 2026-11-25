@@ -4,8 +4,8 @@
 @using PoWatch.Shared.Services
 @inject SensingSession Sensing
 
-<TerminalPanel Title="Activity" Class="cell-activity" Test="live-activity" Flush="true">
-    <Aside>NOW vs USUAL@(Sensing.IsRunning && B.FullBodySeen ? " · FULL BODY" : null)</Aside>
+<TerminalPanel Title="Activity" Class="@(ZChip.IsUnusual(Anomaly("motion")?.Z) ? "cell-activity panel-alert" : "cell-activity")" Test="live-activity" Flush="true">
+    <Aside>@(ZChip.IsUnusual(Anomaly("motion")?.Z) ? "UNUSUAL · " : null)NOW vs USUAL@(Sensing.IsRunning && B.FullBodySeen ? " · FULL BODY" : null)</Aside>
     <ChildContent>
         <div class="metric-cards">
             <RadzenCard class="metric-card">

@@ -1,6 +1,11 @@
-@* A tiny inline SVG trend line. Cheap enough to put one in every table row, which a chart control is not. *@
+@* A tiny inline SVG trend line. Cheap enough to put one in every table row, which a chart control is not.
+   An optional Baseline draws faintly behind it on the same scale (today over a usual day). *@
 <svg class="term-spark @(Cyan ? "term-spark--cyan" : string.Empty)" viewBox="0 0 100 28" preserveAspectRatio="none"
      role="img" aria-label="@Label">
+    @if (_baseline.Length > 0)
+    {
+        <polyline class="term-spark-base" points="@_baseline" />
+    }
     @if (_points.Length > 0)
     {
         <polyline points="@_points" />
@@ -9,27 +14,35 @@
 
 @code {
     private string _points = string.Empty;
+    private string _baseline = string.Empty;
 
     [Parameter, EditorRequired] public IReadOnlyList<double> Values { get; set; } = [];
 
-    /// <summary>Fixed top of the scale; the series maximum when null.</summary>
+    /// <summary>Fixed top of the scale; the larger of both series' maxima when null.</summary>
     [Parameter] public double? Max { get; set; }
+
+    /// <summary>A second series drawn faintly behind Values, on the same scale.</summary>
+    [Parameter] public IReadOnlyList<double>? Baseline { get; set; }
+
+    /// <summary>How many points span the full width; Values' own count when null. Set it to draw a partial day.</summary>
+    [Parameter] public int? Slots { get; set; }
 
     [Parameter] public bool Cyan { get; set; }
     [Parameter] public string Label { get; set; } = "Trend";
 
     protected override void OnParametersSet()
     {
-        if (Values.Count < 2)
-        {
-            _points = string.Empty;
-            return;
-        }
-
-        var max = Max ?? Values.Max();
+        var max = Max ?? Math.Max(Values.DefaultIfEmpty().Max(), Baseline?.DefaultIfEmpty().Max() ?? 0);
         if (max <= 0) max = 1;
-        var step = 100.0 / (Values.Count - 1);
-        _points = string.Join(' ', Values.Select((v, i) =>
+        _points = Line(Values, Slots ?? Values.Count, max);
+        _baseline = Baseline is null ? string.Empty : Line(Baseline, Slots ?? Baseline.Count, max);
+    }
+
+    private static string Line(IReadOnlyList<double> values, int slots, double max)
+    {
+        if (values.Count < 2 || slots < 2) return string.Empty;
+        var step = 100.0 / (slots - 1);
+        return string.Join(' ', values.Take(slots).Select((v, i) =>
             FormattableString.Invariant($"{i * step:0.##},{27 - (Math.Clamp(v / max, 0, 1) * 26):0.##}")));
     }
 }

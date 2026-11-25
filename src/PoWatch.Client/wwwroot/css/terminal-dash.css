@@ -65,7 +65,9 @@
 @media (min-width: 1100px) and (min-height: 640px) {
     .dash-grid {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
-        grid-template-rows: auto minmax(360px, auto) auto;
+        /* Outer rows size to their fullest panel up to a cap, so the three panels in a row stay one height
+           and a long list scrolls inside its panel instead of stretching the row. */
+        grid-template-rows: minmax(0, 340px) minmax(380px, auto) minmax(0, 340px);
         grid-template-areas:
             "metrics     inframe   faces"
             "heat        camera    narration"
@@ -93,6 +95,44 @@
 @media (max-width: 719.98px) {
     .stats-window { flex-basis: 100%; }
 }
+
+/* FactRow: small labelled numbers under a panel's headline; tabular digits so live numbers don't jitter. */
+.fact-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 10px 12px; margin: 0; padding: 10px; border-top: 1px solid var(--term-line); }
+.fact { min-width: 0; }
+.fact dt { overflow: hidden; font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-dim); white-space: nowrap; text-overflow: ellipsis; }
+.fact dd { overflow: hidden; margin: 2px 0 0; font: 600 15px var(--term-mono); font-variant-numeric: tabular-nums; color: var(--term-text); white-space: nowrap; text-overflow: ellipsis; }
+
+/* ShareBar: one stacked bar for how a whole splits, legend under it. */
+.share-bar { padding: 8px 10px; }
+.share-bar-track { display: flex; gap: 2px; height: 8px; overflow: hidden; border-radius: 999px; background: var(--term-panel-2); }
+.share-bar-track > span { flex-basis: 0; min-width: 3px; }
+.share-bar-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0 0; padding: 0; list-style: none; font: 11px var(--term-mono); color: var(--term-muted); }
+.share-bar-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; }
+.share-bar-legend b { margin-left: 4px; color: var(--term-text); font-weight: 600; }
+
+.term-panel-body--flush > .fact-row:first-child { border-top: 0; }
+.share-bar-track > span { transition: flex-grow 600ms ease-out; }
+
+/* A panel whose number is 2σ or more from usual: amber edge and a slow glow, so it is seen from across the room. */
+.term-panel.panel-alert { border-color: var(--term-amber); animation: panel-alert 2.4s ease-in-out infinite alternate; }
+.panel-alert > .term-panel-head .term-panel-meta { color: var(--term-text); }
+@keyframes panel-alert {
+    from { box-shadow: 0 0 0 1px var(--term-amber); }
+    to { box-shadow: 0 0 0 1px var(--term-amber), 0 0 18px color-mix(in srgb, var(--term-amber) 35%, transparent); }
+}
+
+/* The camera's corner readout. White on a dark scrim: it sits on video, not on the theme's surface. */
+.live-hud { position: absolute; z-index: 3; top: 8px; left: 8px; padding: 3px 8px; border-radius: 3px; background: #000000b3; color: #fff; font: 11px var(--term-mono); font-variant-numeric: tabular-nums; letter-spacing: 0.06em; pointer-events: none; }
+.live-hud-rec { color: var(--term-red); animation: hud-rec 1.6s steps(2, jump-none) infinite; }
+@keyframes hud-rec { 50% { opacity: 0.25; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .term-panel.panel-alert, .live-hud-rec { animation: none; }
+    .share-bar-track > span { transition: none; }
+}
+
+/* Room insights: the captions' most-used words as chips. */
+.env-words .word-chip { display: inline-block; margin: 2px 4px 2px 0; padding: 0 7px; border: 1px solid var(--term-line); border-radius: 999px; }
 
 .live-stage { background: #05070a; }
 .live-heat { display: grid; place-items: center; }

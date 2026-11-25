@@ -16,10 +16,6 @@
             <span>@census.Count THINGS SEEN</span>
         }</Aside>
     <ChildContent>
-        @if (L.Tracks.Count > 0)
-        {
-            <WhoList Rows="@WhoIsHere()" Label="Tracked right now" />
-        }
         @if (Presence is { } stay)
         {
             <FactRow Test="inframe-dwell" Facts="@([
@@ -28,6 +24,10 @@
                 new("Longest", stay.DwellMaxSeconds >= 1 ? DisplayText.Duration(stay.DwellMaxSeconds) : null, "The longest single visit this session"),
                 new("Empty for", stay.LongestEmptySeconds >= 1 ? DisplayText.Duration(stay.LongestEmptySeconds) : null, "The longest stretch with nobody in frame"),
             ])" />
+        }
+        @if (L.Tracks.Count > 0)
+        {
+            <WhoList Rows="@WhoIsHere()" Label="Tracked right now" />
         }
         @if (census.Count == 0)
         {

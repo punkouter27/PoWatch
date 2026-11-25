@@ -172,7 +172,7 @@ working in this repository:
 ### 3. Architecture & Setup
 * **Keep Docs Updated:** Check `docs/` and `README.md` first to get an overview of the app, and update them in the same change
 * **Fully Automated:** Run all builds, scripts, and setup commands directly. Do not ask the user to run terminal commands.
-* **Shared Components:** Look to consolidate functionality and UI into shared components when possible. Reusable UI goes in `src/PoWatch.Client/Components/` (`WhoList`, `StatCell`, `Sparkline`, `TerminalPanel`), browser-safe logic in `PoWatch.Shared/Services`; two panels that render the same list or number should share one component rather than copy the markup. `scripts/check-hygiene.ps1` fails on a component nothing renders.
+* **Shared Components:** Look to consolidate functionality and UI into shared components when possible. Reusable UI goes in `src/PoWatch.Client/Components/` (`WhoList`, `StatCell`, `FactRow`, `ShareBar`, `Sparkline`, `TerminalPanel`), browser-safe logic in `PoWatch.Shared/Services`; two panels that render the same list or number should share one component rather than copy the markup. `scripts/check-hygiene.ps1` fails on a component nothing renders.
 
 ### Radzen is the component library (owner decision 2026-11-21)
 Every button, text box, dropdown, number box, checkbox, tab set and chart is a Radzen component

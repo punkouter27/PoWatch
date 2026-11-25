@@ -141,9 +141,8 @@
 .moment img { display: block; grid-column: 1 / -1; width: min(100%, 320px); margin: 4px 0 2px; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--term-line); border-radius: 2px; }
 .moment.is-now { background: color-mix(in srgb, var(--term-accent) 14%, transparent); box-shadow: inset 2px 0 0 var(--term-accent); }
 
-.live-who b, .live-spots b, .live-census b { color: var(--term-text); font-weight: 600; }
+.live-who b, .live-census b { color: var(--term-text); font-weight: 600; }
 
-.live-spots { margin: 8px 0 0; font: 11px var(--term-mono); color: var(--term-muted); }
 
 .live-heat-label { margin: 0 0 4px; font: var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; color: var(--term-dim); }
 /* Space's switch between the two heats, in the panel's title bar. */

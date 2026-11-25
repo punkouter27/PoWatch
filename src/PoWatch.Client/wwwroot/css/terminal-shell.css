@@ -430,6 +430,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .term-spark { display: block; width: 100%; height: 28px; }
 .term-spark polyline { fill: none; stroke: var(--term-accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .term-spark--cyan polyline { stroke: var(--term-cyan); }
+.term-spark polyline.term-spark-base { stroke: var(--term-dim); stroke-dasharray: 3 3; opacity: 0.7; }
 
 
 .term-heat {

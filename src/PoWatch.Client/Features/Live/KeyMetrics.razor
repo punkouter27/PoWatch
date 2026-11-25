@@ -1,8 +1,8 @@
 @* Live's headline numbers for the range beside your usual day, and how far today sits from it (σ).
    Head counts (now, peak, visits) are In frame's; the third headline number, activity, has its own panel. *@
 
-<TerminalPanel Title="Key metrics" Class="cell-metrics" Test="live-metrics" Flush="true">
-    <Aside>@Range.ToUpperInvariant() vs USUAL</Aside>
+<TerminalPanel Title="Key metrics" Class="@(Unusual ? "cell-metrics panel-alert" : "cell-metrics")" Test="live-metrics" Flush="true">
+    <Aside>@(Unusual ? "UNUSUAL · " : null)@Range.ToUpperInvariant() vs USUAL</Aside>
     <ChildContent>
         <div class="metric-cards">
             <RadzenCard class="metric-card" data-test="metric-occupancy">
@@ -20,6 +20,15 @@
                         <ZChip Z="@Anomaly("visits/hour")?.Z" />
                     </StatCell>
                     <Sparkline Values="@VisitsTrend" Cyan="true" Label="Visits over the session" />
+                </RadzenCard>
+            }
+            @if (Patterns is { TodayProfile.Count: 24, UsualProfile.Count: 24 } day && day.UsualProfile.Any(v => v > 0))
+            {
+                <RadzenCard class="metric-card" data-test="metric-day-shape">
+                    <StatCell Label="Today vs usual" Value="@($"{DateTime.Now.Hour:00}:00")"
+                              Hint="Occupancy by hour; the faint line is your usual day" />
+                    <Sparkline Values="@day.TodayProfile.Take(DateTime.Now.Hour + 1).ToList()" Baseline="@day.UsualProfile" Slots="24"
+                               Label="Today's occupancy by hour over your usual day" />
                 </RadzenCard>
             }
         </div>
@@ -42,6 +51,9 @@
     [Parameter] public IReadOnlyList<double> VisitsTrend { get; set; } = [];
 
     private AnomalyDto? Anomaly(string metric) => Patterns?.Anomalies.FirstOrDefault(a => a.Metric == metric);
+
+    /// <summary>Occupancy, or visits once the rate is shown, is 2σ or more from usual: the panel lights up.</summary>
+    private bool Unusual => ZChip.IsUnusual(Anomaly("occupancy")?.Z) || (!RateTooEarly && ZChip.IsUnusual(Anomaly("visits/hour")?.Z));
 
     /// <summary>"+0.82 typical": today's curve against the usual one; null until today has a shape.</summary>
     private string? Rhythm => Patterns?.RhythmScore is { } r

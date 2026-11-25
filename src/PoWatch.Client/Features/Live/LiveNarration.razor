@@ -12,6 +12,14 @@
         <span class="term-stat-hint">@Status</span>
         <TranscriptLink Entries="@lines" Title="@TranscriptTitle" FileName="@TranscriptFile" />
     </div>
+    <FactRow Test="narration-facts" Facts="@([
+        new("Per minute", PerMinute(all), "Lines written per minute over the session"),
+        new("Saw", Count(all, "caption", "moment"), "Scene descriptions and notable moments"),
+        new("Said", Count(all, "speech"), "Speech heard and transcribed"),
+        new("Heard", Count(all, "sound"), "Sounds recognised"),
+        new("Comings", Count(all, "enter", "exit"), "Arrivals and departures"),
+        new("Longest quiet", QuietGap(all), "The longest wait between two lines"),
+    ])" />
     <TimelineFilters @bind-Value="_filter" TestPrefix="narration" Label="Filter narration" />
     @if (Sensing.Live.LastError is { } error && Recording)
     {
@@ -68,6 +76,21 @@
         : SessionId == Guid.Empty
             ? "Press Start: everything the camera sees and the microphone hears is written here."
             : "Nothing was written down in this session.";
+
+    private static string? Count(List<TimelineEntry> lines, params string[] kinds) =>
+        lines.Count == 0 ? null : lines.Count(e => kinds.Contains(e.Kind)).ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>Lines a minute from the session's start; null before a minute has passed.</summary>
+    private string? PerMinute(List<TimelineEntry> lines)
+    {
+        if (lines.Count == 0 || Started is not { } start) return null;
+        var minutes = ((Recording ? DateTimeOffset.UtcNow : _endedUtc ?? lines[0].AtUtc) - start).TotalMinutes;
+        return minutes < 1 ? null : (lines.Count / minutes).ToString("0.0", CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>The widest gap between two neighbouring lines (they arrive newest first); null under two lines.</summary>
+    private static string? QuietGap(List<TimelineEntry> lines) =>
+        lines.Count < 2 ? null : DisplayText.Duration(lines.Zip(lines.Skip(1), (a, b) => (a.AtUtc - b.AtUtc).TotalSeconds).Max());
 
     /// <summary>Newest first: the browser's lines while recording, else what the server kept.</summary>
     private IEnumerable<TimelineEntry> Lines() => Recording ? L.Narration.Reverse() : _kept;

@@ -4,6 +4,9 @@
 @code {
     [Parameter] public double? Z { get; set; }
 
+    /// <summary>The flag threshold, shared with panels that light up when one of their numbers is unusual.</summary>
+    public static bool IsUnusual(double? z) => z is { } v && Math.Abs(v) >= 2;
+
     private string Summary => Z switch
     {
         null => "Building history",
