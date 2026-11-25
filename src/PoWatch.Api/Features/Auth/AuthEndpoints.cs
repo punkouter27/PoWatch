@@ -44,10 +44,20 @@ internal static class AuthEndpoints
         .WithName("AuthConfig")
         .WithSummary("Which sign-in methods are available in this environment.");
 
-        group.MapGet("/login/microsoft", (string? returnUrl, IConfiguration config) =>
+        group.MapGet("/login/microsoft", (
+            string? returnUrl,
+            IConfiguration config,
+            IOptions<FeatureFlagsOptions> flags,
+            IWebHostEnvironment env) =>
         {
             if (string.IsNullOrWhiteSpace(config["AzureAd:ClientId"]))
+            {
+                // A local run has no Entra app, but /login shows the Microsoft button everywhere: on a host
+                // that allows developer sign-in, the button signs in as the guest instead of dead-ending.
+                if (flags.Value.DeveloperBypassAuth && !env.IsProduction())
+                    return Results.Redirect($"/auth/login/fake?returnUrl={Uri.EscapeDataString(SafeLocalUrl(returnUrl))}");
                 return Results.NotFound(new { message = "Microsoft sign-in is not configured." });
+            }
 
             var props = new AuthenticationProperties { RedirectUri = SafeLocalUrl(returnUrl) };
             return Results.Challenge(props, [OpenIdConnectDefaults.AuthenticationScheme]);
