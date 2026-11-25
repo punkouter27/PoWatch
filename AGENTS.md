@@ -118,7 +118,8 @@ Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 | Run locally (developer sign-in) | `AzureStorage__ConnectionString="<Azurite connection string, ports 21000-21002>" FeatureFlags__DeveloperBypassAuth=true FeatureFlags__EnableKeyVault=false ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:7428 dotnet run --project src/PoWatch.Api --no-launch-profile` | → http://localhost:7428 and http://localhost:7428/diag; sign in at http://localhost:7428/auth/login/fake?returnUrl=/ |
 
 - **Deploy:** push to `master` runs `.github/workflows/deploy.yml` (format, build, Unit, Integration, publish,
-  deploy; the `mobile` job builds the Android client beside it). `*.md` changes do not deploy.
+  deploy; the `mobile` job builds the Android client beside it). Markdown changes, anywhere in the tree, and
+  `.github/skills/**` do not deploy (`**/*.md` in `paths-ignore`; a bare `*.md` misses nested files).
 - **Deploy check:** `curl -sI https://app-powatch-win2.azurewebsites.net/health/live` shows `X-Commit: <pushed sha>`
   (the workflow waits for it).
 - **Live:** https://app-powatch-win2.azurewebsites.net and https://app-powatch-win2.azurewebsites.net/diag

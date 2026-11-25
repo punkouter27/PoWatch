@@ -16,7 +16,9 @@ name: Build & Deploy
 on:
   push:
     branches: [master]
-    paths-ignore: ['*.md', 'SCREENSHOTS/**']
+    # `*` does not cross `/` in path filters, so `*.md` alone misses every nested Markdown file (docs/,
+    # .github/skills/). Skills are prose and cannot change the build, so they never deploy either.
+    paths-ignore: ['**/*.md', '.github/skills/**', 'SCREENSHOTS/**']
   workflow_dispatch:
 
 concurrency:
