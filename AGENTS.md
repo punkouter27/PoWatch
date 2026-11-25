@@ -157,6 +157,10 @@ working in this repository:
 ### 1. Git & Workflow
 * **Stay on `master`:** Commit directly to `master`. Create branches only when specifically asked.
 * **Casual Commits:** Write short, natural commit messages using informal American phrasing. Auto-commit and push on sync.
+* **Plan fuzzy work with `/grill-with-docs`:** the project skills in `.github/skills/` (`grill-with-docs`,
+  `grilling`, `domain-modeling`) interview you in rounds and write `GLOSSARY.md` at the root plus `docs/adr/` as
+  terms and decisions settle. Both files are created lazily; `GLOSSARY.md` is vocabulary only. See
+  [docs/development.md](docs/development.md).
 
 ### 2. Running, Testing & Clean Code
 * **Run Only Related Tests:** Test only what was touched. Skip tests for minor edits; never run the whole test suite.

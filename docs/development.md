@@ -33,6 +33,24 @@ E2EUI hosts the app in-process against an Azurite Testcontainer by default (sinc
 pass every test silently unless `E2E_LOCAL=1`). `E2E_BASE_URL` points it at a running instance instead. It
 never skips: no Docker or no Chromium fails every test with the reason.
 
+## Planning a change: `/grill-with-docs`
+
+New features start with an interview, not a guessed spec. Three project skills live in
+[.github/skills/](../.github/skills) and load in Copilot (VS Code and CLI) and in Claude Code:
+
+- **`grill-with-docs`** (type `/grill-with-docs`) — interviews you about a plan or design, in rounds, and records
+  what settles as it goes. This is the one you invoke.
+- **`grilling`** — the interview: the design tree, the frontier, one numbered round with a recommendation per
+  question on a `➡️` line, then wait. Facts come from the code, decisions come from you.
+- **`domain-modeling`** — the writing: a resolved term goes into `GLOSSARY.md` at the root the moment it settles,
+  and a decision is offered as an ADR in `docs/adr/` only when it is hard to reverse, surprising without context
+  **and** the result of a real trade-off. Most sessions earn none.
+
+`grill-with-docs` is a one-line delegation to the other two, so all three are committed: the wrapper alone gives
+you an interview that writes nothing. `GLOSSARY.md` and `docs/adr/` are created on the first term or ADR, never in
+advance, and `GLOSSARY.md` holds vocabulary only — no implementation detail, no spec, no scratch notes. The session
+ends at shared understanding and stops there; nothing is built until you say so.
+
 ## Where the pipeline lives
 
 Sensing runs in the browser; the server only ingests 10-second ticks and serves rollups.
