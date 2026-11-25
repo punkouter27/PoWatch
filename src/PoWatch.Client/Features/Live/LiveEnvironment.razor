@@ -1,7 +1,7 @@
 @inherits StatsTabBase<EnvironmentStatsDto>
 @inject SensingSession Sensing
 
-@if (HasReadings || Data?.WeirdestCaption is not null || (!Query.IsEmpty && (Loading || Data is null)))
+@if (HasReadings || HasHistory || (!Query.IsEmpty && (Loading || Data is null)))
 {
 <TerminalPanel Title="Room insights" Class="cell-env" Test="live-environment" Flush="true">
     <ChildContent>
@@ -17,6 +17,28 @@
                     <StatCell Label="Last sound" Value="@Sound" Hint="@SoundHint" Test="metric-sound" />
                 }
             </div>
+        }
+        @if (Data is { } env)
+        {
+            <FactRow Test="env-facts" Facts="@([
+                new("Light switches", env.LightCurve.Count > 0 ? env.Switches.Count.ToString(CultureInfo.InvariantCulture) : null, LastSwitch(env)),
+                new("Sunrise", env.SunriseUtc is { } rise ? DisplayText.LocalTime(rise) : null, "Today's sunrise where you are"),
+                new("Sunset", env.SunsetUtc is { } set ? DisplayText.LocalTime(set) : null, "Today's sunset where you are"),
+                new("Captions", env.CaptionCount > 0 ? env.CaptionCount.ToString(CultureInfo.InvariantCulture) : null, "How many times the scene was described in words this session"),
+            ])" />
+            @* The room's own colours, as the camera saw them: data, so not theme tokens. *@
+            <ShareBar Label="The room's main colours this session" Test="env-palette" Legend="false"
+                      Parts="@([.. env.Palette.Select(c => new ShareBar.Part($"#{c.Rgb:x6}", c.Share, $"#{c.Rgb:x6}"))])" />
+            @if (env.Words.Count > 0)
+            {
+                <p class="live-census env-words" data-test="env-words" title="The words the captions used most this session">
+                    <span class="live-heat-label">MOST SAID</span>
+                    @foreach (var word in env.Words.Take(8))
+                    {
+                        <span class="word-chip">@word.Word <b>@word.Count</b></span>
+                    }
+                </p>
+            }
         }
         @if (Data?.WeirdestCaption is { } caption)
         {
@@ -36,7 +58,13 @@
 
 @code {
     private LiveSensingState L => Sensing.Live;
-    private bool HasReadings => Sensing.IsRunning && (L.Light is not null || !string.IsNullOrEmpty(L.LastSound));
+    private bool HasHistory => Data is { } d && (d.WeirdestCaption is not null || d.Palette.Count > 0 || d.Words.Count > 0 || d.CaptionCount > 0);
+
+    private static string? LastSwitch(EnvironmentStatsDto env) => env.Switches.Count == 0
+        ? "The lights have not been switched this session"
+        : $"Lights last switched {(env.Switches[^1].On ? "on" : "off")} at {DisplayText.LocalTime(env.Switches[^1].AtUtc)}";
+
+    private bool HasReadings =>Sensing.IsRunning && (L.Light is not null || !string.IsNullOrEmpty(L.LastSound));
 
     protected override Task<EnvironmentStatsDto?> LoadAsync(StatsQuery query) => Api.GetEnvironmentAsync(query);
     protected override bool ShouldRender() => true;

@@ -1,6 +1,7 @@
 @* Face readings: the temporary labels the camera gives the people in front of it, and what its landmarks
    and the face models say about them. Read on this device and never stored — the labels last one
-   session (docs/adr/0001-face-statistics-on-device.md, docs/adr/0002-session-scoped-face-labels.md). *@
+   session (docs/adr/0001-face-statistics-on-device.md, docs/adr/0002-session-scoped-face-labels.md).
+   Under them, the body language the body points show (arms crossed, leaning in…), also this session's only (ADR 0003). *@
 @using PoWatch.Shared.Services
 @implements IDisposable
 @inject SensingSession Sensing
@@ -18,10 +19,26 @@
         }
         else
         {
+            <FactRow Test="faces-facts" Facts="@([
+                new("In view", Sensing.Faces.Count.ToString(CultureInfo.InvariantCulture), "Faces the landmarker sees right now"),
+                new("Labelled", Sensing.FacesLabelled.ToString(CultureInfo.InvariantCulture), "Temporary Person labels given this session; forgotten when it ends"),
+                new("Mean beauty", MeanBeauty(), "The classical-canon score averaged over the faces in view"),
+            ])" />
             <WhoList Rows="@Rows()" Label="Faces in view" Test="faces-list" Empty="No face in view." />
             @if (!Sensing.FacesRead && Sensing.Faces.Count > 0)
             {
                 <p class="term-stat-hint" data-test="faces-loading">Loading the face models (about 190 MB the first time) for age, presentation and labels.</p>
+            }
+            @if (Sensing.Bodies.InView.Count > 0)
+            {
+                <p class="live-census" data-test="body-language-now"><span class="live-heat-label">BODY LANGUAGE</span></p>
+                <WhoList Rows="@BodyRows()" Label="Body language of each body in view" Test="body-language" />
+            }
+            @if (BodySummary() is { } summary)
+            {
+                <p class="live-census" data-test="body-language-summary" title="Person-time this session, read from body points on this machine">
+                    <span class="live-heat-label">SESSION</span>@summary
+                </p>
             }
         }
         <p class="term-stat-hint">Beauty is the classical canon (symmetry, thirds, fifths, φ) read from the landmarks. Age and presentation are model estimates and can be wrong. Nothing about a face leaves this device or is stored.</p>
@@ -38,6 +55,41 @@
 
     private List<WhoList.Row> Rows() =>
         [.. Sensing.Faces.Select(f => new WhoList.Row(f.Label ?? "Reading…", Note(f)))];
+
+    /// <summary>The faces in view's mean canon score, rounded; null until one face is scored.</summary>
+    private string? MeanBeauty()
+    {
+        var scores = Sensing.Faces.Where(f => f.Beauty is not null).Select(f => (double)f.Beauty!).ToList();
+        return scores.Count == 0 ? null : scores.Average().ToString("0", CultureInfo.InvariantCulture);
+    }
+
+    private List<WhoList.Row> BodyRows() =>
+        [.. Sensing.Bodies.InView.Select(b => new WhoList.Row($"Body {b.Slot}", b.Cues == BodyCues.None ? "open" : string.Join(" · ", Cues(b.Cues))))];
+
+    private static IEnumerable<string> Cues(BodyCues cues) =>
+        Enum.GetValues<BodyCues>().Where(c => c != BodyCues.None && cues.HasFlag(c)).Select(Words);
+
+    private static string Words(BodyCues cue) => cue switch
+    {
+        BodyCues.ArmsCrossed => "arms crossed",
+        BodyCues.HandsOnHips => "hands on hips",
+        BodyCues.HandToFace => "hand to face",
+        BodyCues.HandsBehindHead => "hands behind head",
+        BodyCues.LeaningIn => "leaning in",
+        BodyCues.LeaningBack => "leaning back",
+        _ => cue.ToString(),
+    };
+
+    /// <summary>"mostly open (84%) · arms crossed 2m 10s · leaning in 5m 00s"; null before a body was read for a few seconds.</summary>
+    private string? BodySummary()
+    {
+        var b = Sensing.Bodies;
+        if (b.ObservedSeconds < 5) return null;
+        var open = b.OpenSeconds / b.ObservedSeconds;
+        var parts = new List<string> { $"{(open >= 0.5 ? "mostly open" : "mostly closed")} ({open.ToString("P0", CultureInfo.InvariantCulture)} open)" };
+        parts.AddRange(b.CueSeconds.Where(p => p.Value >= 1).OrderByDescending(p => p.Value).Select(p => $"{Words(p.Key)} {DisplayText.Duration(p.Value)}"));
+        return string.Join(" · ", parts);
+    }
 
     private static string Note(FaceReadout face)
     {

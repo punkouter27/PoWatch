@@ -1,6 +1,7 @@
 @* Who is tracked right now, how long they have been and how they are holding themselves, the session's
    head counts, then every other thing seen as one line (what is in frame now first, in bold) and, where
-   posture was read, how the session's person-time split between sitting, standing and lying. *@
+   posture was read, how the session's person-time split between sitting, standing and lying, a nudge
+   after a long unbroken sit, and how much of the time backs were upright (BodyReadings, this session only). *@
 @using PoWatch.Shared.Services
 @inject SensingSession Sensing
 
@@ -18,6 +19,15 @@
         @if (L.Tracks.Count > 0)
         {
             <WhoList Rows="@WhoIsHere()" Label="Tracked right now" />
+        }
+        @if (Presence is { } stay)
+        {
+            <FactRow Test="inframe-dwell" Facts="@([
+                new("Typical stay", stay.DwellP50Seconds is { } p50 ? DisplayText.Duration(p50) : null, "Half of all visits this session were shorter than this"),
+                new("Long stay", stay.DwellP90Seconds is { } p90 ? DisplayText.Duration(p90) : null, "Nine visits in ten were shorter than this"),
+                new("Longest", stay.DwellMaxSeconds >= 1 ? DisplayText.Duration(stay.DwellMaxSeconds) : null, "The longest single visit this session"),
+                new("Empty for", stay.LongestEmptySeconds >= 1 ? DisplayText.Duration(stay.LongestEmptySeconds) : null, "The longest stretch with nobody in frame"),
+            ])" />
         }
         @if (census.Count == 0)
         {
@@ -45,10 +55,27 @@
                 }
             </p>
         }
+        @if (Presence is { } split)
+        {
+            <ShareBar Label="Person-time by posture this session" Test="posture-split" Legend="false"
+                      Parts="@([new("sitting", split.SittingSeconds), new("standing", split.StandingSeconds), new("lying", split.LyingSeconds)])" />
+        }
         @if (PostureLine() is { } posture)
         {
             <p class="live-census" data-test="live-posture" title="Person-time this session, read from body joints on this machine; the longest sit is the longest unbroken run of minutes mostly sat through">
                 <span class="live-heat-label">POSTURE</span>@posture
+            </p>
+        }
+        @if (Sensing.IsRunning && L.SittingFor >= BreakAfter)
+        {
+            <p class="live-nudge" role="status" data-test="live-break-nudge">
+                Sitting @DisplayText.Duration(L.SittingFor.TotalSeconds) straight. Time to stand up and stretch.
+            </p>
+        }
+        @if (Sensing.IsRunning && UprightLine() is { } upright)
+        {
+            <p class="live-census" data-test="body-posture-score" title="Share of the time shoulders, hips and ears were seen that the back and neck were upright rather than slumped forward, from body points on this machine. A rule of thumb, not a medical measure">
+                <span class="live-heat-label">UPRIGHT</span>@upright
             </p>
         }
         @* When each thing was around, not just whether it ever was: one line per presence class. *@
@@ -88,7 +115,22 @@
                     + (t.Posture == Posture.Unknown ? null : $" · {t.Posture.ToString().ToLowerInvariant()}")))
             .ToList();
 
-    /// <summary>"sitting 42m 10s · standing 5m 02s · longest sit 38m 00s · sitting now 12m 40s"; null when no posture was read.</summary>
+    /// <summary>One unbroken sit this long gets a nudge to stand up.</summary>
+    private static readonly TimeSpan BreakAfter = TimeSpan.FromMinutes(50);
+
+    /// <summary>"72% of the time · slumped 9m 10s · longest 4m 00s · slumped now 1m 05s"; null before posture was judged.</summary>
+    private string? UprightLine()
+    {
+        var b = Sensing.Bodies;
+        if (b.PostureScore is not { } score) return null;
+        var parts = new List<string> { $"{score.ToString("0", CultureInfo.InvariantCulture)}% of the time" };
+        if (b.SlumpedSeconds >= 1) parts.Add($"slumped {DisplayText.Duration(b.SlumpedSeconds)}");
+        if (b.LongestSlumpSeconds >= 60) parts.Add($"longest {DisplayText.Duration(b.LongestSlumpSeconds)}");
+        if (b.SlumpedNowSeconds >= 10) parts.Add($"slumped now {DisplayText.Duration(b.SlumpedNowSeconds)}");
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>"sitting 42m 10s · standing 5m 02s · 11% on their feet · longest sit 38m 00s · sitting now 12m 40s"; null when no posture was read.</summary>
     private string? PostureLine()
     {
         var parts = new List<string>();
@@ -97,6 +139,8 @@
             if (p.SittingSeconds >= 1) parts.Add($"sitting {DisplayText.Duration(p.SittingSeconds)}");
             if (p.StandingSeconds >= 1) parts.Add($"standing {DisplayText.Duration(p.StandingSeconds)}");
             if (p.LyingSeconds >= 1) parts.Add($"lying {DisplayText.Duration(p.LyingSeconds)}");
+            if (p.SittingSeconds >= 1 && p.StandingSeconds >= 1)
+                parts.Add($"{(p.StandingSeconds / (p.SittingSeconds + p.StandingSeconds)).ToString("P0", CultureInfo.InvariantCulture)} on their feet");
             if (p.LongestSittingSeconds >= 60) parts.Add($"longest sit {DisplayText.Duration(p.LongestSittingSeconds)}");
         }
         if (Sensing.IsRunning && L.SittingFor >= TimeSpan.FromMinutes(1)) parts.Add($"sitting now {DisplayText.Duration(L.SittingFor.TotalSeconds)}");

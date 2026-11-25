@@ -5,6 +5,14 @@
 <TerminalPanel Title="Regulars" Class="cell-regulars" Test="live-regulars" Flush="true">
     <Aside>@(L.Regulars.Count == 0 ? "NONE YET" : $"{L.Regulars.Count} KNOWN")</Aside>
     <ChildContent>
+        @if (Sensing.IsRunning)
+        {
+            <FactRow Test="regulars-facts" Facts="@([
+                new("Known here", L.Regulars.Count(r => Here(r.Id)).ToString(CultureInfo.InvariantCulture), "Regulars in the frame right now"),
+                new("New faces", L.Tracks.Count(t => t.Label == "person" && L.RegularFor(t.TrackId) is null).ToString(CultureInfo.InvariantCulture), "People in the frame right now who are not a regular"),
+                new("Peak together", L.PeakConcurrency.ToString(CultureInfo.InvariantCulture), "The most tracked at once this session"),
+            ])" />
+        }
         <WhoList Rows="@Rows()" Label="Regulars seen this session" Test="regulars-list" Empty="Nobody known has been seen this session." />
     </ChildContent>
 </TerminalPanel>

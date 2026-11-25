@@ -40,7 +40,9 @@
 /* The face model's landmark points, drawn over the video by face-overlay.js. The video is fixed in the
    layout (.term-feed, z-index 1) rather than inside the Live panel, so the canvas is too: it copies the
    video's box and clip each frame and sits one layer above it, never in the way of a click. */
-.live-face-mesh {
+/* body-overlay.js's stick figure works the same way. */
+.live-face-mesh,
+.live-body-skeleton {
     position: fixed;
     z-index: 2;
     visibility: hidden;
@@ -151,6 +153,9 @@
 .space-switch button:focus-visible { outline: 1px solid var(--term-accent); outline-offset: -1px; }
 .live-census { margin: 0; padding: 8px 10px; font: 12px var(--term-mono); color: var(--term-muted); line-height: 1.7; min-height: 2.4em; }
 .live-census .live-heat-label { display: inline; margin-right: 8px; }
+/* A long sit's nudge to stand: readable text on the soft warning colour, never warning-on-peach. */
+.live-nudge { margin: 0 10px 8px; padding: 6px 10px; border-radius: var(--term-radius); background: var(--po-warning-soft); color: var(--po-text); font: 12px var(--term-mono); }
+.live-census .term-spark { margin-top: 4px; }
 .dash-grid .stats-weird { margin: 0; padding: 8px 10px; border-top: 1px solid var(--term-line); }
 
 .live-who { list-style: none; margin: 0; padding: 6px 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 14px; font: 12px var(--term-mono); color: var(--term-muted); border-bottom: 1px solid var(--term-line); }

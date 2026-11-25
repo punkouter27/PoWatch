@@ -1,0 +1,47 @@
+@* One stacked bar for how a whole splits into parts (posture time, door use, the room's colours), with a
+   legend under it. Parts at or below zero are left out; nothing renders when the total is zero. A part's
+   Color is any CSS colour; without one it takes the next theme colour. *@
+@if (_parts.Count > 0)
+{
+    <div class="share-bar" data-test="@Test">
+        <div class="share-bar-track" role="img" aria-label="@AriaLabel">
+            @foreach (var (part, color, share) in _parts)
+            {
+                <span style="flex-grow: @Grow(share); background: @color" title="@($"{part.Label} {share:P0}")"></span>
+            }
+        </div>
+        @if (Legend)
+        {
+            <ul class="share-bar-legend">
+                @foreach (var (part, color, share) in _parts)
+                {
+                    <li><i style="background: @color" aria-hidden="true"></i>@part.Label <b>@(part.Note ?? share.ToString("P0", CultureInfo.InvariantCulture))</b></li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+@code {
+    public sealed record Part(string Label, double Value, string? Color = null, string? Note = null);
+
+    private static readonly string[] Theme = ["var(--term-accent)", "var(--term-cyan)", "var(--term-green)", "var(--term-amber)", "var(--term-red)"];
+
+    private List<(Part Part, string Color, double Share)> _parts = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<Part> Parts { get; set; } = [];
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public bool Legend { get; set; } = true;
+    [Parameter] public string? Test { get; set; }
+
+    private string AriaLabel => $"{Label}: {string.Join(", ", _parts.Select(p => $"{p.Part.Label} {p.Share.ToString("P0", CultureInfo.InvariantCulture)}"))}";
+
+    protected override void OnParametersSet()
+    {
+        var kept = Parts.Where(p => p.Value > 0).ToList();
+        var total = kept.Sum(p => p.Value);
+        _parts = total <= 0 ? [] : [.. kept.Select((p, i) => (p, p.Color ?? Theme[i % Theme.Length], p.Value / total))];
+    }
+
+    private static string Grow(double share) => share.ToString("0.####", CultureInfo.InvariantCulture);
+}

@@ -1,0 +1,25 @@
+@* A row of small labelled numbers under a panel's headline: label on top, value under it, the reason in the
+   tooltip. Facts with no value are left out, and the row renders nothing when none are left. *@
+@if (_shown.Count > 0)
+{
+    <dl class="fact-row" data-test="@Test">
+        @foreach (var fact in _shown)
+        {
+            <div class="fact" title="@fact.Title" data-test="@fact.Test">
+                <dt>@fact.Label</dt>
+                <dd>@fact.Value</dd>
+            </div>
+        }
+    </dl>
+}
+
+@code {
+    public sealed record Fact(string Label, string? Value, string? Title = null, string? Test = null);
+
+    private List<Fact> _shown = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<Fact> Facts { get; set; } = [];
+    [Parameter] public string? Test { get; set; }
+
+    protected override void OnParametersSet() => _shown = [.. Facts.Where(f => !string.IsNullOrEmpty(f.Value))];
+}

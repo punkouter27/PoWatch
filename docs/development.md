@@ -66,7 +66,12 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   Every 1.5 s one face crop goes to `js/sensing/face-reader-worker.js` (CPU, ~190 MB on first use): age
   band, presentation and a DINOv2 descriptor. Both reach `Client/Services/SensingSession.Faces.cs` as
   `[JSExport]` typed arrays and live in `FaceReadings` for the session only; `MediaPipeFace` maps the
-  mesh to the 68 iBUG points `FaceGeometry` scores. The
+  mesh to the 68 iBUG points `FaceGeometry` scores. Bodies go the same way through `js/body-overlay.js`
+  (faint stick figure, a slot per body) and `js/sensing/body-worker.js` (MediaPipe Pose Landmarker lite,
+  33 points plus world metres, ~6 MB model): every 0.5 s they reach `SensingSession.Bodies.cs` and
+  `BodyReadings` (`BodyGeometry` reads one frame: slump, shoulder tilt, body-language cues), which feed
+  Live's Activity (activity, energy, left/right), In frame (upright score, break nudge after 50 min of
+  sitting) and Faces (body language) panels, for the session only ([ADR 0003](adr/0003-body-readings-on-device.md)). The
   browser-safe C# parts (`CentroidTracker`, `TickBatcher`, `VlmScheduler`, `AdaptiveCadence`,
   `HighlightRules`, `PostureRules`, `FaceGeometry`, `FaceLabeler`, `MediaPipeFace`, `FaceReadings`, `ReelPlanner`) sit in `PoWatch.Shared/Services` so unit tests can cover them. Unsent batches wait
   in the IndexedDB outbox (`js/outbox.js`).

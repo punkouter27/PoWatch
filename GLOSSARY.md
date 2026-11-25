@@ -22,6 +22,10 @@ _Avoid_: Keypoint, facial point, face print
 The scoring of one face in one frame from its **landmarks**. It happens on the device, and only its numbers leave the page.
 _Avoid_: Scan, analysis, biometric profile, face recognition
 
+**Body reading**:
+What the 33 body points of one person in one frame say (slumped or upright, arms crossed, leaning in), and the session totals made from them (activity, energy, left/right balance). Read on the device, held for the session only, never stored.
+_Avoid_: Body scan, gait signature, biometric
+
 **Face descriptor**:
 The numbers a face model makes from one face, used only to tell that face from another. It is held in memory for one session and never written anywhere.
 _Avoid_: Template, fingerprint, face print, biometric hash

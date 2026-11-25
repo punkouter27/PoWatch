@@ -23,6 +23,11 @@
                 </RadzenCard>
             }
         </div>
+        <FactRow Test="metric-patterns" Facts="@([
+            new("Rhythm", Rhythm, "How closely today's hour-by-hour curve follows your usual day: +1.00 is textbook, 0 unrelated, below 0 upside down"),
+            new("Next busy", Patterns?.NextBusyHour is { } hour ? $"{hour:00}:00" : null, "The next hour that is usually busiest, from the last 28 days"),
+            new("4-week trend", Trend, "How occupancy has been moving per day over the last 28 days"),
+        ])" />
     </ChildContent>
 </TerminalPanel>
 
@@ -37,4 +42,16 @@
     [Parameter] public IReadOnlyList<double> VisitsTrend { get; set; } = [];
 
     private AnomalyDto? Anomaly(string metric) => Patterns?.Anomalies.FirstOrDefault(a => a.Metric == metric);
+
+    /// <summary>"+0.82 typical": today's curve against the usual one; null until today has a shape.</summary>
+    private string? Rhythm => Patterns?.RhythmScore is { } r
+        ? string.Create(CultureInfo.InvariantCulture, $"{r:+0.00;-0.00} {(r >= 0.8 ? "typical" : r >= 0.4 ? "loose" : r >= 0 ? "off-beat" : "flipped")}")
+        : null;
+
+    /// <summary>"↑ 0.4 pts/day" in occupancy percentage points; flat under 0.05.</summary>
+    private string? Trend => Patterns is not { Calendar.Count: >= 7 } p
+        ? null
+        : Math.Abs(p.OccupancyTrendPerDay * 100) < 0.05
+            ? "flat"
+            : string.Create(CultureInfo.InvariantCulture, $"{(p.OccupancyTrendPerDay > 0 ? "↑" : "↓")} {Math.Abs(p.OccupancyTrendPerDay * 100):0.0} pts/day");
 }

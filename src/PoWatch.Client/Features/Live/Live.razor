@@ -118,9 +118,15 @@
                 </div>
                 @if (_space is { } space)
                 {
-                    <p class="live-spots" data-test="stats-space">
-                        MOTION <b>@(space.HottestCell >= 0 ? Cell(space.HottestCell) : "—")</b> · PEOPLE <b>@(space.FavouriteSpotCell >= 0 ? Cell(space.FavouriteSpotCell) : "—")</b> · DOOR <b>@space.BusiestEdge.ToUpperInvariant()</b>
-                    </p>
+                    <FactRow Test="stats-space" Facts="@([
+                        new("Hot spot", space.HottestCell >= 0 ? Cell(space.HottestCell) : "—", "The grid cell with the most motion today"),
+                        new("Favourite spot", space.FavouriteSpotCell >= 0 ? Cell(space.FavouriteSpotCell) : "—", "Where tracked people and animals were centred most today"),
+                        new("Came in", space.Entries.Values.Sum().ToString(CultureInfo.InvariantCulture), "Tracks that entered across a frame edge today"),
+                        new("Went out", space.Exits.Values.Sum().ToString(CultureInfo.InvariantCulture), "Tracks that left across a frame edge today"),
+                    ])" />
+                    @* Which edge of the frame is the door: entries and exits together, per edge. *@
+                    <ShareBar Label="Comings and goings by frame edge today" Test="space-edges"
+                              Parts="@([.. space.Entries.Keys.Union(space.Exits.Keys).Select(edge => new ShareBar.Part(edge.ToLowerInvariant(), space.Entries.GetValueOrDefault(edge) + space.Exits.GetValueOrDefault(edge), Note: $"{space.Entries.GetValueOrDefault(edge)} in · {space.Exits.GetValueOrDefault(edge)} out")).OrderByDescending(p => p.Value)])" />
                 }
             </ChildContent>
         </TerminalPanel>
@@ -129,6 +135,6 @@
 
         <LiveRegulars />
 
-        <LiveActivity Patterns="@_patterns" />
+        <LiveActivity Patterns="@_patterns" Presence="@_presence" />
     </div>
 </div>
