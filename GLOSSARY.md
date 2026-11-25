@@ -22,6 +22,14 @@ _Avoid_: Keypoint, facial point, face print
 The scoring of one face in one frame from its **landmarks**. It happens on the device, and only its numbers leave the page.
 _Avoid_: Scan, analysis, biometric profile, face recognition
 
+**Face descriptor**:
+The numbers a face model makes from one face, used only to tell that face from another. It is held in memory for one session and never written anywhere.
+_Avoid_: Template, fingerprint, face print, biometric hash
+
+**Face label**:
+The temporary "Person 3" a face carries for the length of one session, from a **face descriptor**. It is not a **Regular**, it is not stored, and the next session starts with nobody known.
+_Avoid_: Identity, account, name, known face, profile
+
 **Traditional beauty**:
 How closely a face sits to the classical canons of proportion — symmetry, the facial thirds, the rule of fifths and the golden-ratio spans — as geometry, 0–100. It is a statement about proportions, not about a person.
 _Avoid_: Attractiveness score, beauty AI, hotness, rating

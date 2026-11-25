@@ -9,3 +9,7 @@ per bucket, a mean score. No face embedding, no per-face row, and no link from a
 **Regular** is ever computed or stored, so "observes, does not identify" still holds for what leaves
 the device. The rejected alternatives were storing trajectory-level face rows (re-identifiable) and a
 live-only overlay (no statistics at all, which is not what this app is for).
+
+Amended by [ADR 0002](0002-session-scoped-face-labels.md): a face descriptor may exist in memory for
+the length of one session, so people can be told apart and labelled. It is still never stored, never
+matched across sessions and never tied to a **Regular**.
