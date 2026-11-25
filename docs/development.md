@@ -136,3 +136,5 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   `/health/live` to serve the pushed commit; a red check stops the deploy. A second job, `mobile`, builds
   the Android target of `src/PoWatch.Mobile` without blocking the deploy. No infra job, no rollback, no PR
   runs. Run the narrow tests and `scripts/ci-checks.ps1` (hygiene, test caps) locally before pushing.
+  Markdown anywhere in the tree and `.github/skills/**` never deploy: the workflow's `paths-ignore` is
+  `['**/*.md', '.github/skills/**', 'SCREENSHOTS/**']`, so a prose-only push starts no run at all.
