@@ -65,9 +65,7 @@
 @media (min-width: 1100px) and (min-height: 640px) {
     .dash-grid {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
-        /* Outer rows size to their fullest panel up to a cap, so the three panels in a row stay one height
-           and a long list scrolls inside its panel instead of stretching the row. */
-        grid-template-rows: minmax(0, 340px) minmax(380px, auto) minmax(0, 340px);
+        grid-template-rows: auto minmax(380px, auto) auto;
         grid-template-areas:
             "metrics     inframe   faces"
             "heat        camera    narration"
@@ -85,6 +83,10 @@
     .dash-grid .cell-activity { grid-area: activity; }
 
     .dash-grid > * { min-height: 0; }
+    /* The top and bottom rows take their fullest panel's height up to a cap; the others stretch to match, and
+       a long list scrolls inside its panel instead of stretching the row. (A capped row track would always
+       grow to its cap, leaving a gap under short panels, so the cap sits on the panels.) */
+    .dash-grid :is(.cell-metrics, .cell-inframe, .cell-faces, .cell-env, .cell-regulars, .cell-activity) { max-height: 340px; }
     .dash-grid .cell-metrics > .term-panel-body { min-height: 0; }
     .dash-grid .term-skeleton { height: auto !important; }
     .dash-grid .cell-env .term-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
