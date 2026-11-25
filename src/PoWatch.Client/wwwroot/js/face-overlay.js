@@ -24,7 +24,9 @@
   const CROP_MARGIN = 1.4;
   // A face this close (share of frame width) to where a slot was last frame is the same face.
   const FOLLOW_DISTANCE = 0.12;
-  const DOT_RADIUS = 1.6;
+  // Faint on purpose: the picture stays the picture, and the points only say "your face is being read".
+  const DOT_RADIUS = 1;
+  const DOT_COLOR = 'rgba(94, 234, 212, 0.25)';
 
   let _worker = null;
   let _reader = null;
@@ -96,7 +98,7 @@
     if (!faces?.length) return;
 
     const place = placer(w, h);
-    ctx.fillStyle = 'rgba(94, 234, 212, 0.9)';
+    ctx.fillStyle = DOT_COLOR;
     for (const points of faces) {
       for (const point of points) {
         const [x, y] = place(point);
