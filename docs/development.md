@@ -65,7 +65,8 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   wasm pair (`forVisionTasks(WASM, true)`); the classic pair fails every frame with "ModuleFactory not set."
   Every 1.5 s one face crop goes to `js/sensing/face-reader-worker.js` (CPU, ~190 MB on first use): age
   band, presentation and a DINOv2 descriptor. Both reach `Client/Services/SensingSession.Faces.cs` as
-  `[JSExport]` typed arrays and live in `FaceReadings` for the session only; `MediaPipeFace` maps the
+  `[JSExport]` typed arrays and live in `FaceReadings` for the session only (`FaceTrends` keeps its
+  5-second means of beauty, expected age and face count for the Faces panel's moving graphs); `MediaPipeFace` maps the
   mesh to the 68 iBUG points `FaceGeometry` scores. Bodies go the same way through `js/body-overlay.js`
   (faint stick figure, a slot per body) and `js/sensing/body-worker.js` (MediaPipe Pose Landmarker lite,
   33 points plus world metres, ~6 MB model): every 0.5 s they reach `SensingSession.Bodies.cs` and
@@ -73,7 +74,7 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   Live's Activity (activity, energy, left/right), In frame (upright score, break nudge after 50 min of
   sitting) and Faces (body language) panels, for the session only ([ADR 0003](adr/0003-body-readings-on-device.md)). The
   browser-safe C# parts (`CentroidTracker`, `TickBatcher`, `VlmScheduler`, `AdaptiveCadence`,
-  `HighlightRules`, `PostureRules`, `FaceGeometry`, `FaceLabeler`, `MediaPipeFace`, `FaceReadings`, `ReelPlanner`) sit in `PoWatch.Shared/Services` so unit tests can cover them. Unsent batches wait
+  `HighlightRules`, `PostureRules`, `FaceGeometry`, `FaceLabeler`, `MediaPipeFace`, `FaceReadings`, `FaceTrends`, `ReelPlanner`) sit in `PoWatch.Shared/Services` so unit tests can cover them. Unsent batches wait
   in the IndexedDB outbox (`js/outbox.js`).
 - **Ingest:** `Api/Features/Ingest` → `Application/Features/Ingest/IngestService.cs`. It claims each `batchKey`
   once in `PoWatchIngestLedger`, writes raw rows and merges minute/hour/day/all rollups; the endpoint

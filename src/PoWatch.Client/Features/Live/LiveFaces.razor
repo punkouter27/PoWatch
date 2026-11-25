@@ -19,10 +19,21 @@
         }
         else
         {
+            @* Moving averages over the session: one point per 5 s while a face was in view (FaceTrends). *@
+            <div class="metric-cards" data-test="face-trends">
+                <RadzenCard class="metric-card">
+                    <StatCell Label="Beauty" Value="@Now(f => f.Beauty, "0")" Hint="@Span(T.SessionBeauty, T.BeautyRange, "0")" Test="face-beauty-trend" />
+                    <Sparkline Values="@T.BeautyHistory" Max="100" Label="Mean beauty of the faces in view over this session" />
+                </RadzenCard>
+                <RadzenCard class="metric-card">
+                    <StatCell Label="Age" Value="@Now(f => f.AgeYears, "0")" Unit="yrs" Hint="@Span(T.SessionAge, T.AgeRange, "0")" Test="face-age-trend" />
+                    <Sparkline Values="@T.AgeHistory" Cyan="true" Label="Mean estimated age of the faces in view over this session" />
+                </RadzenCard>
+            </div>
             <FactRow Test="faces-facts" Facts="@([
                 new("In view", Sensing.Faces.Count.ToString(CultureInfo.InvariantCulture), "Faces the landmarker sees right now"),
+                new("Most at once", T.FacesHistory.Count > 0 ? T.FacesHistory.Max().ToString("0", CultureInfo.InvariantCulture) : null, "The most faces in view together this session"),
                 new("Labelled", Sensing.FacesLabelled.ToString(CultureInfo.InvariantCulture), "Temporary Person labels given this session; forgotten when it ends"),
-                new("Mean beauty", MeanBeauty(), "The classical-canon score averaged over the faces in view"),
             ])" />
             <WhoList Rows="@Rows()" Label="Faces in view" Test="faces-list" Empty="No face in view." />
             @if (!Sensing.FacesRead && Sensing.Faces.Count > 0)
@@ -56,11 +67,22 @@
     private List<WhoList.Row> Rows() =>
         [.. Sensing.Faces.Select(f => new WhoList.Row(f.Label ?? "Reading…", Note(f)))];
 
-    /// <summary>The faces in view's mean canon score, rounded; null until one face is scored.</summary>
-    private string? MeanBeauty()
+    private FaceTrends T => Sensing.FaceTrends;
+
+    /// <summary>One reading averaged over the faces in view right now; "—" when none has it.</summary>
+    private string Now(Func<FaceReadout, double?> read, string format)
     {
-        var scores = Sensing.Faces.Where(f => f.Beauty is not null).Select(f => (double)f.Beauty!).ToList();
-        return scores.Count == 0 ? null : scores.Average().ToString("0", CultureInfo.InvariantCulture);
+        var values = Sensing.Faces.Select(read).OfType<double>().ToList();
+        return values.Count == 0 ? "—" : values.Average().ToString(format, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>"Session 54 · range 49–61"; waiting text before the first point.</summary>
+    private static string Span(double? mean, (double Low, double High)? range, string format)
+    {
+        var ic = CultureInfo.InvariantCulture;
+        if (mean is not { } m) return "Waiting for a face";
+        var text = $"Session {m.ToString(format, ic)}";
+        return range is { } r ? $"{text} · range {r.Low.ToString(format, ic)}–{r.High.ToString(format, ic)}" : text;
     }
 
     private List<WhoList.Row> BodyRows() =>

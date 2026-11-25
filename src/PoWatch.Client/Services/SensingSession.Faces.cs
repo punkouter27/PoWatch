@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
 using PoWatch.Shared.Services;
@@ -15,9 +16,14 @@ public sealed partial class SensingSession
     private static SensingSession? s_faces;
 
     private FaceReadings _faces = new();
+    private FaceTrends _faceTrends = new();
+    private long _facesStarted = Stopwatch.GetTimestamp();
 
     /// <summary>The faces in view right now, in slot order.</summary>
     public IReadOnlyList<FaceReadout> Faces => _faces.InView;
+
+    /// <summary>Mean beauty, age and face count over this session, in 5-second stretches.</summary>
+    public FaceTrends FaceTrends => _faceTrends;
 
     /// <summary>Whether the face models have read anyone this session, so they have loaded.</summary>
     public bool FacesRead => _faces.HasRead;
@@ -29,6 +35,8 @@ public sealed partial class SensingSession
     private void StartFaces()
     {
         _faces = new FaceReadings();
+        _faceTrends = new FaceTrends();
+        _facesStarted = Stopwatch.GetTimestamp();
         s_faces = this;
     }
 
@@ -36,6 +44,7 @@ public sealed partial class SensingSession
     {
         if (s_faces == this) s_faces = null;
         _faces = new FaceReadings();
+        _faceTrends = new FaceTrends();
     }
 
     /// <summary>
@@ -50,6 +59,7 @@ public sealed partial class SensingSession
     {
         if (s_faces is not { IsRunning: true } session) return;
         session._faces.OnLandmarks(slots, meshes);
+        session._faceTrends.Observe(session._faces.InView, Stopwatch.GetElapsedTime(session._facesStarted).TotalSeconds);
         session.Notify();
     }
 

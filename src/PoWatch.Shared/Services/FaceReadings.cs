@@ -15,7 +15,8 @@ public sealed record FaceReadout(
     double AgeConfidence,
     string? Presentation,
     double PresentationConfidence,
-    int Readings);
+    int Readings,
+    double? AgeYears = null);
 
 /// <summary>
 /// The faces in front of the camera during one session, and what has been read from them: traditional
@@ -32,6 +33,9 @@ public sealed class FaceReadings
 {
     /// <summary>The age model's classes (jdp8/vit-age-classifier), in its output order.</summary>
     public static readonly string[] AgeBands = ["0–2", "3–9", "10–19", "20–29", "30–39", "40–49", "50–59", "60–69", "70+"];
+
+    /// <summary>Each age band's middle in years (70+ taken as 75), for an expected age that moves smoothly.</summary>
+    public static readonly double[] AgeBandMiddles = [1, 6, 14.5, 24.5, 34.5, 44.5, 54.5, 64.5, 75];
 
     /// <summary>The presentation model's classes (onnx-community/gender-classification-ONNX), in its output order.</summary>
     public static readonly string[] Presentations = ["female", "male"];
@@ -159,7 +163,8 @@ public sealed class FaceReadings
                 Math.Round(ageP, 2),
                 presentation < 0 || presentationP < MinPresentationConfidence ? null : Presentations[presentation],
                 Math.Round(presentationP, 2),
-                Readings);
+                Readings,
+                Age.Expected(AgeBandMiddles) is { } years ? Math.Round(years, 1) : null);
         }
     }
 
@@ -181,6 +186,15 @@ public sealed class FaceReadings
             if (total <= 0) return;
             for (var i = 0; i < _sum.Length; i++) _sum[i] += probabilities[i] / total;
             _count++;
+        }
+
+        /// <summary>The probability-weighted mean of one value per class; null before any reading.</summary>
+        public double? Expected(IReadOnlyList<double> values)
+        {
+            if (_count == 0) return null;
+            var sum = 0.0;
+            for (var i = 0; i < _sum.Length; i++) sum += _sum[i] * values[i];
+            return sum / _count;
         }
 
         /// <summary>The most likely class and its mean probability, or (-1, 0) before any reading.</summary>
