@@ -142,6 +142,7 @@ Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 | Key Vault off in production (`FeatureFlags__EnableKeyVault=false`); the app's identity has no vault access | the shared vault would load every app's secrets into config; PoWatch keeps none there | 2026-11-23 | grant get/list (`$KeyVaultAccess`), set `KeyVault__Uri`, flag on |
 | `SCREENSHOTS/` is git-ignored (before/after pages stay local) | keeps the repo small | — | un-ignore it |
 | App Service `app-powatch-win2` on `asp-PoWatch-f1` (standard `app-powatch`) | renaming means recreating | — | owner-approved recreate |
+| Face **landmarks** are scored on the device for traditional beauty, age band and presentation estimate; only aggregates may be stored, never an embedding, a per-face row or a link to a Regular ([ADR 0001](docs/adr/0001-face-statistics-on-device.md)) | the owner asked for face statistics; three code comments said "nothing biometric", so the exception is written down instead of left implicit | 2026-11-25 | delete the face feature and the ADR |
 
 **Hosting:** App Service F1 (Free, Windows, `asp-PoWatch-f1`): 60 CPU-minutes and a data-out quota per day (Azure
 reported 855 MB on 2026-11-22; over it the site stops until 00:00 UTC). Never run test

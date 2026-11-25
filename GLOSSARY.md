@@ -1,0 +1,31 @@
+# PoWatch
+
+A stat-heavy webcam observer. It watches a space, records what happened as folds — presence, motion,
+objects, posture, light, sound — and shows the numbers back. It observes; it does not identify or
+converse, and the sensing runs on the device that holds the camera.
+
+## Language
+
+**Regular**:
+A person, pet or object recognised across sessions by look alone, and named only by position — "Person 3", "Cat 1".
+_Avoid_: Known face, known person, identity, profile
+
+**Keypoint**:
+One of the 17 body joints the pose model returns, used to read **posture**.
+_Avoid_: Joint, pose point
+
+**Landmark**:
+One of the 68 points the face model returns on a face, in the iBUG layout; the raw material for a **traditional beauty** score.
+_Avoid_: Keypoint, facial point, face print
+
+**Face reading**:
+The scoring of one face in one frame from its **landmarks**. It happens on the device, and only its numbers leave the page.
+_Avoid_: Scan, analysis, biometric profile, face recognition
+
+**Traditional beauty**:
+How closely a face sits to the classical canons of proportion — symmetry, the facial thirds, the rule of fifths and the golden-ratio spans — as geometry, 0–100. It is a statement about proportions, not about a person.
+_Avoid_: Attractiveness score, beauty AI, hotness, rating
+
+**Pose**:
+How a body is arranged as read from **keypoints** — standing, sitting or lying.
+_Avoid_: Posture (that is the reading, not the arrangement)
