@@ -201,6 +201,8 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         {
             _self = DotNetObjectReference.Create(this);
             await js.TryInvokeVoidAsync("powatchPixels.start", video, _self, 250);
+            // The face model's points, drawn straight over the camera; nothing it reads is stored.
+            await js.TryInvokeVoidAsync("powatchFaces.start", video);
             // Asked once per session: the browser shows its own microphone prompt the first time.
             if (Listening)
             {
@@ -239,6 +241,7 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
 
         await js.TryInvokeVoidAsync("powatchPixels.stop");
         await js.TryInvokeVoidAsync("powatchAudio.stop");
+        await js.TryInvokeVoidAsync("powatchFaces.stop");
         await js.TryInvokeVoidAsync("powatchDetector.stop");
         if (s_detecting == this) s_detecting = null;
         if (_scene is null) await js.TryInvokeVoidAsync("powatchInference.stopMonitor");

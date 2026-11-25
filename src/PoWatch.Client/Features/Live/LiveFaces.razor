@@ -1,0 +1,19 @@
+@* Face readings: the temporary labels the camera gives the people in front of it, and what its landmarks
+   say about them. Nothing is read until a face model runs, and nothing about a face is ever stored — the
+   labels last one session (docs/adr/0002-session-scoped-face-labels.md). *@
+@inject SensingSession Sensing
+
+<TerminalPanel Title="Faces" Class="cell-faces" Test="live-faces" Flush="true">
+    <Aside>ON DEVICE</Aside>
+    <ChildContent>
+        @if (!Sensing.IsRunning)
+        {
+            <p class="term-empty" data-test="faces-idle">Faces are read while the camera runs.</p>
+        }
+        else
+        {
+            <p class="term-empty" data-test="faces-idle">No face model is loaded yet, so nobody is being read.</p>
+        }
+        <p class="term-stat-hint">Temporary labels, traditional beauty, age band and presentation appear here. Landmarks never leave this device and are never stored.</p>
+    </ChildContent>
+</TerminalPanel>

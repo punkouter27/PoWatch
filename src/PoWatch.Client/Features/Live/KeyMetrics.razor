@@ -1,6 +1,5 @@
 @* Live's headline numbers for the range beside your usual day, and how far today sits from it (σ).
-   Head counts (now, peak, visits) are In frame's. *@
-@inject SensingSession Sensing
+   Head counts (now, peak, visits) are In frame's; the third headline number, activity, has its own panel. *@
 
 <TerminalPanel Title="Key metrics" Class="cell-metrics" Test="live-metrics" Flush="true">
     <Aside>@Range.ToUpperInvariant() vs USUAL</Aside>
@@ -23,13 +22,6 @@
                     <Sparkline Values="@VisitsTrend" Cyan="true" Label="Visits over the session" />
                 </RadzenCard>
             }
-            <RadzenCard class="metric-card">
-                <StatCell Label="Activity level" Value="@(Sensing.IsRunning ? L.Motion.ToString("P1", CultureInfo.InvariantCulture) : "—")"
-                          Hint="@(Sensing.IsRunning ? $"Now · usual daily mean {DisplayText.Percent(Anomaly("motion")?.Mean)}" : "Available while observing")" Test="metric-motion">
-                    <ZChip Z="@Anomaly("motion")?.Z" />
-                </StatCell>
-                <Sparkline Values="@L.MotionHistory" Label="Activity over the last minute" />
-            </RadzenCard>
         </div>
     </ChildContent>
 </TerminalPanel>
@@ -43,8 +35,6 @@
     [Parameter] public PatternStatsDto? Patterns { get; set; }
     [Parameter] public IReadOnlyList<double> OccupancyTrend { get; set; } = [];
     [Parameter] public IReadOnlyList<double> VisitsTrend { get; set; } = [];
-
-    private LiveSensingState L => Sensing.Live;
 
     private AnomalyDto? Anomaly(string metric) => Patterns?.Anomalies.FirstOrDefault(a => a.Metric == metric);
 }

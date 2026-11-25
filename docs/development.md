@@ -57,7 +57,10 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
 
 - **Browser sensing:** `PoWatch.Client/wwwroot/js/sensing/` (pixel layer, RF-DETR detector worker) and
   `js/sensing/inference-worker.js` (captions: models in `js/caption-models.js`, keep/reject rules in
-  `js/caption-quality.js`, MiniLM embeddings in `js/embedder.js`), driven from `Client/Services/SensingSession.cs`. The
+  `js/caption-quality.js`, MiniLM embeddings in `js/embedder.js`), driven from `Client/Services/SensingSession.cs`.
+  Faces go through `js/face-overlay.js` (canvas over the feed) and `js/sensing/face-worker.js` (MediaPipe
+  Face Landmarker, 478 points, names in [GLOSSARY.md](../GLOSSARY.md)); its runtime is vendored at
+  `wwwroot/lib/mediapipe-1.2.3/` and only the ~4 MB `.task` model is downloaded at run time. The
   browser-safe C# parts (`CentroidTracker`, `TickBatcher`, `VlmScheduler`, `AdaptiveCadence`,
   `HighlightRules`, `PostureRules`, `FaceGeometry`, `FaceLabeler`, `ReelPlanner`) sit in `PoWatch.Shared/Services` so unit tests can cover them. Unsent batches wait
   in the IndexedDB outbox (`js/outbox.js`).

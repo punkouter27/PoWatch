@@ -59,25 +59,28 @@
     .dash-grid .live-camera { grid-column: span 2; }
 }
 
-/* Keep the desktop's three columns, with natural row heights and room for the camera.
-   The feed and heat grid retain 16:9. */
-@media (min-width: 1280px) and (min-height: 700px) {
+/* Three by three with the camera in the middle cell and eight panels around it: the metrics read the
+   room, the camera shows it. 1100px is a half-screen laptop window, not just a desktop monitor. Below
+   this width the grid stacks and the camera comes first. */
+@media (min-width: 1100px) and (min-height: 640px) {
     .dash-grid {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.9fr) minmax(0, 1fr);
-        grid-template-rows: auto auto auto;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
+        grid-template-rows: auto minmax(360px, auto) auto;
         grid-template-areas:
-            "metrics     now      heat"
-            "narration   camera   camera"
-            "environment environment regulars";
+            "metrics     inframe   faces"
+            "heat        camera    narration"
+            "environment regulars  activity";
         min-height: 0;
     }
     .dash-grid .cell-metrics { grid-area: metrics; }
-    .dash-grid .cell-inframe { grid-area: now; }
+    .dash-grid .cell-inframe { grid-area: inframe; }
+    .dash-grid .cell-faces { grid-area: faces; }
     .dash-grid .cell-heat { grid-area: heat; }
-    .dash-grid .cell-narration { grid-area: narration; }
     .dash-grid .live-camera { grid-area: camera; }
+    .dash-grid .cell-narration { grid-area: narration; }
     .dash-grid .cell-env { grid-area: environment; }
     .dash-grid .cell-regulars { grid-area: regulars; }
+    .dash-grid .cell-activity { grid-area: activity; }
 
     .dash-grid > * { min-height: 0; }
     .dash-grid .cell-metrics > .term-panel-body { min-height: 0; }

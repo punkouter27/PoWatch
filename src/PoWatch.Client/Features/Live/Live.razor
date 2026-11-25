@@ -11,7 +11,8 @@
 <h1 class="visually-hidden">Live</h1>
 
 @* One session, one toolbar; configuration folds away, diagnostics live on /diag.
-   The desktop grid stays three columns, with page scrolling instead of scrollable cards. *@
+   Desktop reads as three by three: the camera in the middle cell, eight panels around it. Below 1280px
+   the same panels stack in this order, camera first, so a phone still opens on the picture. *@
 <div class="dash" data-inference-ms="@L.DetectorLatencyMs.ToString(CultureInfo.InvariantCulture)">
     <div class="stats-toolbar" data-test="stats-toolbar">
         <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
@@ -85,6 +86,7 @@
 
         <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend" />
         <InFrame Objects="@_objects" Presence="@_presence" />
+        <LiveFaces />
 
         @* What the camera and the microphone are turning into words, newest first, with the session's map. *@
         <TerminalPanel Title="Narration" Class="cell-narration" Test="live-narration-panel" Flush="true">
@@ -126,5 +128,7 @@
         <LiveEnvironment Query="@_query" />
 
         <LiveRegulars />
+
+        <LiveActivity Patterns="@_patterns" />
     </div>
 </div>

@@ -1,0 +1,26 @@
+@* How much is moving right now, against the usual day. It was KeyMetrics' third card; it lives on its own
+   panel so the camera can sit in the middle of eight metrics. *@
+@inject SensingSession Sensing
+
+<TerminalPanel Title="Activity" Class="cell-activity" Test="live-activity" Flush="true">
+    <Aside>NOW vs USUAL</Aside>
+    <ChildContent>
+        <div class="metric-cards">
+            <RadzenCard class="metric-card">
+                <StatCell Label="Activity level" Value="@(Sensing.IsRunning ? L.Motion.ToString("P1", CultureInfo.InvariantCulture) : "—")"
+                          Hint="@(Sensing.IsRunning ? $"Now · usual daily mean {DisplayText.Percent(Anomaly("motion")?.Mean)}" : "Available while observing")" Test="metric-motion">
+                    <ZChip Z="@Anomaly("motion")?.Z" />
+                </StatCell>
+                <Sparkline Values="@L.MotionHistory" Label="Activity over the last minute" />
+            </RadzenCard>
+        </div>
+    </ChildContent>
+</TerminalPanel>
+
+@code {
+    [Parameter] public PatternStatsDto? Patterns { get; set; }
+
+    private LiveSensingState L => Sensing.Live;
+
+    private AnomalyDto? Anomaly(string metric) => Patterns?.Anomalies.FirstOrDefault(a => a.Metric == metric);
+}
