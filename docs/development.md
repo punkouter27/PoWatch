@@ -67,7 +67,10 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   band, presentation and a DINOv2 descriptor. Both reach `Client/Services/SensingSession.Faces.cs` as
   `[JSExport]` typed arrays and live in `FaceReadings` for the session only (`FaceTrends` keeps its
   5-second means of beauty, expected age and face count for the Faces panel's moving graphs); `MediaPipeFace` maps the
-  mesh to the 68 iBUG points `FaceGeometry` scores. Bodies go the same way through `js/body-overlay.js`
+  mesh to the 68 iBUG points `FaceGeometry` scores. The overlay also paints one chip per face on its hairline,
+  naming it "Person 2" (a quiet "…" until the face models have read it): .NET pushes each face's label down
+  (`powatchFaces.labels`) whenever it changes, and `FaceLabeler`'s descriptor match gives someone who comes
+  back the same number, so two people in the picture are never confused. Bodies go the same way through `js/body-overlay.js`
   (faint stick figure, a slot per body) and `js/sensing/body-worker.js` (MediaPipe Pose Landmarker lite,
   33 points plus world metres, ~6 MB model): every 0.5 s they reach `SensingSession.Bodies.cs` and
   `BodyReadings` (`BodyGeometry` reads one frame: slump, shoulder tilt, body-language cues), which feed

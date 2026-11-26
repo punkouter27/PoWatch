@@ -146,8 +146,8 @@
       chip.textContent = name || '…';
       chip.dataset.reading = name ? 'false' : 'true';
       chip.style.left = `${Math.round(x)}px`;
-      // On the hairline, but never off the top of the picture.
-      chip.style.top = `${Math.max(16, Math.round(y) - 4)}px`;
+      // On the hairline, but never off the top of the picture (the chip is drawn 19px tall above its point).
+      chip.style.top = `${Math.max(20, Math.round(y) - 4)}px`;
     }
     const here = new Set(_slots.map((face) => face.slot));
     for (const [slot, chip] of _chips) {
