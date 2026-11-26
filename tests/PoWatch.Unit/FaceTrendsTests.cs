@@ -7,6 +7,9 @@ public sealed class FaceTrendsTests
     private static FaceReadout Face(double? beauty, double? years) =>
         new(1, "Person 1", beauty, null, 0, null, 0, 1, years);
 
+    private static FaceReadout FaceWith(int slot, string? presentation) =>
+        Face(null, null) with { Slot = slot, Presentation = presentation, PresentationConfidence = 0.95 };
+
     [Fact]
     public void A_stretch_becomes_one_point_of_its_mean_once_the_next_starts()
     {
@@ -79,5 +82,21 @@ public sealed class FaceTrendsTests
         readings.OnReading(1, [0, 0, 0, 0, 0.5, 0.5, 0, 0, 0], [0.5, 0.5], [1f, 0f]);
 
         Assert.Equal(39.5, readings.InView[0].AgeYears);
+    }
+
+    [Fact]
+    public void The_sex_split_is_the_share_of_the_faces_scored_in_a_stretch()
+    {
+        var trends = new FaceTrends();
+        trends.Observe([FaceWith(1, "male"), FaceWith(2, "male"), FaceWith(3, "female")], 0);
+        trends.Observe([FaceWith(1, null)], FaceTrends.BinSeconds);
+        trends.Observe([], FaceTrends.BinSeconds * 2);
+
+        Assert.Equal([66.7], trends.MaleHistory);
+        Assert.Equal([33.3], trends.FemaleHistory);
+        Assert.Equal((66.7, 33.3), trends.SessionSexSplit);
+        Assert.True(FaceWith(1, "male").Male);
+        Assert.False(FaceWith(1, "female").Male);
+        Assert.Null(FaceWith(1, null).Male);
     }
 }

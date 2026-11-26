@@ -16,7 +16,19 @@ public sealed record FaceReadout(
     string? Presentation,
     double PresentationConfidence,
     int Readings,
-    double? AgeYears = null);
+    double? AgeYears = null)
+{
+    /// <summary>
+    /// Whether the presentation model's estimate is male; false for female, null while unclear. Follows
+    /// <see cref="Presentation"/>, so a low-confidence guess counts for neither.
+    /// </summary>
+    public bool? Male => Presentation switch
+    {
+        "male" => true,
+        "female" => false,
+        _ => null,
+    };
+}
 
 /// <summary>
 /// The faces in front of the camera during one session, and what has been read from them: traditional
