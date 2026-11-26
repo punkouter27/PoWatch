@@ -150,21 +150,37 @@
         .cell-heat .term-heat { max-width: 150px; margin-inline: auto; }
     }
 
-    /* Under about a 768-high window (a cell of 200px or less): the headline numbers tighten up and lists keep
-       their first rows, so a laptop shows all nine panels with nothing behind a scrollbar. */
+    /* Under about a 768-high window (a cell of 200px or less): the headline numbers tighten up, the sparklines
+       and the second bar step out, and lists keep their first rows, so a 720-high laptop shows all nine
+       panels with nothing behind a scrollbar. */
     @container cell (max-height: 200px) {
         .cell-narration :is(.minimap, .moment-filters) { display: none; }
         .cell-metrics .metric-card.rz-card,
-        .cell-activity .metric-card.rz-card { padding: 4px 7px; }
+        .cell-activity .metric-card.rz-card { padding: 3px 6px; }
         .cell-metrics .metric-card .term-spark,
-        .cell-activity .metric-card .term-spark { height: 12px; }
+        .cell-activity .metric-card .term-spark { height: 10px; margin-top: 2px; }
+        .cell-metrics .metric-cards { padding: 4px; gap: 4px; }
         .cell-metrics .metric-card .term-stat-hint,
-        .cell-activity .metric-card .term-stat-hint { line-height: 1.2; }
+        .cell-activity .metric-card .term-stat-hint { line-height: 1.15; }
         .cell-metrics .fact-row,
-        .cell-activity .fact-row { padding: 4px 8px; }
+        .cell-activity .fact-row { padding: 3px 8px; }
+        .cell-metrics .fact dd,
+        .cell-activity .fact dd { font-size: 12px; }
+        .cell-activity .metric-card .term-stat-value { font-size: 16px; }
+        /* Space keeps the heat map and its facts; the frame-edge bar is the first thing to go. */
+        .cell-heat .term-heat { max-width: 104px; }
+        .cell-heat .share-bar { display: none; }
+        .cell-heat .fact-row { padding: 3px 8px; }
         .cell-inframe .live-who li:nth-child(n+3),
         .cell-regulars .live-who li:nth-child(n+3),
         .cell-faces .live-who li:nth-child(n+3) { display: none; }
+    }
+
+    /* A short window also loses the slack between the pieces, which is a few pixels on every row. */
+    @media (max-height: 820px) {
+        .dash { gap: 6px; }
+        .dash-grid { --term-gap: 6px; }
+        .dash-grid .term-panel-head { padding: 2px 8px; }
     }
 }
 

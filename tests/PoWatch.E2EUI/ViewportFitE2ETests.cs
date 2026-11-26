@@ -125,7 +125,7 @@ public sealed class ViewportFitE2ETests
     {
         // Its own user: the nine panels are all shown, whatever another test left the guest's layout as.
         var user = $"fit-{Guid.NewGuid():N}";
-        foreach (var (width, height) in new[] { (1440, 900), (1366, 768), (1152, 768) })
+        foreach (var (width, height) in new[] { (1440, 900), (1366, 768), (1280, 720), (1152, 700) })
         {
             await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser, user: user);
             await page.SetViewportSizeAsync(width, height);

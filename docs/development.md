@@ -130,8 +130,9 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   the page never scrolls and no cell shows a scrollbar; a cell adapts instead. Head, cards and facts step down a
   size, and the least important rows step out as the cell gets shorter (`@container cell` on `.live-slot`, at 240 px
   and 200 px): footnotes, the body-language blocks, the posture split, the caption words, the hour-by-hour card, the
-  narration's minimap and filters, and list rows past the second. Narrower or shorter windows keep the stacked
-  layout that scrolls.
+  narration's minimap and filters, the Space frame-edge bar and sparklines, and list rows past the second. A short
+  window (820 px or less) also loses the slack between rows. `ViewportFitE2ETests` holds it at 1152×700 up to
+  1440×900: the page, the panels and the last row all fit.
 - **Radzen controls (2026-11-21).** Every button, text box, dropdown, number box and checkbox is a Radzen
   component. The theme is imported into `@layer vendor` (`index.html`), so the app's sheets win; class `pw-plain`
   (`terminal-base.css`, `@layer plain`) reverts a control to the native look so `.term-button` and friends style
