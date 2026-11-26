@@ -122,6 +122,13 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   the on-device inference engine and the pipeline counters. Browser errors post to `/api/diag/client-error`.
   The boot probe is `GET /api/diag/boot`; nothing on the server may map `/diag` itself. There is no `/system`
   page or `/api/diagnostics` route any more.
+- **Live is one screen (2026-11-26).** From 1100 px wide and 640 px tall the nine panels fill the window: `.dash`
+  is the height of `main` and the grid takes every pixel the bar and the models strip leave, in three even rows. So
+  the page never scrolls and no cell shows a scrollbar; a cell adapts instead. Head, cards and facts step down a
+  size, and the least important rows step out as the cell gets shorter (`@container cell` on `.live-slot`, at 240 px
+  and 200 px): footnotes, the body-language blocks, the posture split, the caption words, the hour-by-hour card, the
+  narration's minimap and filters, and list rows past the second. Narrower or shorter windows keep the stacked
+  layout that scrolls.
 - **Radzen controls (2026-11-21).** Every button, text box, dropdown, number box and checkbox is a Radzen
   component. The theme is imported into `@layer vendor` (`index.html`), so the app's sheets win; class `pw-plain`
   (`terminal-base.css`, `@layer plain`) reverts a control to the native look so `.term-button` and friends style

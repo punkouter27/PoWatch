@@ -5,11 +5,12 @@
 //   - every half second, each face's 478 points, which .NET scores for traditional beauty;
 //   - every 1.5 s, one face's reading from face-reader-worker.js (age band, presentation, and a
 //     descriptor for its temporary "Person N" label), read from a crop cut around its landmarks.
-// Nothing is stored or posted to the server.
+// .NET hands back each face's label, and this paints one chip per face on the hairline (Person 1,
+// Person 2 …), so the picture itself says who is who. Nothing is stored or posted to the server.
 //
 // The <video> is fixed in the layout and docked over Live's .live-feed slot by feed-dock.js, so the
 // canvas copies the video's box and clip (ensureCanvas) and is drawn with the same object-fit: cover
-// crop. When Live is not on screen the video is hidden, and so are the points.
+// crop. When Live is not on screen the video is hidden, and so are the points and the chips.
 (function () {
   'use strict';
 
@@ -32,6 +33,7 @@
   let _reader = null;
   let _video = null;
   let _canvas = null;
+  let _tags = null;
   let _busy = false;
   let _reading = false;
   let _readPausedUntil = 0;
@@ -42,6 +44,10 @@
   let _nextSlot = 1;
   /** The faces in view: { slot, cx, cy, points, reads }. */
   let _slots = [];
+  /** Each face's temporary label, by slot, as .NET last handed it over. */
+  let _labels = new Map();
+  /** The label chips on screen, by slot, reused rather than rebuilt every frame. */
+  const _chips = new Map();
   let _aspect = 9 / 16;
 
   /** The client assembly's [JSExport] methods, as detector-bridge.js gets them. */
@@ -89,24 +95,101 @@
     return (point) => [ox + (point[0] * vw * scale), oy + (point[1] * vh * scale)];
   }
 
-  function draw(faces) {
+  /**
+   * The chip layer: the video's own box and clip, so a label lands on the face it names through the
+   * same cover crop as the points, and hides with the video when Live is not on screen.
+   */
+  function ensureTags() {
+    if (!_tags?.isConnected) {
+      _tags = document.querySelector('.live-face-tags');
+      if (!_tags) {
+        _tags = document.createElement('div');
+        _tags.className = 'live-face-tags';
+        _tags.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(_tags);
+      }
+    }
+    const { left, top, width, height, clipPath, visibility } = _video.style;
+    Object.assign(_tags.style, { left, top, width, height, clipPath, visibility });
+    return visibility === 'visible' ? _tags : null;
+  }
+
+  /** Each face's label, by slot, as .NET knows them (SensingSession.PushFaceLabels). */
+  function labels(slots, names) {
+    _labels = new Map((slots ?? []).map((slot, i) => [Math.round(slot), names?.[i] || '']));
+  }
+
+  /**
+   * One chip per face on its hairline, saying which person it is; a face no model has read yet wears a
+   * "…" chip instead, so it is still visibly one of the counted faces. Chips for faces that have left
+   * go with them.
+   */
+  function paintTags(place) {
+    const layer = ensureTags();
+    if (!layer) return;
+    for (const face of _slots) {
+      let x0 = 1, x1 = 0, y0 = 1;
+      for (const [x, y] of face.points) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+      }
+      const [x, y] = place([(x0 + x1) / 2, y0]);
+      let chip = _chips.get(face.slot);
+      if (!chip) {
+        chip = document.createElement('span');
+        chip.className = 'live-face-tag';
+        layer.appendChild(chip);
+        _chips.set(face.slot, chip);
+      }
+      const name = _labels.get(face.slot);
+      chip.textContent = name || '…';
+      chip.dataset.reading = name ? 'false' : 'true';
+      chip.style.left = `${Math.round(x)}px`;
+      // On the hairline, but never off the top of the picture.
+      chip.style.top = `${Math.max(16, Math.round(y) - 4)}px`;
+    }
+    const here = new Set(_slots.map((face) => face.slot));
+    for (const [slot, chip] of _chips) {
+      if (!here.has(slot)) {
+        chip.remove();
+        _chips.delete(slot);
+      }
+    }
+  }
+
+  function clearTags() {
+    for (const chip of _chips.values()) chip.remove();
+    _chips.clear();
+    _labels = new Map();
+    if (_tags) {
+      _tags.replaceChildren();
+      _tags.style.visibility = 'hidden';
+    }
+  }
+
+  function draw() {
     const canvas = ensureCanvas();
     if (!canvas) return;
     const { w, h } = size(canvas);
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, w, h);
-    if (!faces?.length) return;
+    if (!_slots.length) {
+      clearTags();
+      return;
+    }
 
     const place = placer(w, h);
     ctx.fillStyle = DOT_COLOR;
-    for (const points of faces) {
-      for (const point of points) {
+    for (const face of _slots) {
+      for (const point of face.points) {
         const [x, y] = place(point);
         ctx.beginPath();
         ctx.arc(x, y, DOT_RADIUS, 0, Math.PI * 2);
         ctx.fill();
       }
     }
+    paintTags(place);
   }
 
   function centre(points) {
@@ -207,8 +290,9 @@
       const faces = event.data?.faces;
       if (!faces) return;
       if (event.data.aspect) _aspect = event.data.aspect;
-      draw(faces);
+      // Slot numbers first: both the points and their chips are drawn for the faces they now name.
       follow(faces);
+      draw();
       send();
     };
     _worker.onerror = () => { _busy = false; };
@@ -229,11 +313,12 @@
     _video = null;
     _slots = [];
     _readPausedUntil = 0;
+    clearTags();
     if (_canvas) {
       _canvas.getContext('2d')?.clearRect(0, 0, _canvas.width, _canvas.height);
       _canvas.style.visibility = 'hidden';
     }
   }
 
-  window.powatchFaces = { start, stop };
+  window.powatchFaces = { start, stop, labels };
 })();

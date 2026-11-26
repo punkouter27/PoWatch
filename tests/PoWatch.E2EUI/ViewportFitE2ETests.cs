@@ -120,6 +120,38 @@ public sealed class ViewportFitE2ETests
         await page.AssertNoBlazorErrorAsync();
     }
 
+    [E2EFact]
+    public async Task Live_fills_the_window_so_no_panel_scrolls()
+    {
+        // Its own user: the nine panels are all shown, whatever another test left the guest's layout as.
+        var user = $"fit-{Guid.NewGuid():N}";
+        foreach (var (width, height) in new[] { (1440, 900), (1366, 768), (1152, 768) })
+        {
+            await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser, user: user);
+            await page.SetViewportSizeAsync(width, height);
+            await page.WaitForTimeoutAsync(1200);
+            await Assertions.Expect(page.GetByTestId("live-grid")).ToBeVisibleAsync();
+
+            // [main's own scroll, the worst panel's overflow, how many panels, how far the last one hangs past
+            // the window]. The board is meant to be the window: all nine on screen, nothing scrolling.
+            var fit = await page.EvaluateAsync<int[]>("""
+                () => {
+                    const main = document.querySelector('#main-content');
+                    const bodies = [...document.querySelectorAll('.dash-grid .term-panel-body')];
+                    const worst = bodies.reduce((m, b) => Math.max(m, b.scrollHeight - b.clientHeight), 0);
+                    const slots = [...document.querySelectorAll('.live-slot')];
+                    const lowest = Math.max(...slots.map(s => Math.round(s.getBoundingClientRect().bottom)));
+                    return [main.scrollHeight - main.clientHeight, worst, slots.length, lowest - innerHeight];
+                }
+                """);
+            Assert.True(fit[0] <= 1, $"Live at {width}×{height}: the page scrolls by {fit[0]} px.");
+            Assert.True(fit[1] <= 1, $"Live at {width}×{height}: a panel scrolls by {fit[1]} px.");
+            Assert.Equal(9, fit[2]);
+            Assert.True(fit[3] <= 0, $"Live at {width}×{height}: the last panel runs {fit[3]} px past the window.");
+            await page.AssertNoBlazorErrorAsync();
+        }
+    }
+
     private static async Task AssertBodyFitsViewportAsync(IPage page, string where)
     {
         var size = await page.EvaluateAsync<int[]>("() => [document.documentElement.clientWidth, document.documentElement.clientHeight, document.documentElement.scrollHeight]");

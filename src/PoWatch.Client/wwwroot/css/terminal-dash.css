@@ -72,9 +72,15 @@
    hidden one leaves no gap. 1100px is a half-screen laptop window, not just a desktop monitor. Below this
    width the grid stacks and the camera comes first. */
 @media (min-width: 1100px) and (min-height: 640px) {
+    /* The board is the window: the bar and the models strip take only what they need and the nine panels
+       share every pixel left over in three even rows, so the whole room is on screen at once. A panel with
+       more to say than its cell scrolls inside itself; the page never scrolls. */
+    .dash { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+    .dash > .stats-toolbar { padding: 8px 10px; }
     .dash-grid {
+        flex: 1 1 auto;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
-        grid-template-rows: auto minmax(380px, auto) auto;
+        grid-template-rows: repeat(3, minmax(0, 1fr));
         grid-template-areas:
             "s1 s2 s3"
             "s4 s5 s6"
@@ -92,14 +98,74 @@
     .live-slot[data-slot="9"] { grid-area: s9; }
 
     .dash-grid > * { min-height: 0; }
-    /* The top and bottom rows take their fullest panel's height up to a cap; the others stretch to match, and
-       a long list scrolls inside its panel instead of stretching the row. (A capped row track would always
-       grow to its cap, leaving a gap under short panels, so the cap sits on the panels.) */
-    .live-slot:is([data-slot="1"], [data-slot="2"], [data-slot="3"], [data-slot="7"], [data-slot="8"], [data-slot="9"]):not([data-panel="camera"]) { max-height: 340px; }
     .dash-grid .cell-metrics > .term-panel-body { min-height: 0; }
     .dash-grid .term-skeleton { height: auto !important; }
     .dash-grid .cell-env .term-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dash-grid .term-stats .term-stat-hint { display: block; }
+
+    /* A cell is a third of the window now, so everything inside steps down one size: the same rows, read as
+       a wall display rather than a page. Headers, cards and facts tighten together. */
+    .dash-grid { --fs-xs: 10px; --fs-sm: 11px; --fs-md: 13px; --fs-lg: 15px; }
+    .dash .term-panel-head { padding: 3px 8px; font-size: 10px; }
+    .dash-grid .term-panel-body { padding: 7px 9px; }
+    .dash-grid .term-panel-body--flush { padding: 0; }
+    .dash-grid .term-stats { gap: 6px; }
+    .dash-grid .term-stat-value { font-size: 18px; }
+    .dash-grid .term-stat-label, .dash-grid .term-stat-hint { font-size: 10px; }
+    .dash-grid .metric-cards { grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr)); gap: 6px; padding: 7px; }
+    .dash-grid .metric-card.rz-card { padding: 7px 8px; }
+    .dash-grid .metric-card .term-stat-value { font-size: clamp(17px, 1.5vw, 24px); }
+    .dash-grid .metric-card .term-stat-hint { gap: 2px; margin-top: 3px; }
+    .dash-grid .metric-card .term-spark { height: 18px; margin-top: 4px; }
+    .dash-grid .rz-chart { height: 110px; }
+    .dash-grid .fact-row { gap: 4px 10px; padding: 6px 8px; }
+    .dash-grid .fact dd { font-size: 13px; }
+    .dash-grid .env-words .word-chip { margin: 1px 3px 1px 0; padding: 0 5px; }
+    .dash-grid .term-empty { padding: 8px 4px; }
+    /* The camera fills its cell instead of holding a 16:9 box, so a shorter middle row does not overflow. */
+    .dash-grid .live-stage { display: grid; height: 100%; min-height: 0; }
+    .dash-grid .live-feed { height: 100%; min-height: 0; aspect-ratio: auto; }
+
+    /* No cell ever shows a scrollbar: a panel fits what it was given and the least important rows step out as
+       the cell gets shorter (container queries on the slot), so what is on screen is always the whole of it.
+       Whatever still runs out of room fades at the bottom edge, the way a page break does. */
+    .live-slot { container-type: size; container-name: cell; }
+    .dash-grid .term-panel-body { overflow: hidden; }
+    .dash-grid .term-panel-body:not(.term-panel-body--flush) {
+        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 12px), transparent);
+        mask-image: linear-gradient(180deg, #000 calc(100% - 12px), transparent);
+    }
+    .dash-grid :is(.live-who, .live-census, .env-words, .live-class-sparks, .live-lines .moment-list) { overflow: hidden; }
+
+    /* Under about a 900-high window (a cell of 240px or less): the footnotes and the second-tier readings go. */
+    @container cell (max-height: 240px) {
+        .cell-faces > .term-panel-body > .term-stat-hint:last-child,
+        .cell-faces :is([data-test="body-language-now"], [data-test="body-language"], [data-test="body-language-summary"]),
+        .cell-metrics [data-test="metric-day-shape"],
+        .cell-env :is(.env-words, .stats-weird),
+        .cell-inframe :is([data-test="posture-split"], [data-test="live-posture"], [data-test="body-posture-score"], .live-class-sparks),
+        .cell-activity :is([data-test="body-activity"], [data-test="body-energy"], [data-test="body-activity-bar"],
+            [data-test="body-activity-split"], [data-test="body-balance"]) { display: none; }
+        /* Space keeps its heat map, smaller, so the facts under it stay on the cell. */
+        .cell-heat .term-heat { max-width: 150px; margin-inline: auto; }
+    }
+
+    /* Under about a 768-high window (a cell of 200px or less): the headline numbers tighten up and lists keep
+       their first rows, so a laptop shows all nine panels with nothing behind a scrollbar. */
+    @container cell (max-height: 200px) {
+        .cell-narration :is(.minimap, .moment-filters) { display: none; }
+        .cell-metrics .metric-card.rz-card,
+        .cell-activity .metric-card.rz-card { padding: 4px 7px; }
+        .cell-metrics .metric-card .term-spark,
+        .cell-activity .metric-card .term-spark { height: 12px; }
+        .cell-metrics .metric-card .term-stat-hint,
+        .cell-activity .metric-card .term-stat-hint { line-height: 1.2; }
+        .cell-metrics .fact-row,
+        .cell-activity .fact-row { padding: 4px 8px; }
+        .cell-inframe .live-who li:nth-child(n+3),
+        .cell-regulars .live-who li:nth-child(n+3),
+        .cell-faces .live-who li:nth-child(n+3) { display: none; }
+    }
 }
 
 /* A phone keeps the session identity visible above the controls. */
