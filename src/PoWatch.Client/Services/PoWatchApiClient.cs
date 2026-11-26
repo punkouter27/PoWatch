@@ -147,6 +147,12 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<ProfileDto?> UpdateProfileAsync(UpdateProfileDto update, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.PutAsJsonAsync("api/profile", update, Json.UpdateProfileDto, ct), Json.ProfileDto, cancellationToken);
 
+    public Task<LiveLayoutDto?> GetLiveLayoutAsync(CancellationToken cancellationToken = default) =>
+        ReadAsync(ct => httpClient.GetAsync("api/profile/layout", ct), Json.LiveLayoutDto, cancellationToken);
+
+    public Task<LiveLayoutDto?> SaveLiveLayoutAsync(LiveLayoutDto layout, CancellationToken cancellationToken = default) =>
+        ReadAsync(ct => httpClient.PutAsJsonAsync("api/profile/layout", layout, Json.LiveLayoutDto, ct), Json.LiveLayoutDto, cancellationToken);
+
     public async Task<IReadOnlyList<PlaceDto>> SearchPlacesAsync(string name, CancellationToken cancellationToken = default) =>
         await ReadAsync(ct => httpClient.GetAsync($"api/places?q={Uri.EscapeDataString(name)}", ct), Json.ListPlaceDto, cancellationToken) ?? [];
 

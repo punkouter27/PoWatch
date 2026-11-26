@@ -2,13 +2,15 @@ namespace PoWatch.Shared.Services;
 
 /// <summary>
 /// The faces in view over one session as moving averages: every <see cref="BinSeconds"/> the mean beauty
-/// and mean expected age of the faces seen in that stretch, and the most faces at once. Session-wide
-/// means and the lowest and highest stretch go with them. Aggregates only, in memory for the session,
-/// never stored or sent (ADR 0001). One instance per session: not thread-safe.
+/// and mean expected age of the faces seen in that stretch, the most faces at once, and how the scored
+/// faces split male/female as a percentage. Session-wide means and the lowest and highest stretch go
+/// with them. Aggregates only, in memory for the session, never stored or sent (ADR 0001). One instance
+/// per session: not thread-safe.
 /// </summary>
 /// <remarks>
-/// Beauty and age get a point only for stretches where a face was scored, so the lines skip the empty
-/// room rather than dropping to zero; the face count gets a point for every stretch with a frame.
+/// Beauty, age and the sex split get a point only for stretches where a face was scored, so the lines
+/// skip the empty room rather than dropping to zero; the face count gets a point for every stretch with
+/// a frame. The sex split is a percentage of the faces scored in the stretch, not a count.
 /// </remarks>
 public sealed class FaceTrends
 {
@@ -21,6 +23,8 @@ public sealed class FaceTrends
     private readonly List<double> _beauty = [];
     private readonly List<double> _age = [];
     private readonly List<double> _faces = [];
+    private readonly List<double> _male = [];
+    private readonly List<double> _female = [];
     private readonly Mean _binBeauty = new();
     private readonly Mean _binAge = new();
     private readonly Mean _allBeauty = new();
@@ -28,6 +32,10 @@ public sealed class FaceTrends
     private double? _binStart;
     private int _binFrames;
     private int _binMostFaces;
+    private int _binMale;
+    private int _binFemale;
+    private long _allMale;
+    private long _allFemale;
 
     /// <summary>Mean beauty per stretch with a scored face, oldest first.</summary>
     public IReadOnlyList<double> BeautyHistory => _beauty;
@@ -37,6 +45,17 @@ public sealed class FaceTrends
 
     /// <summary>The most faces at once per stretch, oldest first.</summary>
     public IReadOnlyList<double> FacesHistory => _faces;
+
+    /// <summary>Male share of the scored faces per stretch, 0-100; male + female = 100.</summary>
+    public IReadOnlyList<double> MaleHistory => _male;
+
+    /// <summary>Female share of the scored faces per stretch, 0-100.</summary>
+    public IReadOnlyList<double> FemaleHistory => _female;
+
+    /// <summary>Male and female share of every scored face this session, 0-100; null before one was scored.</summary>
+    public (double Male, double Female)? SessionSexSplit =>
+        _allMale + _allFemale == 0 ? null : (Math.Round(100.0 * _allMale / (_allMale + _allFemale), 1),
+            Math.Round(100.0 * _allFemale / (_allMale + _allFemale), 1));
 
     /// <summary>Mean beauty over every frame of every face this session; null before one was scored.</summary>
     public double? SessionBeauty => _allBeauty.Value;
@@ -74,6 +93,11 @@ public sealed class FaceTrends
                 _binAge.Add(years);
                 _allAge.Add(years);
             }
+            if (face.Male is { } male)
+            {
+                if (male) { _binMale++; _allMale++; }
+                else { _binFemale++; _allFemale++; }
+            }
         }
         _binFrames++;
         _binMostFaces = Math.Max(_binMostFaces, inView.Count);
@@ -85,10 +109,17 @@ public sealed class FaceTrends
         if (_binFrames > 0) Push(_faces, _binMostFaces);
         if (_binBeauty.Value is { } beauty) Push(_beauty, beauty);
         if (_binAge.Value is { } age) Push(_age, age);
+        if (_binMale + _binFemale > 0)
+        {
+            Push(_male, 100.0 * _binMale / (_binMale + _binFemale));
+            Push(_female, 100.0 * _binFemale / (_binMale + _binFemale));
+        }
         _binBeauty.Clear();
         _binAge.Clear();
         _binFrames = 0;
         _binMostFaces = 0;
+        _binMale = 0;
+        _binFemale = 0;
     }
 
     private static void Push(List<double> line, double value)

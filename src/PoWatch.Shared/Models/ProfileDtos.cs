@@ -26,6 +26,13 @@ public sealed class ProfileDto
     public bool DigestEmailAvailable { get; init; }
 }
 
+/// <summary>How the caller arranges Live's panels: the order they fill the grid in, and which are hidden.</summary>
+public sealed class LiveLayoutDto
+{
+    public List<string> Order { get; init; } = [];
+    public List<string> Hidden { get; init; } = [];
+}
+
 /// <summary>The whole set of choices, replaced at once.</summary>
 public sealed class UpdateProfileDto
 {

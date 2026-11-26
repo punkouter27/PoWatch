@@ -106,7 +106,7 @@ Every command below was run on 2026-11-21 (PowerShell or bash, repo root).
 | Format | `dotnet format PoWatch.slnx --verify-no-changes` | — |
 | Build | `dotnet build PoWatch.slnx -c Release` | warnings are errors (the client is trim-analysed) |
 | Hygiene / caps | `pwsh scripts/check-hygiene.ps1` and `pwsh scripts/check-test-caps.ps1` | after a Release build |
-| Unit | `dotnet test tests/PoWatch.Unit -c Release` | nothing (115 tests) |
+| Unit | `dotnet test tests/PoWatch.Unit -c Release` | nothing (100 tests) |
 | Integration | `dotnet test tests/PoWatch.Integration -c Release` | Docker (Testcontainers Azurite); skips with one message without it (25) |
 | E2E API | `dotnet test tests/PoWatch.E2EAPI -c Release` | Docker; skips without it (15; `StatsE2ETests` holds a time budget, so it runs alone after the others) |
 | E2E UI (the release gate) | `pwsh scripts/run-browser-tests.ps1 -Repeat 3` | publishes the trimmed Release build (what deploys), starts Azurite (Docker) and the published app on :7429, runs the tier 3 times in a row against it, stops everything; needs Playwright Chromium (25) |

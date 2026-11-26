@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using PoWatch.Client.Services;
 using PoWatch.Shared.Models;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Client.Features.Live;
 
@@ -16,6 +17,14 @@ public sealed partial class Live
     private StatsQuery _query = StatsQuery.For("session");
 
     private ElementReference _slot;
+    private ElementReference _grid;
+
+    /// <summary>The account's panel order and hidden panels; every panel in the default order until loaded.</summary>
+    private List<string> _order = [.. LivePanels.DefaultOrder];
+    private List<string> _hidden = [];
+
+    /// <summary>Set when the grid changed shape, so the camera is docked again over its (moved or new) slot.</summary>
+    private bool _layoutChanged;
     private ElementReference _demoCanvas;
     private bool _demoEffects;
     private bool _effectsMounted;
@@ -67,6 +76,7 @@ public sealed partial class Live
         _ = Feed.EnsureConnectedAsync();
         _refresh = new CancellationTokenSource();
         _ = RefreshLoopAsync(_refresh.Token);
+        _ = LoadLayoutAsync();
     }
 
     /// <summary>A Journal link (?session=) opens that session; otherwise the page follows the recording one.</summary>
@@ -105,6 +115,12 @@ public sealed partial class Live
         {
             _self = DotNetObjectReference.Create(this);
             await JS.TryInvokeVoidAsync("powatchFeed.watchReturn", _self, 300);
+            await JS.TryInvokeVoidAsync("powatchLayout.attach", _grid, _self);
+            await DockFeedAsync();
+        }
+        else if (_layoutChanged)
+        {
+            _layoutChanged = false;
             await DockFeedAsync();
         }
 
@@ -246,7 +262,56 @@ public sealed partial class Live
         Sensing.Recap = new SessionRecap(refreshed.FirstOrDefault(s => s.Id == session.Id) ?? session, TimeSpan.FromSeconds(secondsAway));
     }
 
-    private Task DockFeedAsync() => Sensing.DockFeedAsync(_slot);
+    /// <summary>The camera panel can be hidden; the camera keeps sensing, only the picture goes away.</summary>
+    private async Task DockFeedAsync()
+    {
+        if (_hidden.Contains(LivePanels.Camera)) await JS.TryInvokeVoidAsync("powatchFeed.undock");
+        else await Sensing.DockFeedAsync(_slot);
+    }
+
+    private List<string> VisiblePanels => [.. _order.Where(id => !_hidden.Contains(id))];
+
+    private bool IsDefaultLayout => _hidden.Count == 0 && _order.SequenceEqual(LivePanels.DefaultOrder);
+
+    private async Task LoadLayoutAsync()
+    {
+        if (await Api.GetLiveLayoutAsync() is not { } layout) return;
+        ApplyLayout(layout);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ApplyLayout(LiveLayoutDto layout)
+    {
+        _order = LivePanels.Normalize(layout.Order);
+        _hidden = LivePanels.CleanHidden(layout.Hidden);
+        _layoutChanged = true;
+    }
+
+    /// <summary>Shows the change at once, then saves it to the account; a failed save says so and keeps the change on screen.</summary>
+    private async Task SaveLayoutAsync(IEnumerable<string> order, IEnumerable<string> hidden)
+    {
+        var layout = new LiveLayoutDto { Order = LivePanels.Normalize(order), Hidden = LivePanels.CleanHidden(hidden) };
+        ApplyLayout(layout);
+        StateHasChanged();
+        if (await Api.SaveLiveLayoutAsync(layout) is null)
+            _error = "The panel layout could not be saved; it will reset when the page reloads.";
+    }
+
+    private Task SetHiddenAsync(string id, bool hide) =>
+        SaveLayoutAsync(_order, hide ? [.. _hidden, id] : _hidden.Where(h => h != id));
+
+    private Task ShowAllAsync() => SaveLayoutAsync(_order, []);
+
+    private Task HideAllAsync() => SaveLayoutAsync(_order, LivePanels.DefaultOrder);
+
+    private Task ResetLayoutAsync() => SaveLayoutAsync(LivePanels.DefaultOrder, []);
+
+    private Task StepAsync(string id, int by) => SaveLayoutAsync(LivePanels.Step(_order, id, by), _hidden);
+
+    /// <summary>A panel dropped on another (live-layout.js): it takes that panel's place, the ones between shift along.</summary>
+    [JSInvokable]
+    public Task MovePanel(string id, string target) =>
+        InvokeAsync(() => SaveLayoutAsync(LivePanels.Move(_order, id, target), _hidden));
 
     private static string Pct(double value) => DisplayText.Fraction(value);
 
@@ -257,6 +322,7 @@ public sealed partial class Live
         Feed.Changed -= OnStatsChanged;
         await JS.TryInvokeVoidAsync("powatchFeed.undock");
         await JS.TryInvokeVoidAsync("powatchFeed.unwatchReturn");
+        await JS.TryInvokeVoidAsync("powatchLayout.detach");
         _self?.Dispose();
         if (_refresh is not null)
         {

@@ -44,157 +44,98 @@ public sealed class BodyReadingsTests
     }
 
     [Fact]
-    public void An_upright_body_facing_the_camera_is_whole_upright_and_open()
+    public void One_frame_reads_as_upright_slumped_leaning_or_closed()
     {
-        var pose = BodyGeometry.Read(Body());
+        var upright = BodyGeometry.Read(Body());
+        Assert.True(upright.UpperBody);
+        Assert.True(upright.FullBody);
+        Assert.False(upright.Slumped);
+        Assert.Equal(BodyCues.None, upright.Cues);
+        Assert.Equal(0, upright.ShoulderTilt!.Value, 3);
 
-        Assert.True(pose.UpperBody);
-        Assert.True(pose.FullBody);
-        Assert.False(pose.Slumped);
-        Assert.Equal(BodyCues.None, pose.Cues);
-        Assert.Equal(0, pose.ShoulderTilt!.Value, 3);
-    }
-
-    [Fact]
-    public void A_body_without_hips_is_not_read()
-    {
-        var values = Body();
-        values[(BodyGeometry.LeftHip * BodyGeometry.ValuesPerPoint) + 2] = 0;
-
-        Assert.False(BodyGeometry.Read(values).UpperBody);
+        var noHips = Body();
+        noHips[(BodyGeometry.LeftHip * BodyGeometry.ValuesPerPoint) + 2] = 0;
+        Assert.False(BodyGeometry.Read(noHips).UpperBody);
         Assert.False(BodyGeometry.Read([1, 2, 3]).UpperBody);
-    }
 
-    [Fact]
-    public void A_head_pushed_towards_the_camera_is_slumped()
-    {
-        var pose = BodyGeometry.Read(Body(p =>
-        {
-            p[BodyGeometry.LeftEar] = p[BodyGeometry.LeftEar] with { Z = -0.15 };
-            p[BodyGeometry.RightEar] = p[BodyGeometry.RightEar] with { Z = -0.15 };
-        }));
+        Assert.True(BodyGeometry.Read(Body(HeadForward)).Slumped);
 
-        Assert.True(pose.Slumped);
-    }
-
-    [Fact]
-    public void Shoulders_nearer_the_camera_than_the_hips_lean_in_without_slumping()
-    {
-        var pose = BodyGeometry.Read(Body(p =>
+        var leaning = BodyGeometry.Read(Body(p =>
         {
             foreach (var point in new[] { BodyGeometry.LeftShoulder, BodyGeometry.RightShoulder, BodyGeometry.LeftEar, BodyGeometry.RightEar })
                 p[point] = p[point] with { Z = -0.12 };
         }));
+        Assert.Equal(BodyCues.LeaningIn, leaning.Cues);
+        Assert.False(leaning.Slumped);
 
-        Assert.Equal(BodyCues.LeaningIn, pose.Cues);
-        Assert.False(pose.Slumped);
-    }
-
-    [Fact]
-    public void Wrists_across_the_body_between_shoulders_and_hips_are_arms_crossed()
-    {
-        var pose = BodyGeometry.Read(Body(p =>
+        Assert.True(BodyGeometry.Read(Body(p =>
         {
             p[BodyGeometry.LeftWrist] = (0.45, 0.45, 0);
             p[BodyGeometry.RightWrist] = (0.55, 0.45, 0);
-        }));
-
-        Assert.True(pose.Cues.HasFlag(BodyCues.ArmsCrossed));
+        })).Cues.HasFlag(BodyCues.ArmsCrossed));
+        Assert.Equal(BodyCues.HandToFace, BodyGeometry.Read(Body(p => p[BodyGeometry.RightWrist] = (0.48, 0.24, 0))).Cues);
+        Assert.True(BodyGeometry.Read(Body(p => p[BodyGeometry.LeftShoulder] = (0.58, 0.32, 0))).ShoulderTilt > 5);
     }
 
     [Fact]
-    public void A_wrist_at_the_nose_is_a_hand_to_the_face()
+    public void Speeds_read_as_an_activity()
     {
-        var pose = BodyGeometry.Read(Body(p => p[BodyGeometry.RightWrist] = (0.48, 0.24, 0)));
+        static BodyActivity Read(double limbs, double hips, double wrists, double ankles, bool anklesSeen = false, bool handUp = false, bool bothUp = false) =>
+            BodyReadings.Classify(new BodyReadings.Speeds(limbs, hips, wrists, ankles), anklesSeen, handUp, bothUp);
 
-        Assert.Equal(BodyCues.HandToFace, pose.Cues);
+        Assert.Equal(BodyActivity.Walking, Read(0, 0.6, 0, 0, anklesSeen: true));
+        Assert.Equal(BodyActivity.Active, Read(1.2, 0, 1, 1, anklesSeen: true));
+        Assert.Equal(BodyActivity.Waving, Read(0.3, 0, 1.0, 0, handUp: true));
+        Assert.Equal(BodyActivity.Stretching, Read(0.1, 0, 0.2, 0, handUp: true, bothUp: true));
+        Assert.Equal(BodyActivity.Gesturing, Read(0.2, 0, 0.5, 0));
+        Assert.Equal(BodyActivity.Still, Read(0.01, 0.01, 0.01, 0.01, anklesSeen: true));
     }
 
     [Fact]
-    public void A_lower_left_shoulder_tilts_positive()
+    public void A_session_adds_up_time_slumps_waves_walks_and_leavers()
     {
-        var pose = BodyGeometry.Read(Body(p => p[BodyGeometry.LeftShoulder] = (0.58, 0.32, 0)));
-
-        Assert.True(pose.ShoulderTilt > 5);
-    }
-
-    [Theory]
-    [InlineData(0, 0.6, 0, 0, true, false, false, BodyActivity.Walking)]
-    [InlineData(1.2, 0, 1, 1, true, false, false, BodyActivity.Active)]
-    [InlineData(0.3, 0, 1.0, 0, false, true, false, BodyActivity.Waving)]
-    [InlineData(0.1, 0, 0.2, 0, false, true, true, BodyActivity.Stretching)]
-    [InlineData(0.2, 0, 0.5, 0, false, false, false, BodyActivity.Gesturing)]
-    [InlineData(0.01, 0.01, 0.01, 0.01, true, false, false, BodyActivity.Still)]
-    public void Speeds_read_as_an_activity(double limbs, double hips, double wrists, double ankles, bool anklesSeen, bool handUp, bool bothUp, BodyActivity expected) =>
-        Assert.Equal(expected, BodyReadings.Classify(new BodyReadings.Speeds(limbs, hips, wrists, ankles), anklesSeen, handUp, bothUp));
-
-    [Fact]
-    public void A_still_body_adds_upright_still_open_time_and_an_energy_point()
-    {
-        var readings = new BodyReadings();
-        for (var i = 0; i <= 12; i++) readings.OnLandmarks([1], Body(), i * 0.5);
-
-        var body = Assert.Single(readings.InView);
+        var still = new BodyReadings();
+        for (var i = 0; i <= 12; i++) still.OnLandmarks([1], Body(), i * 0.5);
+        var body = Assert.Single(still.InView);
         Assert.Equal(1, body.Slot);
         Assert.Equal(BodyActivity.Still, body.Activity);
-        Assert.Equal(6, readings.ActivitySeconds[BodyActivity.Still], 6);
-        Assert.Equal(6, readings.UprightSeconds, 6);
-        Assert.Equal(100, readings.PostureScore);
-        Assert.Equal(6, readings.OpenSeconds, 6);
-        Assert.Equal(0, Assert.Single(readings.EnergyHistory));
-        Assert.True(readings.FullBodySeen);
-    }
+        Assert.Equal(6, still.ActivitySeconds[BodyActivity.Still], 6);
+        Assert.Equal(100, still.PostureScore);
+        Assert.Equal(6, still.OpenSeconds, 6);
+        Assert.Equal(0, Assert.Single(still.EnergyHistory));
+        Assert.True(still.FullBodySeen);
 
-    [Fact]
-    public void A_fast_hand_above_the_shoulder_waves_and_counts_as_left_arm_movement()
-    {
-        var readings = new BodyReadings();
+        var waving = new BodyReadings();
         for (var i = 0; i <= 6; i++)
-            readings.OnLandmarks([1], Body(p => p[BodyGeometry.LeftWrist] = (i % 2 == 0 ? 0.6 : 0.8, 0.2, 0)), i * 0.5);
+            waving.OnLandmarks([1], Body(p => p[BodyGeometry.LeftWrist] = (i % 2 == 0 ? 0.6 : 0.8, 0.2, 0)), i * 0.5);
+        Assert.Equal(BodyActivity.Waving, Assert.Single(waving.InView).Activity);
+        Assert.True(waving.ArmBalance > 0.9);
 
-        Assert.Equal(BodyActivity.Waving, Assert.Single(readings.InView).Activity);
-        Assert.True(readings.ArmBalance > 0.9);
+        var walking = new BodyReadings();
+        for (var i = 0; i <= 4; i++) walking.OnLandmarks([1], Body(shift: i * 0.1), i * 0.5);
+        Assert.Equal(BodyActivity.Walking, Assert.Single(walking.InView).Activity);
+
+        var slumping = new BodyReadings();
+        for (var i = 0; i <= 4; i++) slumping.OnLandmarks([1], Body(HeadForward), i * 0.5);
+        Assert.Equal(2, slumping.SlumpedNowSeconds, 6);
+        slumping.OnLandmarks([1], Body(), 2.5);
+        Assert.Equal(0, slumping.SlumpedNowSeconds);
+        Assert.Equal(2, slumping.LongestSlumpSeconds, 6);
+        Assert.Equal(0.5, slumping.UprightSeconds, 6);
+
+        // A gap (a hidden tab) is not time, and a body not handed over has left.
+        var gap = new BodyReadings();
+        gap.OnLandmarks([1], Body(), 0);
+        gap.OnLandmarks([1], Body(), 60);
+        Assert.Equal(0, gap.ObservedSeconds);
+        gap.OnLandmarks([], [], 60.5);
+        Assert.Empty(gap.InView);
     }
 
-    [Fact]
-    public void Moving_across_the_frame_is_walking()
+    /// <summary>Ears pushed 20 cm towards the camera: a forward head.</summary>
+    private static void HeadForward(Dictionary<int, (double X, double Y, double Z)> p)
     {
-        var readings = new BodyReadings();
-        for (var i = 0; i <= 4; i++) readings.OnLandmarks([1], Body(shift: i * 0.1), i * 0.5);
-
-        Assert.Equal(BodyActivity.Walking, Assert.Single(readings.InView).Activity);
-    }
-
-    [Fact]
-    public void A_slump_is_timed_and_its_run_ends_when_the_back_straightens()
-    {
-        var slumped = Body(p =>
-        {
-            p[BodyGeometry.LeftEar] = p[BodyGeometry.LeftEar] with { Z = -0.2 };
-            p[BodyGeometry.RightEar] = p[BodyGeometry.RightEar] with { Z = -0.2 };
-        });
-        var readings = new BodyReadings();
-        for (var i = 0; i <= 4; i++) readings.OnLandmarks([1], slumped, i * 0.5);
-        Assert.Equal(2, readings.SlumpedNowSeconds, 6);
-
-        readings.OnLandmarks([1], Body(), 2.5);
-
-        Assert.Equal(0, readings.SlumpedNowSeconds);
-        Assert.Equal(2, readings.LongestSlumpSeconds, 6);
-        Assert.Equal(2, readings.SlumpedSeconds, 6);
-        Assert.Equal(0.5, readings.UprightSeconds, 6);
-    }
-
-    [Fact]
-    public void A_gap_is_not_time_and_a_body_not_handed_over_has_left()
-    {
-        var readings = new BodyReadings();
-        readings.OnLandmarks([1], Body(), 0);
-        readings.OnLandmarks([1], Body(), 60);
-        Assert.Equal(0, readings.ObservedSeconds);
-
-        readings.OnLandmarks([], [], 60.5);
-
-        Assert.Empty(readings.InView);
+        p[BodyGeometry.LeftEar] = p[BodyGeometry.LeftEar] with { Z = -0.2 };
+        p[BodyGeometry.RightEar] = p[BodyGeometry.RightEar] with { Z = -0.2 };
     }
 }

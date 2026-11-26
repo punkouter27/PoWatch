@@ -11,6 +11,11 @@ public interface IProfileStore
 
     /// <summary>Every saved profile. Only users who changed a setting have one, so the set stays small.</summary>
     IAsyncEnumerable<UserProfile> ListAsync(CancellationToken cancellationToken);
+
+    /// <summary>The user's Live panel arrangement; null until they change it.</summary>
+    Task<LiveLayout?> GetLayoutAsync(string userId, CancellationToken cancellationToken);
+
+    Task SaveLayoutAsync(string userId, LiveLayout layout, CancellationToken cancellationToken);
 }
 
 /// <summary>Shared recap links, found by token for anyone holding the link and by owner for revoking.</summary>

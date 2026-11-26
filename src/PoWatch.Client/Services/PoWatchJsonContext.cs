@@ -54,6 +54,7 @@ namespace PoWatch.Client.Services;
 [JsonSerializable(typeof(List<WatchRule>))]
 [JsonSerializable(typeof(ProfileDto))]
 [JsonSerializable(typeof(UpdateProfileDto))]
+[JsonSerializable(typeof(LiveLayoutDto))]
 [JsonSerializable(typeof(List<PlaceDto>))]
 [JsonSerializable(typeof(WeatherYearDto))]
 [JsonSerializable(typeof(WeekDigestDto))]

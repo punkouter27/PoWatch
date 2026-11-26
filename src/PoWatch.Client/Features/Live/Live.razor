@@ -5,14 +5,16 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject StatsFeed Feed
+@using PoWatch.Shared.Services
 
 <PageTitle>Live · PoWatch</PageTitle>
 @* The page's one h1, for screen readers; the lit section key in the header is its visible title. *@
 <h1 class="visually-hidden">Live</h1>
 
 @* One session, one toolbar; configuration folds away, diagnostics live on /diag.
-   Desktop reads as three by three: the camera in the middle cell, eight panels around it. Below 1280px
-   the same panels stack in this order, camera first, so a phone still opens on the picture. *@
+   Desktop reads as three by three, by default with the camera in the middle cell and eight panels around
+   it; each account can hide panels and reorder them (Panels menu, or drag a panel's grip). Below 1100px
+   the panels stack in that order, camera first, so a phone still opens on the picture. *@
 <div class="dash" data-inference-ms="@L.DetectorLatencyMs.ToString(CultureInfo.InvariantCulture)">
     <div class="stats-toolbar" data-test="stats-toolbar">
         <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
@@ -26,6 +28,33 @@
         <a href="diag" class="term-button session-health" data-test="session-health">
             @(L.LastError is not null || L.LostTicks > 0 ? "Needs attention" : L.PendingBatches > 0 ? "Saving queued" : Sensing.IsRunning ? "Sensing active" : "System status")
         </a>
+        @* Which panels show and in what order, saved to the account. Dragging a panel's grip does the same. *@
+        <details class="export-menu panels-menu" data-test="panels-menu">
+            <summary class="term-button" title="Show, hide and reorder the panels">Panels @(VisiblePanels.Count)/@LivePanels.All.Count ▾</summary>
+            <div class="export-menu-items panels-menu-items">
+                <div class="panels-menu-all">
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@(_hidden.Count == 0)" Click="ShowAllAsync" data-test="panels-show-all">Show all</RadzenButton>
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@(VisiblePanels.Count == 0)" Click="HideAllAsync" data-test="panels-hide-all">Hide all</RadzenButton>
+                </div>
+                @foreach (var id in _order)
+                {
+                    var shown = !_hidden.Contains(id);
+                    <div @key="id" class="panels-menu-row">
+                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" role="switch" aria-checked="@(shown ? "true" : "false")"
+                                      Click="() => SetHiddenAsync(id, shown)" data-test="@($"panel-toggle-{id}")">
+                            <span>@LivePanels.Title(id)</span><b>@(shown ? "ON" : "OFF")</b>
+                        </RadzenButton>
+                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Disabled="@(_order[0] == id)" title="Move earlier" aria-label="@($"Move {LivePanels.Title(id)} earlier")"
+                                      Click="() => StepAsync(id, -1)" data-test="@($"panel-up-{id}")">↑</RadzenButton>
+                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Disabled="@(_order[^1] == id)" title="Move later" aria-label="@($"Move {LivePanels.Title(id)} later")"
+                                      Click="() => StepAsync(id, 1)" data-test="@($"panel-down-{id}")">↓</RadzenButton>
+                    </div>
+                }
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Disabled="@IsDefaultLayout" Click="ResetLayoutAsync" data-test="panels-reset">
+                    <span>Reset <i>every panel, in the original order</i></span><b>↺</b>
+                </RadzenButton>
+            </div>
+        </details>
         @if (_sessionMissing)
         {
             <span class="live-error" role="status" data-test="session-missing">That session was not found, so this is your latest one.</span>
@@ -42,115 +71,156 @@
 
     <AwayCard />
 
-    <div class="dash-grid">
-        <TerminalPanel Title="Camera" Class="live-camera" Test="live-camera" Flush="true">
-            <Aside>
-                @(Sensing.IsRunning ? (L.Demo ? "DEMO SCENE" : "CAMERA") : "STANDBY")
-            </Aside>
-            <ChildContent>
-                @* The camera element itself lives in the layout and is docked over this slot. *@
-                <div class="live-stage">
-                    <div class="live-feed" @ref="_slot">
-                        @if (!Sensing.IsRunning || L.Demo)
-                        {
-                            <canvas class="demo-flow" @ref="_demoCanvas" aria-hidden="true"></canvas>
-                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button demo-effects" aria-pressed="@(_demoEffects ? "true" : "false")"
-                                    Click="ToggleDemoEffects" data-test="demo-effects" title="Decorative simulation, not measured motion">
-                                Effects @(_demoEffects ? "on" : "off")
-                            </RadzenButton>
-                        }
-                        @foreach (var track in Sensing.IsRunning ? L.Tracks : [])
-                        {
-                            <div @key="track.TrackId" class="live-box @(track.Label == "person" ? "live-box--person" : string.Empty)"
-                                 data-uncertain="@(track.Box.Score < 0.6 ? "true" : "false")"
-                                 style="left: @Pct(track.Box.X0 * 100)%; top: @Pct(track.Box.Y0 * 100)%; width: @Pct((track.Box.X1 - track.Box.X0) * 100)%; height: @Pct((track.Box.Y1 - track.Box.Y0) * 100)%;">
-                                <span title="@($"Confidence {track.Box.Score:P0} · Track {track.TrackId}")">@(L.RegularFor(track.TrackId)?.DisplayName ?? track.Label)@(track.Box.Score < 0.6 ? " · uncertain" : null)</span>
-                            </div>
-                        }
-
-                        @if (!Sensing.IsRunning)
-                        {
-                            <div class="live-standby" data-test="live-standby">
-                                <p>Point a camera at anything, press Start, walk away.</p>
-                                <p class="term-stat-hint">Use Start camera above.</p>
-                            </div>
-                        }
-                        else if (Sensing.Live.Demo)
-                        {
-                            <div class="live-demo-note" aria-hidden="true">DEMO SCENE · SYNTHETIC</div>
-                        }
-                        @if (Sensing.IsRunning)
-                        {
-                            @* A broadcast-style corner readout: on air, the clock, who is in view, how long it has run. *@
-                            <div class="live-hud" aria-hidden="true" data-test="live-hud">
-                                <span class="live-hud-rec">●</span> @DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture)
-                                · @L.PeopleNow IN VIEW
-                                @if (L.Session?.StartedUtc is { } began)
-                                {
-                                    <text> · @DisplayText.Duration((DateTimeOffset.UtcNow - began).TotalSeconds)</text>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-            </ChildContent>
-        </TerminalPanel>
-
-        <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend" />
-        <InFrame Objects="@_objects" Presence="@_presence" />
-        <LiveFaces />
-
-        @* What the camera and the microphone are turning into words, newest first, with the session's map. *@
-        <TerminalPanel Title="Narration" Class="cell-narration" Test="live-narration-panel" Flush="true">
-            <Aside>NEWEST FIRST</Aside>
-            <ChildContent>
-                <LiveNarration SessionId="@_sessionId" />
-            </ChildContent>
-        </TerminalPanel>
-
-        @* The room's space in one grid: where motion is right now, or where people and animals were centred
-           today; then the hottest spots and the edge of the frame things mostly come and go by. *@
-        <TerminalPanel Title="Space" Class="cell-heat" Test="live-motion-grid">
-            <Aside>
-                <span class="space-switch" role="group" aria-label="Which heat to show">
-                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_peopleHeat ? "pw-plain" : "pw-plain on")" aria-pressed="@(_peopleHeat ? "false" : "true")" Click="() => _peopleHeat = false" data-test="space-motion">MOTION NOW</RadzenButton>
-                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_peopleHeat ? "pw-plain on" : "pw-plain")" aria-pressed="@(_peopleHeat ? "true" : "false")" Click="() => _peopleHeat = true" data-test="space-people">PEOPLE TODAY</RadzenButton>
-                </span>
-            </Aside>
-            <ChildContent>
-                <div class="live-heat">
-                    @if (_peopleHeat)
+    @* The nine panels in the user's order (saved per account); hidden ones leave no gap, the rest fill the
+       grid in order. Each panel's title bar carries a grip to drag it onto another panel's place and a ×. *@
+    <div class="dash-grid" @ref="_grid" data-test="live-grid">
+        @foreach (var (id, index) in VisiblePanels.Select((id, i) => (id, i + 1)))
+        {
+            <div @key="id" class="live-slot" data-slot="@index" data-panel="@id" data-test="live-slot-@id">
+                <CascadingValue Name="PanelTools" Value="@PanelTools(id)">
+                    @switch (id)
                     {
-                        <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred today" CellTitle="@((i, v) => $"{Cell(i)} · {v:P0}")" />
+                        case LivePanels.Camera:
+                            <TerminalPanel Title="Camera" Class="live-camera" Test="live-camera" Flush="true">
+                                <Aside>
+                                    @(Sensing.IsRunning ? (L.Demo ? "DEMO SCENE" : "CAMERA") : "STANDBY")
+                                </Aside>
+                                <ChildContent>
+                                    @* The camera element itself lives in the layout and is docked over this slot. *@
+                                    <div class="live-stage">
+                                        <div class="live-feed" @ref="_slot">
+                                            @if (!Sensing.IsRunning || L.Demo)
+                                            {
+                                                <canvas class="demo-flow" @ref="_demoCanvas" aria-hidden="true"></canvas>
+                                                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button demo-effects" aria-pressed="@(_demoEffects ? "true" : "false")"
+                                                        Click="ToggleDemoEffects" data-test="demo-effects" title="Decorative simulation, not measured motion">
+                                                    Effects @(_demoEffects ? "on" : "off")
+                                                </RadzenButton>
+                                            }
+                                            @foreach (var track in Sensing.IsRunning ? L.Tracks : [])
+                                            {
+                                                <div @key="track.TrackId" class="live-box @(track.Label == "person" ? "live-box--person" : string.Empty)"
+                                                     data-uncertain="@(track.Box.Score < 0.6 ? "true" : "false")"
+                                                     style="left: @Pct(track.Box.X0 * 100)%; top: @Pct(track.Box.Y0 * 100)%; width: @Pct((track.Box.X1 - track.Box.X0) * 100)%; height: @Pct((track.Box.Y1 - track.Box.Y0) * 100)%;">
+                                                    <span title="@($"Confidence {track.Box.Score:P0} · Track {track.TrackId}")">@(L.RegularFor(track.TrackId)?.DisplayName ?? track.Label)@(track.Box.Score < 0.6 ? " · uncertain" : null)</span>
+                                                </div>
+                                            }
+
+                                            @if (!Sensing.IsRunning)
+                                            {
+                                                <div class="live-standby" data-test="live-standby">
+                                                    <p>Point a camera at anything, press Start, walk away.</p>
+                                                    <p class="term-stat-hint">Use Start camera above.</p>
+                                                </div>
+                                            }
+                                            else if (Sensing.Live.Demo)
+                                            {
+                                                <div class="live-demo-note" aria-hidden="true">DEMO SCENE · SYNTHETIC</div>
+                                            }
+                                            @if (Sensing.IsRunning)
+                                            {
+                                                @* A broadcast-style corner readout: on air, the clock, who is in view, how long it has run. *@
+                                                <div class="live-hud" aria-hidden="true" data-test="live-hud">
+                                                    <span class="live-hud-rec">●</span> @DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture)
+                                                    · @L.PeopleNow IN VIEW
+                                                    @if (L.Session?.StartedUtc is { } began)
+                                                    {
+                                                        <text> · @DisplayText.Duration((DateTimeOffset.UtcNow - began).TotalSeconds)</text>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </ChildContent>
+                            </TerminalPanel>
+                            break;
+                        case "metrics":
+                            <KeyMetrics Range="session" Presence="@_presence" Patterns="@_patterns" OccupancyTrend="@_occupancyTrend" VisitsTrend="@_visitsTrend" />
+                            break;
+                        case "inframe":
+                            <InFrame Objects="@_objects" Presence="@_presence" />
+                            break;
+                        case "faces":
+                            <LiveFaces />
+                            break;
+                        case "narration":
+                            @* What the camera and the microphone are turning into words, newest first, with the session's map. *@
+                            <TerminalPanel Title="Narration" Class="cell-narration" Test="live-narration-panel" Flush="true">
+                                <Aside>NEWEST FIRST</Aside>
+                                <ChildContent>
+                                    <LiveNarration SessionId="@_sessionId" />
+                                </ChildContent>
+                            </TerminalPanel>
+                            break;
+                        case "space":
+                            @* The room's space in one grid: where motion is right now, or where people and animals were centred
+                               today; then the hottest spots and the edge of the frame things mostly come and go by. *@
+                            <TerminalPanel Title="Space" Class="cell-heat" Test="live-motion-grid">
+                                <Aside>
+                                    <span class="space-switch" role="group" aria-label="Which heat to show">
+                                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_peopleHeat ? "pw-plain" : "pw-plain on")" aria-pressed="@(_peopleHeat ? "false" : "true")" Click="() => _peopleHeat = false" data-test="space-motion">MOTION NOW</RadzenButton>
+                                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_peopleHeat ? "pw-plain on" : "pw-plain")" aria-pressed="@(_peopleHeat ? "true" : "false")" Click="() => _peopleHeat = true" data-test="space-people">PEOPLE TODAY</RadzenButton>
+                                    </span>
+                                </Aside>
+                                <ChildContent>
+                                    <div class="live-heat">
+                                        @if (_peopleHeat)
+                                        {
+                                            <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred today" CellTitle="@((i, v) => $"{Cell(i)} · {v:P0}")" />
+                                        }
+                                        else
+                                        {
+                                            <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
+                                        }
+                                    </div>
+                                    @if (_space is { } space)
+                                    {
+                                        <FactRow Test="stats-space" Facts="@([
+                                            new("Hot spot", space.HottestCell >= 0 ? Cell(space.HottestCell) : "—", "The grid cell with the most motion today"),
+                                            new("Favourite spot", space.FavouriteSpotCell >= 0 ? Cell(space.FavouriteSpotCell) : "—", "Where tracked people and animals were centred most today"),
+                                            new("Came in", space.Entries.Values.Sum().ToString(CultureInfo.InvariantCulture), "Tracks that entered across a frame edge today"),
+                                            new("Went out", space.Exits.Values.Sum().ToString(CultureInfo.InvariantCulture), "Tracks that left across a frame edge today"),
+                                        ])" />
+                                        @* Which edge of the frame is the door: entries and exits together, per edge. *@
+                                        <ShareBar Label="Comings and goings by frame edge today" Test="space-edges"
+                                                  Parts="@([.. space.Entries.Keys.Union(space.Exits.Keys).Select(edge => new ShareBar.Part(edge.ToLowerInvariant(), space.Entries.GetValueOrDefault(edge) + space.Exits.GetValueOrDefault(edge), Note: $"{space.Entries.GetValueOrDefault(edge)} in · {space.Exits.GetValueOrDefault(edge)} out")).OrderByDescending(p => p.Value)])" />
+                                    }
+                                    else
+                                    {
+                                        <p class="term-empty" data-test="space-empty">Spots and doors appear after the first minute of watching today.</p>
+                                    }
+                                </ChildContent>
+                            </TerminalPanel>
+                            break;
+                        case "environment":
+                            <LiveEnvironment Query="@_query" />
+                            break;
+                        case "regulars":
+                            <LiveRegulars />
+                            break;
+                        case "activity":
+                            <LiveActivity Patterns="@_patterns" Presence="@_presence" />
+                            break;
                     }
-                    else
-                    {
-                        <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
-                    }
-                </div>
-                @if (_space is { } space)
-                {
-                    <FactRow Test="stats-space" Facts="@([
-                        new("Hot spot", space.HottestCell >= 0 ? Cell(space.HottestCell) : "—", "The grid cell with the most motion today"),
-                        new("Favourite spot", space.FavouriteSpotCell >= 0 ? Cell(space.FavouriteSpotCell) : "—", "Where tracked people and animals were centred most today"),
-                        new("Came in", space.Entries.Values.Sum().ToString(CultureInfo.InvariantCulture), "Tracks that entered across a frame edge today"),
-                        new("Went out", space.Exits.Values.Sum().ToString(CultureInfo.InvariantCulture), "Tracks that left across a frame edge today"),
-                    ])" />
-                    @* Which edge of the frame is the door: entries and exits together, per edge. *@
-                    <ShareBar Label="Comings and goings by frame edge today" Test="space-edges"
-                              Parts="@([.. space.Entries.Keys.Union(space.Exits.Keys).Select(edge => new ShareBar.Part(edge.ToLowerInvariant(), space.Entries.GetValueOrDefault(edge) + space.Exits.GetValueOrDefault(edge), Note: $"{space.Entries.GetValueOrDefault(edge)} in · {space.Exits.GetValueOrDefault(edge)} out")).OrderByDescending(p => p.Value)])" />
-                }
-                else
-                {
-                    <p class="term-empty" data-test="space-empty">Spots and doors appear after the first minute of watching today.</p>
-                }
-            </ChildContent>
-        </TerminalPanel>
-
-        <LiveEnvironment Query="@_query" />
-
-        <LiveRegulars />
-
-        <LiveActivity Patterns="@_patterns" Presence="@_presence" />
+                </CascadingValue>
+            </div>
+        }
+        @if (VisiblePanels.Count == 0)
+        {
+            <div class="live-all-hidden" data-test="live-all-hidden">
+                <p>Every panel is hidden.</p>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="ShowAllAsync" data-test="panels-show-all-empty">Show all panels</RadzenButton>
+            </div>
+        }
     </div>
 </div>
+
+@code {
+    /// <summary>The grip and the hide button each panel's title bar shows (TerminalPanel renders them).</summary>
+    private RenderFragment PanelTools(string id) =>
+        @<span class="panel-tools">
+            <span class="panel-grip" data-grip title="Drag onto another panel to move it there" aria-hidden="true">⠿</span>
+            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain panel-hide" title="@($"Hide {LivePanels.Title(id)}")" aria-label="@($"Hide {LivePanels.Title(id)}")"
+                          Click="() => SetHiddenAsync(id, true)" data-test="@($"panel-hide-{id}")">×</RadzenButton>
+        </span>;
+}

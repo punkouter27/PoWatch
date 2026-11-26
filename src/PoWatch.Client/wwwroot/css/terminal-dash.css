@@ -52,41 +52,50 @@
 .dash-grid > .term-grid { display: contents; }
 .dash-grid .term-panel { grid-column: auto; }
 .dash-grid .rz-chart { height: 200px; }
+/* Each panel sits in a slot the user can move or hide; the panel fills its slot. */
+.live-slot { display: grid; grid-template-rows: minmax(0, 1fr); min-width: 0; min-height: 0; }
+.live-all-hidden { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 32px 12px; border: 1px dashed var(--term-line); border-radius: var(--term-radius); color: var(--term-muted); }
+.live-all-hidden p { margin: 0; }
+/* Stacked, the camera comes first whatever the order, so a phone still opens on the picture. */
+@media (max-width: 1099.98px), (max-height: 639.98px) {
+    .live-slot[data-panel="camera"] { order: -1; }
+}
 .dash-grid .term-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 @media (min-width: 720px) {
     .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dash-grid .live-camera { grid-column: span 2; }
+    .live-slot[data-panel="camera"] { grid-column: span 2; }
 }
 
-/* Three by three with the camera in the middle cell and eight panels around it: the metrics read the
-   room, the camera shows it. 1100px is a half-screen laptop window, not just a desktop monitor. Below
-   this width the grid stacks and the camera comes first. */
+/* Three by three, by default with the camera in the middle cell and eight panels around it: the metrics
+   read the room, the camera shows it. Panels fill the nine slots in the account's order (data-slot), so a
+   hidden one leaves no gap. 1100px is a half-screen laptop window, not just a desktop monitor. Below this
+   width the grid stacks and the camera comes first. */
 @media (min-width: 1100px) and (min-height: 640px) {
     .dash-grid {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
         grid-template-rows: auto minmax(380px, auto) auto;
         grid-template-areas:
-            "metrics     inframe   faces"
-            "heat        camera    narration"
-            "environment regulars  activity";
+            "s1 s2 s3"
+            "s4 s5 s6"
+            "s7 s8 s9";
         min-height: 0;
     }
-    .dash-grid .cell-metrics { grid-area: metrics; }
-    .dash-grid .cell-inframe { grid-area: inframe; }
-    .dash-grid .cell-faces { grid-area: faces; }
-    .dash-grid .cell-heat { grid-area: heat; }
-    .dash-grid .live-camera { grid-area: camera; }
-    .dash-grid .cell-narration { grid-area: narration; }
-    .dash-grid .cell-env { grid-area: environment; }
-    .dash-grid .cell-regulars { grid-area: regulars; }
-    .dash-grid .cell-activity { grid-area: activity; }
+    .live-slot[data-slot="1"] { grid-area: s1; }
+    .live-slot[data-slot="2"] { grid-area: s2; }
+    .live-slot[data-slot="3"] { grid-area: s3; }
+    .live-slot[data-slot="4"] { grid-area: s4; }
+    .live-slot[data-slot="5"] { grid-area: s5; }
+    .live-slot[data-slot="6"] { grid-area: s6; }
+    .live-slot[data-slot="7"] { grid-area: s7; }
+    .live-slot[data-slot="8"] { grid-area: s8; }
+    .live-slot[data-slot="9"] { grid-area: s9; }
 
     .dash-grid > * { min-height: 0; }
     /* The top and bottom rows take their fullest panel's height up to a cap; the others stretch to match, and
        a long list scrolls inside its panel instead of stretching the row. (A capped row track would always
        grow to its cap, leaving a gap under short panels, so the cap sits on the panels.) */
-    .dash-grid :is(.cell-metrics, .cell-inframe, .cell-faces, .cell-env, .cell-regulars, .cell-activity) { max-height: 340px; }
+    .live-slot:is([data-slot="1"], [data-slot="2"], [data-slot="3"], [data-slot="7"], [data-slot="8"], [data-slot="9"]):not([data-panel="camera"]) { max-height: 340px; }
     .dash-grid .cell-metrics > .term-panel-body { min-height: 0; }
     .dash-grid .term-skeleton { height: auto !important; }
     .dash-grid .cell-env .term-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -141,3 +150,24 @@
 .live-lines .moment-list { max-height: 26rem; overflow-y: auto; overflow-anchor: none; }
 .narration-new { margin: 8px 10px; }
 .narration-new[hidden] { display: none; }
+
+/* ── Live: moving and hiding panels ───────────────────────────────────── */
+
+/* The grip and × at the right of each Live panel's title bar (TerminalPanel's PanelTools). */
+.panel-tools { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; }
+.term-panel-meta + .panel-tools { margin-left: 0; }
+.panel-grip { padding: 0 4px; color: var(--term-dim); font-size: 13px; line-height: 1; cursor: grab; user-select: none; }
+.panel-hide { min-width: 22px; min-height: 22px; padding: 0; border: 0; border-radius: 2px; background: transparent; color: var(--term-dim); font: 15px/1 var(--term-mono); cursor: pointer; }
+:is(.panel-grip, .panel-hide):hover { color: var(--term-text); }
+/* Touch screens move panels from the Panels menu; a grip they cannot drag is only noise. */
+@media (hover: none) {
+    .panel-grip { display: none; }
+}
+.live-slot.is-dragging { opacity: 0.45; }
+.live-slot.is-drop-target > .term-panel { outline: 2px dashed var(--term-accent); outline-offset: 2px; }
+
+/* The Panels menu: show all / hide all, then each panel with its switch and earlier / later buttons. */
+.panels-menu-items { display: grid; gap: 2px; min-width: 300px; }
+.panels-menu-all { display: flex; gap: 6px; padding: 4px 4px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--term-line); }
+.panels-menu-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 2px; }
+.panels-menu-row .term-icon-button[disabled] { opacity: 0.35; cursor: default; }

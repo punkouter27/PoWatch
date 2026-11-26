@@ -4,6 +4,7 @@ using PoWatch.Application.Features.Weather;
 using PoWatch.Domain.Models;
 using PoWatch.Domain.Services;
 using PoWatch.Shared.Models;
+using PoWatch.Shared.Services;
 
 namespace PoWatch.Api.Features.Profile;
 
@@ -51,8 +52,30 @@ internal static class ProfileEndpoints
             .WithName("UpdateProfile")
             .WithSummary("Replace the caller's retention window, weather place and weekly-email choice.");
 
+        // Live's panel arrangement; a user who never changed it gets every panel in the default order.
+        group.MapGet("/layout", async (UserId userId, IProfileStore profiles, CancellationToken ct) =>
+                Results.Ok(ToDto(await profiles.GetLayoutAsync(userId, ct))))
+            .WithName("GetLiveLayout");
+
+        group.MapPut("/layout", async (LiveLayoutDto request, UserId userId, IProfileStore profiles, CancellationToken ct) =>
+            {
+                if (request.Order.Count > LivePanels.All.Count * 2 || request.Hidden.Count > LivePanels.All.Count * 2)
+                    return Results.BadRequest(new { message = $"A layout names at most {LivePanels.All.Count} panels." });
+                var layout = new LiveLayout(LivePanels.Normalize(request.Order), LivePanels.CleanHidden(request.Hidden));
+                await profiles.SaveLayoutAsync(userId, layout, ct);
+                return Results.Ok(ToDto(layout));
+            })
+            .WithName("UpdateLiveLayout")
+            .WithSummary("Replace the order and visibility of the caller's Live panels; unknown panel ids are dropped.");
+
         return app;
     }
+
+    private static LiveLayoutDto ToDto(LiveLayout? layout) => new()
+    {
+        Order = LivePanels.Normalize(layout?.Order),
+        Hidden = LivePanels.CleanHidden(layout?.Hidden)
+    };
 
     private static ProfileDto ToDto(UserProfile? profile, bool emailAvailable) => new()
     {

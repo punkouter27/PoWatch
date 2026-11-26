@@ -162,6 +162,11 @@
     {
         var start = new DateTimeOffset(from.Ticks - (from.Ticks % TimeSpan.TicksPerMinute), from.Offset);
         var end = new DateTimeOffset(to.Ticks - (to.Ticks % TimeSpan.TicksPerMinute), to.Offset).AddMinutes(1);
+        // The heat map must not start before the first real minute: an empty leading grid would
+        // replay as a burst of "nobody here" before the first face (the replay's own bug).
+        var first = days.SelectMany(d => d.Minutes).Where(m => m.AtUtc >= start && m.AtUtc < end)
+            .OrderBy(m => m.AtUtc).FirstOrDefault();
+        if (first is not null && first.AtUtc > start) start = first.AtUtc;
         var minutes = new List<ReplayMinuteDto>();
         var grids = new List<byte>();
         var events = new List<ReplayEventDto>();

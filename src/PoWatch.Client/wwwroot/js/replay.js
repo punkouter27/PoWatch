@@ -128,6 +128,17 @@
 
             ctx.fillStyle = c.text;
             ctx.fillRect(Math.round(x(state.at)) - dpr / 2, 0, dpr * 2, h);
+
+            // The readout above the track names the 10-second bucket under the playhead.
+            const bucket = minutes.find(m => m.at <= state.at && state.at < m.at + 60000);
+            if (bucket) {
+                const who = (bucket.who || []).find(p => p.personId === state.selected);
+                if (who) {
+                    ctx.fillStyle = c.text;
+                    ctx.font = `${10 * dpr}px monospace`;
+                    ctx.fillText(`${who.personId} ${who.pct}% of this minute`, 4 * dpr, 9 * dpr);
+                }
+            }
         }
 
         // state.frames holds only when each frame was taken; the picture nearest the playhead is read

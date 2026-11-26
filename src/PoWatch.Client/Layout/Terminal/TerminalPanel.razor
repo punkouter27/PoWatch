@@ -13,6 +13,7 @@
         {
             <span class="term-panel-meta">@Aside</span>
         }
+        @PanelTools
     </header>
     <div class="term-panel-body @(Flush ? "term-panel-body--flush" : string.Empty)">
         @* One failing panel shows a retry box; the rest of the page keeps working. *@
@@ -45,4 +46,7 @@
 
     /// <summary>No inner padding — for tables and camera feeds that run edge to edge.</summary>
     [Parameter] public bool Flush { get; set; }
+
+    /// <summary>A page that lets panels be moved or hidden (Live) cascades its grip and hide button here.</summary>
+    [CascadingParameter(Name = "PanelTools")] public RenderFragment? PanelTools { get; set; }
 }

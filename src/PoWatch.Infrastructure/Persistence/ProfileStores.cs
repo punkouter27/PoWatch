@@ -7,10 +7,11 @@ using PoWatch.Domain.Models;
 
 namespace PoWatch.Infrastructure.Persistence;
 
-/// <summary>One row per user (partition = user key, row = "profile").</summary>
+/// <summary>One row per user (partition = user key, row = "profile"), and beside it the Live layout (row = "live-layout").</summary>
 public sealed class AzureProfileStore(AzureStorageClients clients, IOptions<AzureStorageOptions> options) : IProfileStore
 {
     private const string Row = "profile";
+    private const string LayoutRow = "live-layout";
     private readonly TableClient _table = clients.TableService.GetTableClient(options.Value.ProfilesTable);
 
     public async Task<UserProfile?> GetAsync(string userId, CancellationToken cancellationToken)
@@ -46,6 +47,26 @@ public sealed class AzureProfileStore(AzureStorageClients clients, IOptions<Azur
         await foreach (var entity in _table.QueryAsync<TableEntity>(e => e.RowKey == Row, cancellationToken: cancellationToken))
             yield return ToProfile(entity);
     }
+
+    public async Task<LiveLayout?> GetLayoutAsync(string userId, CancellationToken cancellationToken)
+    {
+        var response = await _table.GetEntityIfExistsAsync<TableEntity>(StatsEntityMapper.UserKey(userId), LayoutRow, cancellationToken: cancellationToken);
+        return response.HasValue
+            ? new LiveLayout(Split(response.Value!.GetString("Order")), Split(response.Value!.GetString("Hidden")))
+            : null;
+    }
+
+    public async Task SaveLayoutAsync(string userId, LiveLayout layout, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+        await _table.UpsertEntityAsync(new TableEntity(StatsEntityMapper.UserKey(userId), LayoutRow)
+        {
+            ["Order"] = string.Join(',', layout.Order),
+            ["Hidden"] = string.Join(',', layout.Hidden)
+        }, TableUpdateMode.Replace, cancellationToken);
+    }
+
+    private static string[] Split(string? ids) => (ids ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static UserProfile ToProfile(TableEntity e) => new()
     {
