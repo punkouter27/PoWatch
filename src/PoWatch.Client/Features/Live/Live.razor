@@ -13,9 +13,9 @@
 <h1 class="visually-hidden">Live</h1>
 
 @* Session controls, AI models, and the Panels menu live in the top nav bar (PoHeader).
-   Desktop reads as three by three, by default with the camera in the middle cell and eight panels around
-   it; each account can hide panels and reorder them (Panels menu, or drag a panel's grip). Below 1100px
-   the panels stack in that order, camera first, so a phone still opens on the picture. *@
+   Every window size reads as three by three, by default with the camera in the middle cell and eight panels
+   around it; each account can hide panels and reorder them (Panels menu, or drag a panel's grip). Each panel
+   shows as much as its cell has room for (container-query tiers in terminal-dash.css). *@
 <div class="dash" data-inference-ms="@L.DetectorLatencyMs.ToString(CultureInfo.InvariantCulture)">
     @if (_sessionMissing || (_error ?? LiveHeader.StartError) is not null)
     {

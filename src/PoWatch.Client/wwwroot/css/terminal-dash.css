@@ -39,143 +39,224 @@
 /* Inline error/status notices on Live (only rendered when something needs attention). */
 .live-notices { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-surface); }
 
-/* The live panels and the stat panels share one grid. */
-.dash-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); }
+/* Three by three at every window size, by default with the camera in the middle cell and eight panels
+   around it: the metrics read the room, the camera shows it. Panels fill the nine slots in the account's
+   order (data-slot), so a hidden one leaves no gap. The board is the window: the bar takes only what it
+   needs and the nine panels share every pixel left over in three even rows, so the whole room is on screen
+   at once on a phone, a laptop or a wall display. The page never scrolls; instead each panel shows as much
+   as its cell has room for. A tiny cell shows the headline, and a bigger one brings back hints,
+   sparklines, lists and charts (the container-query tiers below). */
+.dash { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.dash-grid {
+    flex: 1 1 auto;
+    display: grid;
+    gap: var(--term-gap);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+        "s1 s2 s3"
+        "s4 s5 s6"
+        "s7 s8 s9";
+    min-height: 0;
+}
 .dash-grid > .term-grid { display: contents; }
 .dash-grid .term-panel { grid-column: auto; }
-.dash-grid .rz-chart { height: 200px; }
-/* Each panel sits in a slot the user can move or hide; the panel fills its slot. */
-.live-slot { display: grid; grid-template-rows: minmax(0, 1fr); min-width: 0; min-height: 0; }
-.live-all-hidden { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 32px 12px; border: 1px dashed var(--term-line); border-radius: var(--term-radius); color: var(--term-muted); }
+/* Each panel sits in a slot the user can move or hide; the panel fills its slot. The slot is the size
+   container every tier below measures. */
+.live-slot { display: grid; grid-template-rows: minmax(0, 1fr); min-width: 0; min-height: 0; container-type: size; container-name: cell; }
+.live-slot[data-slot="1"] { grid-area: s1; }
+.live-slot[data-slot="2"] { grid-area: s2; }
+.live-slot[data-slot="3"] { grid-area: s3; }
+.live-slot[data-slot="4"] { grid-area: s4; }
+.live-slot[data-slot="5"] { grid-area: s5; }
+.live-slot[data-slot="6"] { grid-area: s6; }
+.live-slot[data-slot="7"] { grid-area: s7; }
+.live-slot[data-slot="8"] { grid-area: s8; }
+.live-slot[data-slot="9"] { grid-area: s9; }
+.live-all-hidden { grid-column: 1 / -1; grid-row: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 32px 12px; border: 1px dashed var(--term-line); border-radius: var(--term-radius); color: var(--term-muted); }
 .live-all-hidden p { margin: 0; }
-/* Stacked, the camera comes first whatever the order, so a phone still opens on the picture. */
-@media (max-width: 1099.98px), (max-height: 639.98px) {
-    .live-slot[data-panel="camera"] { order: -1; }
-}
+
+.dash-grid > * { min-height: 0; }
+.dash-grid .cell-metrics > .term-panel-body { min-height: 0; }
+.dash-grid .term-skeleton { height: auto !important; }
 .dash-grid .term-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dash-grid .cell-env .term-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dash-grid .term-stats .term-stat-hint { display: block; }
 
-@media (min-width: 720px) {
-    .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .live-slot[data-panel="camera"] { grid-column: span 2; }
+/* A cell is a third of the window, so everything inside starts one size down: the same rows, read as a
+   wall display rather than a page. Headers, cards and facts tighten together. */
+.dash-grid { --fs-xs: 10px; --fs-sm: 11px; --fs-md: 13px; --fs-lg: 15px; }
+.dash .term-panel-head { padding: 3px 8px; font-size: 10px; }
+.dash-grid .term-panel-body { padding: 7px 9px; }
+.dash-grid .term-panel-body--flush { padding: 0; }
+.dash-grid .term-stats { gap: 6px; }
+.dash-grid .term-stat-value { font-size: 18px; }
+.dash-grid .term-stat-label, .dash-grid .term-stat-hint { font-size: 10px; }
+.dash-grid .metric-cards { grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr)); gap: 6px; padding: 7px; }
+.dash-grid .metric-card.rz-card { padding: 7px 8px; }
+.dash-grid .metric-card .term-stat-value { font-size: clamp(17px, 1.5vw, 24px); }
+.dash-grid .metric-card .term-stat-hint { gap: 2px; margin-top: 3px; }
+.dash-grid .metric-card .term-spark { height: 18px; margin-top: 4px; }
+.dash-grid .rz-chart { height: 110px; }
+.dash-grid .fact-row { gap: 4px 10px; padding: 6px 8px; }
+.dash-grid .fact dd { font-size: 13px; }
+.dash-grid .env-words .word-chip { margin: 1px 3px 1px 0; padding: 0 5px; }
+.dash-grid .term-empty { padding: 8px 4px; }
+/* The camera fills its cell instead of holding a 16:9 box, so a short middle row does not overflow. */
+.dash-grid .live-stage { display: grid; height: 100%; min-height: 0; }
+.dash-grid .live-feed { height: 100%; min-height: 0; aspect-ratio: auto; }
+
+/* No cell ever shows a scrollbar: a panel fits what it was given and the least important rows step out as
+   the cell gets smaller, so what is on screen is always the whole of it. Whatever still runs out of room
+   fades at the bottom edge, the way a page break does. */
+.dash-grid .term-panel-body { overflow: hidden; }
+.dash-grid .term-panel-body:not(.term-panel-body--flush) {
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 12px), transparent);
+    mask-image: linear-gradient(180deg, #000 calc(100% - 12px), transparent);
+}
+.dash-grid :is(.live-who, .live-census, .env-words, .live-class-sparks, .live-lines .moment-list) { overflow: hidden; }
+.dash .term-panel-head { min-width: 0; overflow: hidden; }
+
+/* ── Growing: a roomy cell (a big monitor or a wall display) gets page-size type and taller charts. ── */
+@container cell (min-height: 380px) and (min-width: 340px) {
+    .term-panel { --fs-xs: 11px; --fs-sm: 12px; --fs-md: 14px; --fs-lg: 17px; }
+    .term-panel-head { padding: 5px 10px; font-size: 11px; }
+    .term-panel-body:not(.term-panel-body--flush) { padding: 10px 12px; }
+    .term-stat-value { font-size: 22px; }
+    .term-stat-label, .term-stat-hint { font-size: 11px; }
+    .metric-card .term-stat-value { font-size: clamp(20px, 2vw, 30px); }
+    .metric-card .term-spark { height: 26px; }
+    .rz-chart { height: 170px; }
+    .fact dd { font-size: 15px; }
+    .pose-3d-canvas { height: 140px; }
+    .live-heat-mid .term-heat, .fluid-canvas { max-width: 320px; }
+}
+@container cell (min-height: 540px) and (min-width: 460px) {
+    .term-stat-value { font-size: 26px; }
+    .metric-card .term-spark { height: 34px; }
+    .rz-chart { height: 240px; }
+    .pose-3d-canvas { height: 200px; }
+    .live-heat-mid .term-heat, .fluid-canvas { max-width: 440px; }
 }
 
-/* Three by three, by default with the camera in the middle cell and eight panels around it: the metrics
-   read the room, the camera shows it. Panels fill the nine slots in the account's order (data-slot), so a
-   hidden one leaves no gap. 1100px is a half-screen laptop window, not just a desktop monitor. Below this
-   width the grid stacks and the camera comes first. */
-@media (min-width: 1100px) and (min-height: 640px) {
-    /* The board is the window: the bar and the models strip take only what they need and the nine panels
-       share every pixel left over in three even rows, so the whole room is on screen at once. A panel with
-       more to say than its cell scrolls inside itself; the page never scrolls. */
-    .dash { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-    .dash-grid {
-        flex: 1 1 auto;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
-        grid-template-rows: repeat(3, minmax(0, 1fr));
-        grid-template-areas:
-            "s1 s2 s3"
-            "s4 s5 s6"
-            "s7 s8 s9";
-        min-height: 0;
-    }
-    .live-slot[data-slot="1"] { grid-area: s1; }
-    .live-slot[data-slot="2"] { grid-area: s2; }
-    .live-slot[data-slot="3"] { grid-area: s3; }
-    .live-slot[data-slot="4"] { grid-area: s4; }
-    .live-slot[data-slot="5"] { grid-area: s5; }
-    .live-slot[data-slot="6"] { grid-area: s6; }
-    .live-slot[data-slot="7"] { grid-area: s7; }
-    .live-slot[data-slot="8"] { grid-area: s8; }
-    .live-slot[data-slot="9"] { grid-area: s9; }
+/* ── Shrinking: each tier drops the next least important pieces. ── */
 
-    .dash-grid > * { min-height: 0; }
-    .dash-grid .cell-metrics > .term-panel-body { min-height: 0; }
-    .dash-grid .term-skeleton { height: auto !important; }
-    .dash-grid .cell-env .term-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dash-grid .term-stats .term-stat-hint { display: block; }
+/* A cell of 270px or less (about a 900-high window): footnotes and secondary strips step out. */
+@container cell (max-height: 270px) {
+    .cell-faces > .term-panel-body > .term-stat-hint:last-child,
+    .cell-faces :is([data-test="body-language-now"], [data-test="body-language"], [data-test="body-language-summary"]),
+    .cell-metrics [data-test="metric-day-shape"],
+    .cell-env :is(.env-words, .stats-weird, .env-light-spark),
+    .cell-inframe :is([data-test="posture-split"], [data-test="live-posture"], [data-test="body-posture-score"], .live-class-sparks, .inframe-people-spark),
+    .cell-activity :is([data-test="body-activity"], [data-test="body-energy"], [data-test="body-activity-bar"],
+        [data-test="body-activity-split"], [data-test="body-balance"], .pose-3d-canvas),
+    .panel-subhead, .heat-edge, .heat-legend, .term-spark-avg-label, .term-spark-axis { display: none; }
+    /* Space keeps its heat map, compact, so the facts under it stay on the cell. */
+    .cell-heat .term-heat, .cell-heat .fluid-canvas { max-width: 132px; margin-inline: auto; }
+}
 
-    /* A cell is a third of the window now, so everything inside steps down one size: the same rows, read as
-       a wall display rather than a page. Headers, cards and facts tighten together. */
-    .dash-grid { --fs-xs: 10px; --fs-sm: 11px; --fs-md: 13px; --fs-lg: 15px; }
-    .dash .term-panel-head { padding: 3px 8px; font-size: 10px; }
-    .dash-grid .term-panel-body { padding: 7px 9px; }
-    .dash-grid .term-panel-body--flush { padding: 0; }
-    .dash-grid .term-stats { gap: 6px; }
-    .dash-grid .term-stat-value { font-size: 18px; }
-    .dash-grid .term-stat-label, .dash-grid .term-stat-hint { font-size: 10px; }
-    .dash-grid .metric-cards { grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr)); gap: 6px; padding: 7px; }
-    .dash-grid .metric-card.rz-card { padding: 7px 8px; }
-    .dash-grid .metric-card .term-stat-value { font-size: clamp(17px, 1.5vw, 24px); }
-    .dash-grid .metric-card .term-stat-hint { gap: 2px; margin-top: 3px; }
-    .dash-grid .metric-card .term-spark { height: 18px; margin-top: 4px; }
-    .dash-grid .rz-chart { height: 110px; }
-    .dash-grid .fact-row { gap: 4px 10px; padding: 6px 8px; }
-    .dash-grid .fact dd { font-size: 13px; }
-    .dash-grid .env-words .word-chip { margin: 1px 3px 1px 0; padding: 0 5px; }
-    .dash-grid .term-empty { padding: 8px 4px; }
-    /* The camera fills its cell instead of holding a 16:9 box, so a shorter middle row does not overflow. */
-    .dash-grid .live-stage { display: grid; height: 100%; min-height: 0; }
-    .dash-grid .live-feed { height: 100%; min-height: 0; aspect-ratio: auto; }
+/* A cell of 200px or less (about a 768-high window): the headline numbers tighten up, the sparklines and
+   the second bar step out, and lists keep their first rows. */
+@container cell (max-height: 200px) {
+    .cell-narration :is(.minimap, .moment-filters, .narration-controls) { display: none; }
+    .inframe-people-spark, .env-light-spark { display: none; }
+    .cell-metrics .metric-card.rz-card,
+    .cell-activity .metric-card.rz-card { padding: 3px 6px; }
+    .cell-metrics .metric-card .term-spark,
+    .cell-activity .metric-card .term-spark { height: 10px; margin-top: 2px; }
+    .cell-metrics .metric-cards { padding: 4px; gap: 4px; }
+    .cell-metrics .metric-card .term-stat-hint,
+    .cell-activity .metric-card .term-stat-hint { line-height: 1.15; }
+    .cell-metrics .fact-row,
+    .cell-activity .fact-row { padding: 3px 8px; }
+    .cell-metrics .fact dd,
+    .cell-activity .fact dd { font-size: 12px; }
+    .cell-activity .metric-card .term-stat-value { font-size: 16px; }
+    /* Space keeps the heat map and its facts; the frame-edge bar is the first thing to go. */
+    .cell-heat .term-heat { max-width: 104px; }
+    .cell-heat .share-bar { display: none; }
+    .cell-heat .fact-row { padding: 3px 8px; }
+    .cell-inframe .live-who li:nth-child(n+3),
+    .cell-regulars .live-who li:nth-child(n+3),
+    .cell-faces .live-who li:nth-child(n+3) { display: none; }
+}
 
-    /* No cell ever shows a scrollbar: a panel fits what it was given and the least important rows step out as
-       the cell gets shorter (container queries on the slot), so what is on screen is always the whole of it.
-       Whatever still runs out of room fades at the bottom edge, the way a page break does. */
-    .live-slot { container-type: size; container-name: cell; }
-    .dash-grid .term-panel-body { overflow: hidden; }
-    .dash-grid .term-panel-body:not(.term-panel-body--flush) {
-        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 12px), transparent);
-        mask-image: linear-gradient(180deg, #000 calc(100% - 12px), transparent);
-    }
-    .dash-grid :is(.live-who, .live-census, .env-words, .live-class-sparks, .live-lines .moment-list) { overflow: hidden; }
+/* A cell of 140px or less (a short browser pane, a phone): the headline only. Hints, sparklines, the
+   charts and the second fact rows step out, and lists keep their first row. */
+@container cell (max-height: 140px) {
+    .term-stat-hint, .metric-card .term-spark, .term-spark-wrap, .rz-chart, .share-bar,
+    .fact-row + .fact-row, .pose-3d-canvas, .face-metrics-strip, .face-history, .face-breakdown,
+    .meter-row:nth-of-type(n+3), .balance-block, .cue-pills { display: none; }
+    .term-panel-head { padding: 1px 6px; }
+    .term-panel-body:not(.term-panel-body--flush) { padding: 3px 6px; }
+    .term-stats { gap: 3px; }
+    .term-stat-value { font-size: 15px; }
+    .metric-cards { padding: 3px; gap: 3px; }
+    .metric-card.rz-card { padding: 2px 5px; }
+    .metric-card .term-stat-value { font-size: 14px; }
+    .fact-row { padding: 2px 6px; gap: 2px 8px; }
+    .fact dd { font-size: 11px; }
+    .cell-heat .term-heat, .cell-heat .fluid-canvas { max-width: 60px; }
+    .cell-heat .fact-row .fact:nth-child(n+3), .cell-heat .space-picked, .cell-heat .term-empty { display: none; }
+    .live-who li:nth-child(n+2) { display: none; }
+}
 
-    /* Under about a 900-high window (a cell of 270px or less): footnotes and secondary strips step out so 1440×900 never scrolls. */
-    @container cell (max-height: 270px) {
-        .cell-faces > .term-panel-body > .term-stat-hint:last-child,
-        .cell-faces :is([data-test="body-language-now"], [data-test="body-language"], [data-test="body-language-summary"]),
-        .cell-metrics [data-test="metric-day-shape"],
-        .cell-env :is(.env-words, .stats-weird, .env-light-spark),
-        .cell-inframe :is([data-test="posture-split"], [data-test="live-posture"], [data-test="body-posture-score"], .live-class-sparks, .inframe-people-spark),
-        .cell-activity :is([data-test="body-activity"], [data-test="body-energy"], [data-test="body-activity-bar"],
-            [data-test="body-activity-split"], [data-test="body-balance"], .pose-3d-canvas),
-        .panel-subhead, .heat-edge, .heat-legend, .term-spark-avg-label, .term-spark-axis { display: none; }
-        /* Space keeps its heat map, compact, so the facts under it stay on the cell. */
-        .cell-heat .term-heat, .cell-heat .fluid-canvas { max-width: 132px; margin-inline: auto; }
-    }
+/* A narrow cell (a phone or a split screen): fewer columns, and the title bar keeps the title and the
+   panel's own controls but drops the decorations. */
+@container cell (max-width: 240px) {
+    .term-stats, .cell-env .term-stats { grid-template-columns: minmax(0, 1fr); }
+    .metric-cards { grid-template-columns: minmax(0, 1fr); }
+    .fact-row { grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); }
+    .term-stat-hint, .term-spark-axis, .term-spark-avg-label, .heat-edge, .heat-legend, .panel-grip { display: none; }
+    .cell-heat .space-switch { display: none; }
+}
+@container cell (max-width: 150px) {
+    /* A phone's third of the screen: the headline only, as in the shortest cells. */
+    .term-stat-hint, .term-spark-wrap, .rz-chart, .share-bar, .fact-row + .fact-row, .pose-3d-canvas,
+    .face-metrics-strip, .face-history, .face-breakdown, .meter-row:nth-of-type(n+3), .balance-block, .cue-pills,
+    .term-empty, .panel-subhead, .env-words, .stats-weird, .env-light-spark, .inframe-people-spark, .live-class-sparks,
+    .cell-narration :is(.minimap, .moment-filters, .narration-controls, .narration-new),
+    .cell-heat :is(.space-picked, .heat-edge, .heat-legend) { display: none; }
+    .cell-heat .fact-row .fact:nth-child(n+2) { display: none; }
+    .cell-heat .term-heat, .cell-heat .fluid-canvas { max-width: 64px; }
+    .live-who li:nth-child(n+3), .live-lines .moment-list > :nth-child(n+3) { display: none; }
+    .term-panel-body:not(.term-panel-body--flush) { padding: 3px 5px; }
+    .metric-cards { padding: 3px; gap: 3px; }
+    .metric-card.rz-card { padding: 2px 4px; }
+    .fact-row { padding: 2px 5px; gap: 2px 6px; }
+    .term-z { display: none; }
+    .term-stat-label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .term-panel-head { font-size: 9px; padding: 1px 4px; }
+    .term-panel-meta { display: none; }
+    .fact-row { grid-template-columns: minmax(0, 1fr); }
+    .fact-row .fact:nth-child(n+2) { display: none; }
+    .metric-card .term-spark { display: none; }
+    .term-stat-value, .metric-card .term-stat-value { font-size: 13px; }
+}
+/* The camera keeps its toggles in a narrow cell, but only the ones that matter at a glance. */
+@container cell (max-width: 300px) {
+    .live-camera [data-test="cam-toggle-pose"], .live-camera [data-test="cam-toggle-tts"] { display: none; }
+}
+@container cell (max-width: 200px) {
+    .live-camera .space-switch { display: none; }
+    .live-hud { font-size: 9px; padding: 1px 5px; top: 4px; left: 4px; }
+}
 
-    /* Under about a 768-high window (a cell of 200px or less): the headline numbers tighten up, the sparklines
-       and the second bar step out, and lists keep their first rows, so a 720-high laptop shows all nine
-       panels with nothing behind a scrollbar. */
-    @container cell (max-height: 200px) {
-        .cell-narration :is(.minimap, .moment-filters, .narration-controls) { display: none; }
-        .panel-subhead, .heat-edge, .heat-legend, .term-spark-avg-label, .term-spark-axis,
-        .inframe-people-spark, .env-light-spark { display: none; }
-        .cell-metrics .metric-card.rz-card,
-        .cell-activity .metric-card.rz-card { padding: 3px 6px; }
-        .cell-metrics .metric-card .term-spark,
-        .cell-activity .metric-card .term-spark { height: 10px; margin-top: 2px; }
-        .cell-metrics .metric-cards { padding: 4px; gap: 4px; }
-        .cell-metrics .metric-card .term-stat-hint,
-        .cell-activity .metric-card .term-stat-hint { line-height: 1.15; }
-        .cell-metrics .fact-row,
-        .cell-activity .fact-row { padding: 3px 8px; }
-        .cell-metrics .fact dd,
-        .cell-activity .fact dd { font-size: 12px; }
-        .cell-activity .metric-card .term-stat-value { font-size: 16px; }
-        /* Space keeps the heat map and its facts; the frame-edge bar is the first thing to go. */
-        .cell-heat .term-heat { max-width: 104px; }
-        .cell-heat .share-bar { display: none; }
-        .cell-heat .fact-row { padding: 3px 8px; }
-        .cell-inframe .live-who li:nth-child(n+3),
-        .cell-regulars .live-who li:nth-child(n+3),
-        .cell-faces .live-who li:nth-child(n+3) { display: none; }
-    }
-
-    /* A short window also loses the slack between the pieces, which is a few pixels on every row. */
-    @media (max-height: 820px) {
-        .dash { gap: 6px; }
-        .dash-grid { --term-gap: 6px; }
-        .dash-grid .term-panel-head { padding: 2px 8px; }
-    }
+/* A short or narrow window also loses the slack between the pieces, which is a few pixels on every row. */
+@media (max-height: 820px), (max-width: 719.98px) {
+    .dash { gap: 6px; }
+    .dash-grid { --term-gap: 6px; }
+    .dash-grid .term-panel-head { padding: 2px 8px; }
+}
+@media (max-height: 560px), (max-width: 480px) {
+    .dash { gap: 4px; }
+    .dash-grid { --term-gap: 4px; }
+}
+/* On a phone the build stamp normally follows the page's content; Live has no "after" (the board is the
+   window), so there it floats just above the tab bar over room the body keeps free for it. */
+@media (max-width: 768px) {
+    .term-body:has(.dash-grid) { padding-bottom: calc(8px + var(--term-bottom-bar, 0px) + 26px); }
+    .term-body:has(.dash-grid) .po-version { position: fixed; right: 8px; bottom: calc(var(--term-bottom-bar, 0px) + 4px); margin: 0; }
 }
 
 /* FactRow: small labelled numbers under a panel's headline; tabular digits so live numbers don't jitter. */

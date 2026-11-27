@@ -308,6 +308,12 @@
 .person-card-meta h3 { margin: 0; font: 600 15px var(--term-sans); color: var(--term-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .person-card-meta p { margin: 2px 0 0; }
 .person-rename-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.people-section-head { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 6px; font: 600 12px var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-text); }
+.people-section-head span { color: var(--term-dim); font-weight: 400; }
+.person-same-as { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
+.person-same-as .term-stat-hint { margin: 0; }
+.person-same-chip { padding: 2px 10px; border: 1px solid var(--term-accent); border-radius: 999px; font: 600 11px var(--term-mono); color: var(--term-text); background: color-mix(in srgb, var(--term-accent) 12%, transparent); cursor: pointer; }
+.person-same-chip:hover { background: color-mix(in srgb, var(--term-accent) 24%, transparent); }
 .person-name-input { flex: 1 1 auto; min-width: 0; padding: 5px 8px !important; font: 12px var(--term-mono) !important; background: var(--term-surface) !important; border: 1px solid var(--term-line) !important; border-radius: 4px !important; color: var(--term-text) !important; }
 .person-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 6px; border-top: 1px solid var(--term-line); }
 .person-merge-select { flex: 1 1 130px; min-width: 0; }

@@ -10,6 +10,7 @@
         <p class="term-stat-hint">
             Unique people detected by the camera start as <b>Person #1</b>, <b>Person #2</b>, etc.
             Give anyone a real name below and PoWatch will use it on the Camera, Faces panel, and future sessions.
+            If the camera saw the same person twice, type a name that's already used (or click <b>Same as</b>) to merge them into one.
         </p>
 
         @if (!string.IsNullOrEmpty(_notice))
@@ -29,8 +30,26 @@
         }
         else
         {
-            <div class="people-grid" data-test="people-grid">
-                @foreach (var person in _people)
+            @* Names already in use, offered as suggestions in every name box; picking one merges into that person. *@
+            <datalist id="people-names">
+                @foreach (var name in _people.Select(p => p.CustomName).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    <option value="@name"></option>
+                }
+            </datalist>
+            @* Two lists: people still waiting for a name, then the people already known. Saving a name, or
+               clicking a "Same as" chip (which merges the card away), takes a card off the "To tag" list. *@
+            var toTag = _people.Where(p => string.IsNullOrWhiteSpace(p.CustomName)).ToList();
+            var known = _people.Where(p => !string.IsNullOrWhiteSpace(p.CustomName)).OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+            @foreach (var (heading, group, test) in new[] { ("To tag", toTag, "people-to-tag"), ("Known", known, "people-known") })
+            {
+            <h2 class="people-section-head" data-test="@($"{test}-head")">@heading <span>@group.Count</span></h2>
+            @if (group.Count == 0)
+            {
+                <p class="term-empty" data-test="@($"{test}-empty")">@(test == "people-to-tag" ? "Everyone the camera has seen has a name." : "Nobody is named yet: name someone above.")</p>
+            }
+            <div class="people-grid" data-test="@test">
+                @foreach (var person in group)
                 {
                     var id = person.Id;
                     var others = _people.Where(p => p.Id != id).ToList();
@@ -54,9 +73,31 @@
                             </div>
                         </div>
 
+                        @{
+                            var namedOthers = others.Where(p => !string.IsNullOrWhiteSpace(p.CustomName))
+                                .DistinctBy(p => p.CustomName!.Trim(), StringComparer.OrdinalIgnoreCase).ToList();
+                        }
+                        @if (string.IsNullOrWhiteSpace(person.CustomName) && namedOthers.Count > 0)
+                        {
+                            @* One click to say "this is someone already named": it folds this card into theirs. *@
+                            <div class="person-same-as" data-test="@($"person-same-as-{person.Number}")">
+                                <span class="term-stat-hint">Same as</span>
+                                @foreach (var named in namedOthers)
+                                {
+                                    var targetId = named.Id;
+                                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain person-same-chip"
+                                                  Disabled="@_busy" Click="() => MergeIntoAsync(id, targetId)"
+                                                  title="@($"{person.DisplayName} is {named.DisplayName}: merge them")"
+                                                  data-test="@($"person-same-{person.Number}-{named.Number}")">@named.DisplayName</RadzenButton>
+                                }
+                            </div>
+                        }
+
                         <div class="person-rename-row">
                             <RadzenTextBox class="pw-plain person-name-input"
                                            Value="@GetDraft(person)"
+                                           MaxLength="40"
+                                           list="people-names"
                                            Placeholder="@($"Name Person #{person.Number}…")"
                                            aria-label="@($"Name for {person.DisplayName}")"
                                            @oninput="@(e => _drafts[id] = e.Value?.ToString() ?? string.Empty)"
@@ -102,6 +143,7 @@
                     </article>
                 }
             </div>
+            }
         }
     </ChildContent>
 </TerminalPanel>
@@ -132,6 +174,13 @@
         try
         {
             var draft = GetDraft(person).Trim();
+            // A name someone else already has means it is the same person: fold this card into theirs.
+            if (draft.Length > 0
+                && _people.FirstOrDefault(p => p.Id != person.Id && string.Equals(p.CustomName, draft, StringComparison.OrdinalIgnoreCase)) is { } existing)
+            {
+                await MergeCoreAsync(person.Id, existing.Id);
+                return;
+            }
             if (await Api.RenamePersonAsync(person.Id, draft) is { } updated)
             {
                 _drafts[person.Id] = updated.CustomName ?? string.Empty;
@@ -151,18 +200,27 @@
     private async Task MergeAsync(string sourceId)
     {
         if (!_mergeTarget.TryGetValue(sourceId, out var targetId) || string.IsNullOrEmpty(targetId)) return;
+        await MergeIntoAsync(sourceId, targetId);
+    }
+
+    private async Task MergeIntoAsync(string sourceId, string targetId)
+    {
         _busy = true;
         _notice = null;
-        try
-        {
-            if (await Api.MergePeopleAsync(sourceId, targetId) is { } merged)
-            {
-                _mergeTarget.Remove(sourceId);
-                _notice = $"Merged into {merged.DisplayName}.";
-                await LoadAsync();
-            }
-        }
+        try { await MergeCoreAsync(sourceId, targetId); }
         finally { _busy = false; }
+    }
+
+    /// <summary>Merges source into target and reloads; the caller owns the busy flag.</summary>
+    private async Task MergeCoreAsync(string sourceId, string targetId)
+    {
+        if (await Api.MergePeopleAsync(sourceId, targetId) is { } merged)
+        {
+            _mergeTarget.Remove(sourceId);
+            _drafts.Remove(sourceId);
+            _notice = $"Merged into {merged.DisplayName}.";
+            await LoadAsync();
+        }
     }
 
     private async Task DeleteAsync(PersonProfileDto person)

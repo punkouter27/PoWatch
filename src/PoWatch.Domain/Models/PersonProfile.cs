@@ -5,6 +5,8 @@ public sealed record PersonProfileStats
 {
     public int FaceSamples { get; init; }
     public double BeautySum { get; init; }
+    /// <summary>How many readings carried a beauty score (0 on profiles saved before this was counted).</summary>
+    public int BeautyCount { get; init; }
     public double? BeautyLow { get; init; }
     public double? BeautyHigh { get; init; }
     public double SymmetrySum { get; init; }

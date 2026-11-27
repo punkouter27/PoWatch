@@ -125,7 +125,8 @@ public sealed class ViewportFitE2ETests
     {
         // Its own user: the nine panels are all shown, whatever another test left the guest's layout as.
         var user = $"fit-{Guid.NewGuid():N}";
-        foreach (var (width, height) in new[] { (1440, 900), (1366, 768), (1280, 720), (1152, 700) })
+        // Always three by three: big monitors, laptops, a short editor pane, a small window and a phone.
+        foreach (var (width, height) in new[] { (1920, 1080), (1440, 900), (1366, 768), (1280, 720), (1152, 700), (1330, 585), (800, 500), (360, 640) })
         {
             await using var page = await PoWatchPage.SignedInAsync(_fixture.Browser, user: user);
             await page.SetViewportSizeAsync(width, height);
@@ -139,13 +140,25 @@ public sealed class ViewportFitE2ETests
                     const main = document.querySelector('#main-content');
                     const bodies = [...document.querySelectorAll('.dash-grid .term-panel-body')];
                     const worst = bodies.reduce((m, b) => Math.max(m, b.scrollHeight - b.clientHeight), 0);
+                    const over = bodies.filter(b => b.scrollHeight - b.clientHeight > 1)
+                        .map(b => { const s = b.closest('.live-slot'); const r = s.getBoundingClientRect(); return `${s.dataset.panel} ${Math.round(r.width)}x${Math.round(r.height)} +${b.scrollHeight - b.clientHeight} [${[...b.querySelectorAll('*')].filter(c => c.offsetHeight > 0 && c.children.length === 0).slice(0, 12).map(c => `${c.tagName.toLowerCase()}.${c.className}:${c.offsetHeight}`).join(' ')}]`; });
+                    if (over.length) console.warn('OVERFLOW ' + over.join(' | '));
+                    const mainBottom = main.getBoundingClientRect().bottom;
+                    const past = [...main.querySelectorAll('*')].filter(e => e.getBoundingClientRect().bottom > mainBottom + 1 && e.closest('.live-slot') === null)
+                        .slice(0, 4).map(e => `${e.tagName}.${[...e.classList].join('.')} b=${Math.round(e.getBoundingClientRect().bottom)}`);
+                    if (main.scrollHeight - main.clientHeight > 1) over.push(`main ${main.clientHeight}/${main.scrollHeight} bottom=${Math.round(mainBottom)} past: ${past.join(', ')}`);
+                    document.body.dataset.overflow = over.join(' | ');
                     const slots = [...document.querySelectorAll('.live-slot')];
                     const lowest = Math.max(...slots.map(s => Math.round(s.getBoundingClientRect().bottom)));
-                    return [main.scrollHeight - main.clientHeight, worst, slots.length, lowest - innerHeight];
+                    const cols = new Set(slots.map(s => Math.round(s.getBoundingClientRect().left))).size;
+                    const rows = new Set(slots.map(s => Math.round(s.getBoundingClientRect().top))).size;
+                    return [main.scrollHeight - main.clientHeight, worst, slots.length, lowest - innerHeight, cols, rows];
                 }
                 """);
-            Assert.True(fit[0] <= 1, $"Live at {width}×{height}: the page scrolls by {fit[0]} px.");
-            Assert.True(fit[1] <= 1, $"Live at {width}×{height}: a panel scrolls by {fit[1]} px.");
+            Assert.True(fit[4] == 3 && fit[5] == 3, $"Live at {width}×{height}: {fit[4]} columns × {fit[5]} rows, not 3×3.");
+            var overflowing = await page.EvaluateAsync<string>("() => document.body.dataset.overflow || ''");
+            Assert.True(fit[0] <= 1, $"Live at {width}×{height}: the page scrolls by {fit[0]} px ({overflowing}).");
+            Assert.True(fit[1] <= 1, $"Live at {width}×{height}: a panel scrolls by {fit[1]} px ({overflowing}).");
             Assert.Equal(9, fit[2]);
             Assert.True(fit[3] <= 0, $"Live at {width}×{height}: the last panel runs {fit[3]} px past the window.");
             await page.AssertNoBlazorErrorAsync();

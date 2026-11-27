@@ -125,7 +125,10 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   the on-device inference engine and the pipeline counters. Browser errors post to `/api/diag/client-error`.
   The boot probe is `GET /api/diag/boot`; nothing on the server may map `/diag` itself. There is no `/system`
   page or `/api/diagnostics` route any more.
-- **Live is one screen (2026-11-26).** From 1100 px wide and 640 px tall the nine panels fill the window: `.dash`
+- **Live is always 3×3 (2026-11-27).** At every window size, phone included, the nine panels stay three by three;
+  there is no stacked layout any more. Cells shrink to the headline (≤140 px tall or ≤240 px wide) and grow into
+  page-size type and taller charts (≥380 px and ≥540 px tall), all via `@container cell` tiers in `terminal-dash.css`.
+- **Live is one screen (2026-11-26).** The nine panels fill the window: `.dash`
   is the height of `main` and the grid takes every pixel the bar and the models strip leave, in three even rows. So
   the page never scrolls and no cell shows a scrollbar; a cell adapts instead. Head, cards and facts step down a
   size, and the least important rows step out as the cell gets shorter (`@container cell` on `.live-slot`, at 240 px

@@ -123,6 +123,13 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
         return true;
     }
 
+    /// <summary>
+    /// How many readings the beauty sum holds. Beauty is averaged over the readings that had a beauty score,
+    /// not over every face reading (one with only an age would pull the mean down). Profiles saved before
+    /// BeautyCount existed fall back to FaceSamples, the closest count they kept.
+    /// </summary>
+    private static int BeautyReadings(PersonProfileStats s) => s.BeautyCount > 0 ? s.BeautyCount : s.BeautySum > 0 ? s.FaceSamples : 0;
+
     private static string? ValidThumbnail(string? dataUrl) =>
         dataUrl is { Length: > 0 and <= 24_576 } && dataUrl.StartsWith("data:image/jpeg;base64,", StringComparison.Ordinal)
             ? dataUrl
@@ -132,6 +139,7 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
     {
         FaceSamples = a.FaceSamples + b.FaceSamples,
         BeautySum = a.BeautySum + b.BeautySum,
+        BeautyCount = BeautyReadings(a) + BeautyReadings(b),
         BeautyLow = a.BeautyLow is { } al && b.BeautyLow is { } bl ? Math.Min(al, bl) : a.BeautyLow ?? b.BeautyLow,
         BeautyHigh = a.BeautyHigh is { } ah && b.BeautyHigh is { } bh ? Math.Max(ah, bh) : a.BeautyHigh ?? b.BeautyHigh,
         SymmetrySum = a.SymmetrySum + b.SymmetrySum,
@@ -185,6 +193,7 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
         {
             FaceSamples = s.FaceSamples + (hasFace ? 1 : 0),
             BeautySum = s.BeautySum + (r.Beauty ?? 0),
+            BeautyCount = BeautyReadings(s) + (r.Beauty is not null ? 1 : 0),
             BeautyLow = r.Beauty is { } bl ? (s.BeautyLow is { } curLow ? Math.Min(curLow, bl) : bl) : s.BeautyLow,
             BeautyHigh = r.Beauty is { } bh ? (s.BeautyHigh is { } curHigh ? Math.Max(curHigh, bh) : bh) : s.BeautyHigh,
             SymmetrySum = s.SymmetrySum + (r.Symmetry ?? 0),
@@ -244,7 +253,7 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
             LastSeenUtc = p.LastSeenUtc,
             Stats = new PersonAppearanceStatsDto
             {
-                BeautyMean = s.FaceSamples > 0 && s.BeautySum > 0 ? Math.Round(s.BeautySum / s.FaceSamples, 1) : null,
+                BeautyMean = BeautyReadings(s) is > 0 and var n ? Math.Round(s.BeautySum / n, 1) : null,
                 BeautyLow = s.BeautyLow is { } bl ? Math.Round(bl, 1) : null,
                 BeautyHigh = s.BeautyHigh is { } bh ? Math.Round(bh, 1) : null,
                 SymmetryMean = s.SymmetryCount > 0 ? Math.Round(s.SymmetrySum / s.SymmetryCount, 3) : null,
