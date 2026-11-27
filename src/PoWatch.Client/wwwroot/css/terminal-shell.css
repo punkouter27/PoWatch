@@ -14,17 +14,29 @@
     box-sizing: border-box;
 }
 
-/* One row: brand and section keys at the left, status and controls at the right. */
+/* One row: brand, section keys and session label at the left; status, AI, panels, bell and account at the right. */
 .term-header {
     position: relative;
+    z-index: var(--po-z-header);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px 8px;
     /* Vertical room comes from .po-header's 56px min-height (po-tokens.css); padding here would make it 64. */
-    padding: 0 12px;
+    padding: 0 10px;
     border-bottom: 1px solid var(--term-line);
     background: color-mix(in srgb, var(--term-surface) 82%, transparent);
     font-size: var(--fs-sm);
+}
+
+.header-session-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-left: 8px;
+    border-left: 1px solid var(--term-line);
 }
 
 /* The title's font, size and colour are the page shell's .po-header__title (po-tokens.css). */
@@ -188,40 +200,31 @@
     background: var(--term-surface);
     font: var(--fs-sm) var(--term-mono);
 }
-.ai-models-error { padding: 4px 8px; color: var(--term-red); border: 1px solid var(--term-red); border-radius: var(--term-radius); }
+.ai-models-error { padding: 6px 8px; color: var(--term-red); border: 1px solid var(--term-red); border-radius: var(--term-radius); font: var(--fs-xs) var(--term-mono); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+/* AI models dropdown in the top nav bar: compact trigger button, full model controls inside the popover. */
+.ai-nav-menu { flex: none; }
+.ai-config-summary { gap: 5px; white-space: nowrap; }
+.ai-config-summary--warn { border-color: var(--term-amber); color: var(--term-amber); }
+.ai-nav-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--term-dim); }
+.ai-nav-dot--on { background: var(--term-green); }
+.ai-nav-popover { min-width: 440px; max-width: min(560px, calc(100vw - 16px)); padding: 10px 12px; display: grid; gap: 8px; }
+.ai-nav-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding-bottom: 6px; border-bottom: 1px solid var(--term-line); font: 600 var(--fs-sm) var(--term-font); color: var(--term-text); }
+.ai-nav-popover .ai-models { display: grid; gap: 8px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.ai-nav-popover .ai-model { flex-wrap: wrap; gap: 6px 10px; }
+.ai-nav-popover .ai-model label, .ai-nav-popover .ai-model-label { min-width: 60px; }
 @media (max-width: 719.98px) {
     .ai-model { flex-wrap: wrap; width: 100%; }
     .ai-model label { min-width: 52px; }
-    .ai-model .rz-dropdown { flex: 1; max-width: none; min-height: 44px; }
+    .ai-model .rz-dropdown { flex: 1 1 160px; max-width: none; min-height: 44px; }
     .ai-model-status, .model-load { white-space: normal; flex-wrap: wrap; min-width: 0; }
 }
-/* The caption model in the header, next to the section keys: a label and the same compact dropdown as
-   the AI strip. Phones keep it in the AI strip, where a full-width dropdown fits. */
-.term-nav-model { flex: 0 1 auto; display: flex; align-items: center; gap: 6px; min-width: 0; }
-.term-nav-model > span { color: var(--term-dim); font: 600 var(--fs-xs) var(--term-mono); letter-spacing: 0.08em; }
-.term-nav-model .rz-dropdown {
-    min-width: 0;
-    max-width: 280px;
-    min-height: 30px;
-    border: 1px solid var(--term-line);
-    border-radius: var(--term-radius);
-    padding: 2px 6px;
-    color: var(--term-text);
-    background: var(--term-surface);
-    font: 600 var(--fs-xs) var(--term-mono);
-    text-overflow: ellipsis;
-    cursor: pointer;
-}
-.term-nav-model .rz-dropdown:hover, .term-nav-model .rz-dropdown:focus-visible { border-color: var(--term-accent); outline: none; }
-@media (max-width: 719.98px) {
-    .term-nav-model { display: none; }
-}
 
-/* The status chip starts the right-hand group: Start/Stop, bell, then the Po header actions (email or
-   Sign in, gear). The spacer takes the free width, so the right group sits right whatever is shown. */
-.term-header .term-status { margin-left: auto; }
+/* The spacer takes the free width, keeping the brand/nav/session left and controls/account right. */
 .term-header-spacer { flex: 1 1 auto; min-width: 0; }
 .term-header .po-header__actions { gap: 6px; }
+.term-header .session-health { font-size: 11px; white-space: nowrap; }
+.term-header .panels-menu > summary { white-space: nowrap; }
+.term-header .rz-button:not(.pw-plain) { min-height: 30px; padding: 0 10px; font-size: 11px; flex: none; }
 
 .term-button {
     min-height: 36px;
@@ -241,7 +244,7 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 .term-button--primary { background: var(--term-accent); border-color: var(--term-accent); color: var(--term-accent-ink); }
 .term-button--danger { border-color: var(--term-red); color: var(--term-red); }
 .term-button[disabled] { opacity: 0.5; cursor: not-allowed; }
-.term-header .term-button { flex: none; min-height: 32px; }
+.term-header .term-button { flex: none; min-height: 30px; padding: 0 9px; font-size: 11px; }
 
 .term-icon-button {
     min-width: 36px;
@@ -467,6 +470,22 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 
 @media (max-width: 1280px) {
     .term-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .header-session-label { max-width: 170px; }
+    .term-header .po-header__email { max-width: 18ch; }
+}
+
+@media (max-width: 1099.98px) {
+    .header-session-label { display: none; }
+    .term-status-detail { display: none; }
+}
+
+@media (max-width: 1023.98px) {
+    .term-header .session-health { display: none; }
+    .term-header .po-header__email { max-width: 12ch; }
+}
+
+@media (max-width: 899.98px) {
+    .panels-menu-label { display: none; }
 }
 
 @media (max-width: 719.98px) {
@@ -474,10 +493,24 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     .term-span-2 { grid-column: span 1; }
     :root { --term-bottom-bar: calc(57px + env(safe-area-inset-bottom)); }
     .term-status-detail { display: none; }
-    /* Room for the Po header's email and gear: the recording state stays on Live and in Start/Stop. */
+    /* Room for the Po header's email and controls: the recording state stays in Start/Stop. */
     .term-header .term-status { display: none; }
-    .term-header { gap: 6px; padding: 0 8px; }
-    .term-status { margin-left: auto; }
+    .term-header { gap: 4px; padding: 0 8px; }
+    .term-header .term-button { min-height: 32px; padding: 0 7px; font-size: 11px; }
+    .term-header .term-icon-button { min-width: 32px; min-height: 32px; }
+    .term-header .ai-nav-popover,
+    .term-header .panels-menu-items {
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        top: var(--po-header-h);
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        max-height: calc(100dvh - var(--po-header-h) - 16px);
+        overflow-y: auto;
+        box-sizing: border-box;
+    }
     /* The section keys move to BottomNav, a tab bar along the bottom where a thumb reaches; the header stays one row. */
     .term-header .term-keys { display: none; }
     .bottom-nav {
@@ -495,6 +528,13 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
     }
     .term-body { padding: 8px 8px calc(8px + var(--term-bottom-bar)); }
     .term-drawer { width: 100vw; }
+}
+
+@media (max-width: 480px) {
+    .term-header .po-header__title { font-size: 1rem; }
+    .term-header .po-header__email { max-width: 10ch; }
+    .term-header .header-start-btn { padding: 0 8px; }
+    .term-header .header-start-btn .rz-button-text { display: none; }
 }
 
 /* ── Accessibility helpers ─────────────────────────────────────────────── */

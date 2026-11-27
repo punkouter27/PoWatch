@@ -3,95 +3,103 @@
 @inject PoWatchApiClient Api
 @inject IJSRuntime JS
 
-@* The models at work, in one strip on Live above the panels: what finds things in frame, what turns the
-   camera into words, what turns the microphone into words, and what writes the stories.
+@* The models at work, consolidated into one dropdown in the top nav bar: what finds things in frame,
+   what turns the camera into words, what turns the microphone into words, and what writes the stories.
    Each status says what is really running (Ollama on this PC, or the browser's own model standing in),
    and a browser model shows its load as it happens (ModelLoad): download, first run, then WebGPU or CPU. *@
-<details class="ai-config" data-test="ai-config">
-    <summary class="ai-config-summary" data-test="ai-config-toggle">
-        <span>AI &amp; listening</span>
-        <span class="term-stat-hint">Captions @(Sensing.Captions ? "on" : "off") · Listening @(Sensing.Listening ? "on" : "off")</span>
+<details class="export-menu ai-nav-menu" data-test="ai-config">
+    <summary class="term-button ai-config-summary @(_error is not null || _loadFailed || CaptionWarn ? "ai-config-summary--warn" : null)"
+             data-test="ai-config-toggle"
+             title="@($"AI & listening · Captions {(Sensing.Captions ? "on" : "off")} · Listening {(Sensing.Listening ? "on" : "off")}")">
+        <span class="ai-nav-dot @(Sensing.Captions || Sensing.Listening ? "ai-nav-dot--on" : null)" aria-hidden="true"></span>
+        <span>AI</span>
         @foreach (var pending in _loads.Where(s => s.Phase is "downloading" or "warming" or "lost" or "failed"))
         {
             <ModelLoad Status="@pending" Prefix="@(pending.Name switch { "detector" => "Camera", "faces" => "Faces", _ => "Listening" })" />
         }
-        <span class="term-stat-hint">Configure</span>
+        <span aria-hidden="true">▾</span>
     </summary>
-    <div class="ai-models" data-test="ai-models" role="group" aria-label="AI models">
-    <span class="ai-models-title" aria-hidden="true">MODELS</span>
-    <div class="ai-model">
-        <span class="ai-model-label" title="Finds people, pets and things in each frame, about once a second, on this machine.">DETECTS</span>
-        @if (Sensing.IsRunning && !Sensing.Live.Demo)
+    <div class="export-menu-items ai-nav-popover">
+        <div class="ai-nav-head">
+            <span>AI &amp; listening</span>
+            <span class="term-stat-hint">Captions @(Sensing.Captions ? "on" : "off") · Listening @(Sensing.Listening ? "on" : "off")</span>
+        </div>
+        <div class="ai-models" data-test="ai-models" role="group" aria-label="AI models">
+            <span class="ai-models-title" aria-hidden="true">MODELS</span>
+            <div class="ai-model">
+                <span class="ai-model-label" title="Finds people, pets and things in each frame, about once a second, on this machine.">DETECTS</span>
+                @if (Sensing.IsRunning && !Sensing.Live.Demo)
+                {
+                    <ModelLoad Status="@Load("detector")" Prefix="@DetectorName" Test="ai-detector-status" />
+                }
+                else
+                {
+                    <span class="ai-model-status" data-test="ai-detector-status">@(Sensing.Live.Demo && Sensing.IsRunning ? "DEMO · AI IDLE" : "STARTS WITH THE CAMERA")</span>
+                }
+            </div>
+            <div class="ai-model">
+                <label for="ai-caption-model" title="Describes what the camera sees. Captions off saves the GPU.">SEES</label>
+                <CaptionModelSelect Id="ai-caption-model" Test="ai-caption-model" DescribedBy="ai-caption-status" OnError="e => _error = e" />
+                <a id="ai-caption-status" class="ai-model-status @(CaptionWarn ? "ai-model-status--warn" : null)" href="diag" title="@CaptionHint" data-test="ai-caption-status">
+                    @if (BrowserCaptionLoad is { } load)
+                    {
+                        <ModelLoad Status="@load" Prefix="@($"{Fallback} · {BrowserModel}")" Test="ai-caption-load" />
+                    }
+                    else
+                    {
+                        <span role="status">@CaptionStatus</span>
+                    }
+                </a>
+                @* Ollama answered but lacks this model: hand over the exact command instead of making you guess. *@
+                @if (PullCommand is { } pull)
+                {
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain ai-model-pull" Click="CopyPullAsync" data-test="ai-pull"
+                            title="@($"{pull} — press to copy")">@(_copied ? "COPIED" : "PULL")</RadzenButton>
+                }
+            </div>
+            <div class="ai-model">
+                <label for="ai-hearing" title="Words (Whisper), sounds (AST) and voices (WavLM), all heard on this machine; never the audio itself.">HEARS</label>
+                <RadzenDropDown TValue="string" Data="@HearingKeys" Value="@(Sensing.Listening ? "on" : "off")" Change="@(v => SelectHearingAsync(v as string))"
+                                Name="ai-hearing" data-test="ai-hearing" data-value="@(Sensing.Listening ? "on" : "off")"
+                                InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "What the microphone listens with" })">
+                    <Template Context="key">@PickOption.Render((object)key, k => k == "on" ? "WHISPER · AST · WAVLM" : "Listening off")</Template>
+                    <ValueTemplate Context="key">@PickOption.Text((object)key, k => k == "on" ? "WHISPER · AST · WAVLM" : "Listening off")</ValueTemplate>
+                </RadzenDropDown>
+                @if (Sensing.Listening && Sensing.IsRunning && !Sensing.Live.Demo && Load("hearing") is { } hearing)
+                {
+                    <ModelLoad Status="@hearing" Prefix="@(hearing.Model == "voice" ? "VOICES" : "WORDS · SOUNDS")" CpuByDesign="true" Test="ai-hearing-status" />
+                }
+                else
+                {
+                    <span class="ai-model-status" data-test="ai-hearing-status">@(Sensing.Listening ? "THIS BROWSER" : "OFF")</span>
+                }
+            </div>
+            <div class="ai-model">
+                <label for="ai-chat-model" title="Writes recaps and stories, answers questions. Auto picks local Ollama when it answers, else a cloud model; a failing model hands over to the next configured one.">WRITES</label>
+                <RadzenDropDown TValue="string" @key="_chatRevision" Data="@ChatKeys" Value="@_models?.SelectedId" Change="@(v => SelectChatAsync(v as string))"
+                                Disabled="@(_models is null || _saving)" Placeholder="@(_loadFailed ? "Unavailable" : "Loading models...")"
+                                Name="ai-chat-model" data-test="ai-chat-model" data-value="@_models?.SelectedId"
+                                InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Server AI model", ["aria-describedby"] = "ai-chat-status" })">
+                    <Template Context="id">@PickOption.Render((object)id, ChatLabel)</Template>
+                    <ValueTemplate Context="id">@PickOption.Text((object)id, ChatLabel)</ValueTemplate>
+                </RadzenDropDown>
+                <span id="ai-chat-status" class="ai-model-status" role="status">
+                    @(_saving ? "SAVING..." : _models?.SelectedId switch { "Template" => "TEMPLATE", "Ollama" => "SERVER · OLLAMA", "Auto" => "SERVER · AUTO", null => "SERVER", _ => "SERVER · CLOUD" })
+                </span>
+            </div>
+        </div>
+        @if (_error is not null || _loadFailed || CaptionWarn)
         {
-            <ModelLoad Status="@Load("detector")" Prefix="@DetectorName" Test="ai-detector-status" />
-        }
-        else
-        {
-            <span class="ai-model-status" data-test="ai-detector-status">@(Sensing.Live.Demo && Sensing.IsRunning ? "DEMO · AI IDLE" : "STARTS WITH THE CAMERA")</span>
+            <div class="ai-models-error" role="alert">
+                @(_error ?? (_loadFailed ? "Could not load the AI choices." : CaptionHint))
+                @if (_loadFailed)
+                {
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="LoadModelsAsync">Retry AI</RadzenButton>
+                }
+            </div>
         }
     </div>
-    <div class="ai-model">
-        <label for="ai-caption-model" title="Describes what the camera sees. Captions off saves the GPU.">SEES</label>
-        <CaptionModelSelect Id="ai-caption-model" Test="ai-caption-model" DescribedBy="ai-caption-status" OnError="e => _error = e" />
-        <a id="ai-caption-status" class="ai-model-status @(CaptionWarn ? "ai-model-status--warn" : null)" href="diag" title="@CaptionHint" data-test="ai-caption-status">
-            @if (BrowserCaptionLoad is { } load)
-            {
-                <ModelLoad Status="@load" Prefix="@($"{Fallback} · {BrowserModel}")" Test="ai-caption-load" />
-            }
-            else
-            {
-                <span role="status">@CaptionStatus</span>
-            }
-        </a>
-        @* Ollama answered but lacks this model: hand over the exact command instead of making you guess. *@
-        @if (PullCommand is { } pull)
-        {
-            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain ai-model-pull" Click="CopyPullAsync" data-test="ai-pull"
-                    title="@($"{pull} — press to copy")">@(_copied ? "COPIED" : "PULL")</RadzenButton>
-        }
-    </div>
-    <div class="ai-model">
-        <label for="ai-hearing" title="Words (Whisper), sounds (AST) and voices (WavLM), all heard on this machine; never the audio itself.">HEARS</label>
-        <RadzenDropDown TValue="string" Data="@HearingKeys" Value="@(Sensing.Listening ? "on" : "off")" Change="@(v => SelectHearingAsync(v as string))"
-                        Name="ai-hearing" data-test="ai-hearing" data-value="@(Sensing.Listening ? "on" : "off")"
-                        InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "What the microphone listens with" })">
-            <Template Context="key">@PickOption.Render((object)key, k => k == "on" ? "WHISPER · AST · WAVLM" : "Listening off")</Template>
-            <ValueTemplate Context="key">@PickOption.Text((object)key, k => k == "on" ? "WHISPER · AST · WAVLM" : "Listening off")</ValueTemplate>
-        </RadzenDropDown>
-        @if (Sensing.Listening && Sensing.IsRunning && !Sensing.Live.Demo && Load("hearing") is { } hearing)
-        {
-            <ModelLoad Status="@hearing" Prefix="@(hearing.Model == "voice" ? "VOICES" : "WORDS · SOUNDS")" CpuByDesign="true" Test="ai-hearing-status" />
-        }
-        else
-        {
-            <span class="ai-model-status" data-test="ai-hearing-status">@(Sensing.Listening ? "THIS BROWSER" : "OFF")</span>
-        }
-    </div>
-    <div class="ai-model">
-        <label for="ai-chat-model" title="Writes recaps and stories, answers questions. Auto picks local Ollama when it answers, else a cloud model; a failing model hands over to the next configured one.">WRITES</label>
-        <RadzenDropDown TValue="string" @key="_chatRevision" Data="@ChatKeys" Value="@_models?.SelectedId" Change="@(v => SelectChatAsync(v as string))"
-                        Disabled="@(_models is null || _saving)" Placeholder="@(_loadFailed ? "Unavailable" : "Loading models...")"
-                        Name="ai-chat-model" data-test="ai-chat-model" data-value="@_models?.SelectedId"
-                        InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Server AI model", ["aria-describedby"] = "ai-chat-status" })">
-            <Template Context="id">@PickOption.Render((object)id, ChatLabel)</Template>
-            <ValueTemplate Context="id">@PickOption.Text((object)id, ChatLabel)</ValueTemplate>
-        </RadzenDropDown>
-        <span id="ai-chat-status" class="ai-model-status" role="status">
-            @(_saving ? "SAVING..." : _models?.SelectedId switch { "Template" => "TEMPLATE", "Ollama" => "SERVER · OLLAMA", "Auto" => "SERVER · AUTO", null => "SERVER", _ => "SERVER · CLOUD" })
-        </span>
-    </div>
-</div>
 </details>
-@if (_error is not null || _loadFailed || CaptionWarn)
-{
-    <div class="ai-models-error" role="alert">
-        @(_error ?? (_loadFailed ? "Could not load the AI choices." : CaptionHint))
-    @if (_loadFailed)
-    {
-        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="LoadModelsAsync">Retry AI</RadzenButton>
-    }
-    </div>
-}
 @* A GPU model that ended up on the CPU says so once per page, with why: otherwise it only looks slow. *@
 @if (_cpuNotice is not null)
 {

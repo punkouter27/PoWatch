@@ -12,7 +12,7 @@
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
 <div class="@(_signedIn ? "term-shell" : "po-shell-bare")" data-test="app-shell">
-    <PoHeader Bare="@(!_signedIn)" ShowStart="@(!_live)" />
+    <PoHeader Bare="@(!_signedIn)" />
 
     @* App.razor moves focus here after every navigation, so keyboard and screen-reader users land in the page. *@
     <main class="@(_signedIn ? "term-body" : null)" id="main-content" tabindex="-1">
@@ -59,13 +59,11 @@
 
     private bool _signedIn;
     private bool _sessionReady;
-    private bool _live = true;
     private ElementReference _feed;
 
     protected override void OnInitialized()
     {
         Nav.LocationChanged += OnLocationChanged;
-        _live = IsLive(Nav.Uri);
     }
 
     protected override async Task OnParametersSetAsync()
@@ -89,13 +87,10 @@
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        _live = IsLive(e.Location);
         // A drawer belongs to the page it was opened over.
         Drawers.Close();
         InvokeAsync(StateHasChanged);
     }
-
-    private static bool IsLive(string uri) => Section(uri).Length == 0;
 
     /// <summary>The first path segment: "" for Live, "journal", "settings", …</summary>
     private static string Section(string uri) => new Uri(uri).AbsolutePath.Trim('/').Split('/')[0];

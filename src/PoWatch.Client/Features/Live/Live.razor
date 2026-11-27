@@ -5,69 +5,31 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject StatsFeed Feed
+@inject LiveHeaderState LiveHeader
 @using PoWatch.Shared.Services
 
 <PageTitle>Live · PoWatch</PageTitle>
 @* The page's one h1, for screen readers; the lit section key in the header is its visible title. *@
 <h1 class="visually-hidden">Live</h1>
 
-@* One session, one toolbar; configuration folds away, diagnostics live on /diag.
+@* Session controls, AI models, and the Panels menu live in the top nav bar (PoHeader).
    Desktop reads as three by three, by default with the camera in the middle cell and eight panels around
    it; each account can hide panels and reorder them (Panels menu, or drag a panel's grip). Below 1100px
    the panels stack in that order, camera first, so a phone still opens on the picture. *@
 <div class="dash" data-inference-ms="@L.DetectorLatencyMs.ToString(CultureInfo.InvariantCulture)">
-    <div class="stats-toolbar" data-test="stats-toolbar">
-        <span class="stats-window term-stat-hint" data-test="stats-window">@WindowLabel</span>
-        <SessionControls>
-            <StartActions>
-                <RadzenButton Text="@(_starting ? "Starting..." : "Start camera")" Icon="videocam"
-                              Disabled="@_starting" Click="@(() => StartAsync(demo: false))" data-test="start-camera" />
-                @* No demo button (owner, 2026-11-23): the demo scene starts from ?start=demo or Ctrl+K. *@
-            </StartActions>
-        </SessionControls>
-        <a href="diag" class="term-button session-health" data-test="session-health">
-            @(L.LastError is not null || L.LostTicks > 0 ? "Needs attention" : L.PendingBatches > 0 ? "Saving queued" : Sensing.IsRunning ? (Sensing.Paused ? "Paused" : "Sensing active") : "System status")
-        </a>
-        @* Which panels show and in what order, saved to the account. Dragging a panel's grip does the same. *@
-        <details class="export-menu panels-menu" data-test="panels-menu">
-            <summary class="term-button" title="Show, hide and reorder the panels">Panels @(VisiblePanels.Count)/@LivePanels.All.Count ▾</summary>
-            <div class="export-menu-items panels-menu-items">
-                <div class="panels-menu-all">
-                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@(_hidden.Count == 0)" Click="ShowAllAsync" data-test="panels-show-all">Show all</RadzenButton>
-                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@(VisiblePanels.Count == 0)" Click="HideAllAsync" data-test="panels-hide-all">Hide all</RadzenButton>
-                </div>
-                @foreach (var id in _order)
-                {
-                    var shown = !_hidden.Contains(id);
-                    <div @key="id" class="panels-menu-row">
-                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" role="switch" aria-checked="@(shown ? "true" : "false")"
-                                      Click="() => SetHiddenAsync(id, shown)" data-test="@($"panel-toggle-{id}")">
-                            <span>@LivePanels.Title(id)</span><b>@(shown ? "ON" : "OFF")</b>
-                        </RadzenButton>
-                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Disabled="@(_order[0] == id)" title="Move earlier" aria-label="@($"Move {LivePanels.Title(id)} earlier")"
-                                      Click="() => StepAsync(id, -1)" data-test="@($"panel-up-{id}")">↑</RadzenButton>
-                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Disabled="@(_order[^1] == id)" title="Move later" aria-label="@($"Move {LivePanels.Title(id)} later")"
-                                      Click="() => StepAsync(id, 1)" data-test="@($"panel-down-{id}")">↓</RadzenButton>
-                    </div>
-                }
-                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Disabled="@IsDefaultLayout" Click="ResetLayoutAsync" data-test="panels-reset">
-                    <span>Reset <i>every panel, in the original order</i></span><b>↺</b>
-                </RadzenButton>
-            </div>
-        </details>
-        @if (_sessionMissing)
-        {
-            <span class="live-error" role="status" data-test="session-missing">That session was not found, so this is your latest one.</span>
-        }
-
-        @if (_error is not null)
-        {
-            <p class="live-error" role="alert" data-test="live-error">@_error</p>
-        }
-    </div>
-
-    @* Which models see, hear and write, each switchable right here. *@
-    <AiSelectors />
+    @if (_sessionMissing || (_error ?? LiveHeader.StartError) is not null)
+    {
+        <div class="live-notices">
+            @if (_sessionMissing)
+            {
+                <span class="live-error" role="status" data-test="session-missing">That session was not found, so this is your latest one.</span>
+            }
+            @if ((_error ?? LiveHeader.StartError) is { } err)
+            {
+                <p class="live-error" role="alert" data-test="live-error">@err</p>
+            }
+        </div>
+    }
 
     <AwayCard />
 

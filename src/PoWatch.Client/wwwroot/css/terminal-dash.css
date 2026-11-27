@@ -36,16 +36,8 @@
 /* Each panel keeps its height while the numbers arrive, so nothing below it jumps. */
 .cell-metrics > .term-panel-body { min-height: 128px; }
 
-/* One bar: range · question + download · what the range covers (on the right, wide screens only). */
-.stats-toolbar { position: sticky; top: 0; z-index: 8; display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 12px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-surface); }
-.stats-toolbar .term-button { min-height: 32px; padding: 0 10px; flex: none; }
-.stats-toolbar .rz-button.rz-light { color: var(--term-text); background: var(--term-panel-2); border: 1px solid var(--term-line); }
-.stats-window { margin-right: auto; }
-.session-health { font-size: var(--fs-xs); }
-.ai-config { border: 1px solid var(--term-line); border-radius: var(--term-radius); }
-.ai-config-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 12px; cursor: pointer; }
-.ai-config-summary > :last-child { margin-left: auto; }
-.ai-config .ai-models { border: 0; border-top: 1px solid var(--term-line); border-radius: 0; padding: 12px; }
+/* Inline error/status notices on Live (only rendered when something needs attention). */
+.live-notices { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-surface); }
 
 /* The live panels and the stat panels share one grid. */
 .dash-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--term-gap); }
@@ -76,7 +68,6 @@
        share every pixel left over in three even rows, so the whole room is on screen at once. A panel with
        more to say than its cell scrolls inside itself; the page never scrolls. */
     .dash { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-    .dash > .stats-toolbar { padding: 8px 10px; }
     .dash-grid {
         flex: 1 1 auto;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
@@ -185,11 +176,6 @@
         .dash-grid { --term-gap: 6px; }
         .dash-grid .term-panel-head { padding: 2px 8px; }
     }
-}
-
-/* A phone keeps the session identity visible above the controls. */
-@media (max-width: 719.98px) {
-    .stats-window { flex-basis: 100%; }
 }
 
 /* FactRow: small labelled numbers under a panel's headline; tabular digits so live numbers don't jitter. */

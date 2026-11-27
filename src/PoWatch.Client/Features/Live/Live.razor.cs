@@ -85,11 +85,26 @@ public sealed partial class Live
         _wasRunning = Sensing.IsRunning;
         Sensing.Changed += OnSensingChanged;
         Feed.Changed += OnStatsChanged;
+        LiveHeader.Changed += OnLiveHeaderChanged;
+        SyncHeader();
         _ = Feed.EnsureConnectedAsync();
         _refresh = new CancellationTokenSource();
         _ = RefreshLoopAsync(_refresh.Token);
         _ = LoadLayoutAsync();
     }
+
+    private void OnLiveHeaderChanged() => InvokeAsync(StateHasChanged);
+
+    private void SyncHeader() => LiveHeader.Update(
+        WindowLabel,
+        _order,
+        _hidden,
+        IsDefaultLayout,
+        ShowAllAsync,
+        HideAllAsync,
+        SetHiddenAsync,
+        StepAsync,
+        ResetLayoutAsync);
 
     /// <summary>A Journal link (?session=) opens that session; otherwise the page follows the recording one.</summary>
     protected override async Task OnParametersSetAsync()
@@ -112,7 +127,11 @@ public sealed partial class Live
         _ = RefreshStatsAsync();
     }
 
-    private void Apply() => _query = StatsQuery.For("session", _sessionId == Guid.Empty ? null : _sessionId);
+    private void Apply()
+    {
+        _query = StatsQuery.For("session", _sessionId == Guid.Empty ? null : _sessionId);
+        LiveHeader.UpdateWindowLabel(WindowLabel);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -237,6 +256,10 @@ public sealed partial class Live
             {
                 _sessionId = running.Id;
                 Apply();
+            }
+            else
+            {
+                LiveHeader.UpdateWindowLabel(WindowLabel);
             }
 
             InvokeAsync(async () =>
@@ -365,6 +388,7 @@ public sealed partial class Live
         _order = LivePanels.Normalize(layout.Order);
         _hidden = LivePanels.CleanHidden(layout.Hidden);
         _layoutChanged = true;
+        SyncHeader();
     }
 
     /// <summary>Shows the change at once, then saves it to the account; a failed save says so and keeps the change on screen.</summary>
@@ -401,6 +425,8 @@ public sealed partial class Live
         await JS.TryInvokeVoidAsync("powatchFluid.release");
         Sensing.Changed -= OnSensingChanged;
         Feed.Changed -= OnStatsChanged;
+        LiveHeader.Changed -= OnLiveHeaderChanged;
+        LiveHeader.Clear();
         await JS.TryInvokeVoidAsync("powatchFeed.undock");
         await JS.TryInvokeVoidAsync("powatchFeed.unwatchReturn");
         await JS.TryInvokeVoidAsync("powatchLayout.detach");

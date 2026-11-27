@@ -129,12 +129,18 @@
             return;
         }
 
-        // Escape closes an open drawer (Settings, the bell) from anywhere, typing included.
+        // Escape closes an open drawer (Settings, the bell) or header popover from anywhere, typing included.
         if (e.key === 'Escape' && !palette?.open) {
             const close = document.querySelector('.term-drawer:not([hidden]) [data-drawer-close]');
             if (close) {
                 e.preventDefault();
                 close.click();
+                return;
+            }
+            const openMenu = document.querySelector('.term-header details[open]');
+            if (openMenu) {
+                e.preventDefault();
+                openMenu.removeAttribute('open');
                 return;
             }
         }
@@ -238,5 +244,10 @@
         });
     }
 
-    window.powatchMenus = { setup, openPalette, showLine, watchNarration, releaseNarration };
+    /** Closes any open header popover (<details>) — called on navigation and when a side drawer opens. */
+    function closeMenus() {
+        document.querySelectorAll('.term-header details[open]').forEach(d => d.removeAttribute('open'));
+    }
+
+    window.powatchMenus = { setup, openPalette, showLine, watchNarration, releaseNarration, closeMenus };
 })();

@@ -25,6 +25,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<SensingSession>();
 builder.Services.AddScoped<StatsFeed>();
 builder.Services.AddScoped<DrawerState>();
+builder.Services.AddScoped<LiveHeaderState>();
 builder.Services.AddRadzenComponents();
 // Form rules (PoWatch.Shared/Validation), registered by type and injected where a form needs them.
 builder.Services.AddScoped<FluentValidation.IValidator<PoWatch.Shared.Models.WatchRuleInputDto>, PoWatch.Shared.Validation.WatchRuleInputValidator>();

@@ -48,7 +48,8 @@ internal static class PoWatchPage
         page.PageError += (_, error) => errors.Enqueue($"Page error: {error}");
         page.Console += (_, message) =>
         {
-            if (message.Type == "error") errors.Enqueue($"Console: {message.Text}");
+            if (message.Type == "error" && !message.Text.StartsWith("INFO: Created TensorFlow Lite", StringComparison.Ordinal))
+                errors.Enqueue($"Console: {message.Text}");
         };
         page.RequestFailed += (_, request) =>
         {

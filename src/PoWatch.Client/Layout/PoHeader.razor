@@ -1,34 +1,71 @@
 @using System.Security.Claims
+@using PoWatch.Shared.Services
 @implements IDisposable
 @inject SensingSession Sensing
 @inject DrawerState Drawers
+@inject LiveHeaderState LiveHeader
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 @* The page shell header (AGENTS.md, Page shell): the app name upper-left, the signed-in email (or
-   the Sign in button) and the settings gear upper-right, on every page signed in and out. Bare (MainLayout signed out:
-   sign-in, /diag, not-found) keeps just those; the full header adds the section keys, the caption model, recording
-   controls, the bell and the outbox chips. Section keys become the phone's bottom tab bar. *@
+   the Sign in button) upper-right, on every page signed in and out. Bare (MainLayout signed out:
+   sign-in, /diag, not-found) keeps just those; the full header consolidates the section keys,
+   session label, recording controls, system health, AI models, Live panels menu, bell, and outbox. *@
 <header class="term-header po-header" data-test="term-header">
     <a class="term-brand po-header__title" href="/" data-test="header-title">PoWatch</a>
 
     @if (!Bare)
     {
         <NavBar />
+
+        @if (LiveHeader.IsLiveActive && !string.IsNullOrEmpty(LiveHeader.WindowLabel))
+        {
+            <span class="header-session-label term-stat-hint" data-test="stats-window" title="@LiveHeader.WindowLabel">@LiveHeader.WindowLabel</span>
+        }
     }
 
     <span class="term-header-spacer" aria-hidden="true"></span>
 
     @if (!Bare)
     {
-        @* The camera's caption model, one pick away on every page (the same dropdown as Live's AI strip). *@
-        <label class="term-nav-model" title="Which model describes what the camera sees">
-            <span aria-hidden="true">SEES</span>
-            <CaptionModelSelect Test="nav-caption-model" />
-        </label>
+        <SessionControls />
 
-        @if (ShowStart)
+        <a href="diag" class="term-button session-health" data-test="session-health" title="System status and diagnostics">
+            @HealthLabel
+        </a>
+
+        <AiSelectors />
+
+        @if (LiveHeader.IsLiveActive)
         {
-            <SessionControls />
+            <details class="export-menu panels-menu" data-test="panels-menu">
+                <summary class="term-button" title="Show, hide and reorder the panels">
+                    <span class="panels-menu-label">Panels </span>@(LiveHeader.VisiblePanels.Count)/@LivePanels.All.Count ▾
+                </summary>
+                <div class="export-menu-items panels-menu-items">
+                    <div class="panels-menu-all">
+                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@(LiveHeader.Hidden.Count == 0)" Click="ShowAllPanelsAsync" data-test="panels-show-all">Show all</RadzenButton>
+                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Disabled="@(LiveHeader.VisiblePanels.Count == 0)" Click="HideAllPanelsAsync" data-test="panels-hide-all">Hide all</RadzenButton>
+                    </div>
+                    @foreach (var id in LiveHeader.Order)
+                    {
+                        var shown = !LiveHeader.Hidden.Contains(id);
+                        <div @key="id" class="panels-menu-row">
+                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" role="switch" aria-checked="@(shown ? "true" : "false")"
+                                          Click="() => SetPanelHiddenAsync(id, shown)" data-test="@($"panel-toggle-{id}")">
+                                <span>@LivePanels.Title(id)</span><b>@(shown ? "ON" : "OFF")</b>
+                            </RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Disabled="@(LiveHeader.Order[0] == id)" title="Move earlier" aria-label="@($"Move {LivePanels.Title(id)} earlier")"
+                                          Click="() => StepPanelAsync(id, -1)" data-test="@($"panel-up-{id}")">↑</RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-icon-button" Disabled="@(LiveHeader.Order[^1] == id)" title="Move later" aria-label="@($"Move {LivePanels.Title(id)} later")"
+                                          Click="() => StepPanelAsync(id, 1)" data-test="@($"panel-down-{id}")">↓</RadzenButton>
+                        </div>
+                    }
+                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-menu-item" Disabled="@LiveHeader.IsDefaultLayout" Click="ResetPanelsAsync" data-test="panels-reset">
+                        <span>Reset <i>every panel, in the original order</i></span><b>↺</b>
+                    </RadzenButton>
+                </div>
+            </details>
         }
 
         <Tray />
@@ -52,7 +89,7 @@
     }
 
     @* The sign-in page shows the title only: its one action is the card's button. Signed out, the
-       actions are just Sign in (settings needs a sign-in, so the gear is for signed-in users). *@
+       actions are just Sign in. *@
     @if (!OnSignInPage)
     {
         <div class="po-header__actions">
@@ -79,13 +116,16 @@
 </header>
 
 @code {
-    /// <summary>False on Live, where the camera panel has its own start controls.</summary>
-    [Parameter] public bool ShowStart { get; set; } = true;
-
     /// <summary>Signed out (MainLayout): the title and Sign in only; no section keys or session controls.</summary>
     [Parameter] public bool Bare { get; set; }
 
     private bool OnSignInPage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').Equals("/login", StringComparison.OrdinalIgnoreCase);
+
+    private string HealthLabel =>
+        Sensing.Live.LastError is not null || Sensing.Live.LostTicks > 0 ? "Needs attention"
+        : Sensing.Live.PendingBatches > 0 ? "Saving queued"
+        : Sensing.IsRunning ? (Sensing.Paused ? "Paused" : "Sensing active")
+        : "System status";
 
     /// <summary>The header shows the email, never a display name; the name is a last resort.</summary>
     internal static string EmailOf(ClaimsPrincipal user) =>
@@ -94,32 +134,50 @@
     /// <summary>Send whatever is waiting instead of waiting for the next automatic pass.</summary>
     private Task FlushOutboxAsync() => Sensing.SendOutboxAsync();
 
+    private Task ShowAllPanelsAsync() => LiveHeader.OnShowAll?.Invoke() ?? Task.CompletedTask;
+    private Task HideAllPanelsAsync() => LiveHeader.OnHideAll?.Invoke() ?? Task.CompletedTask;
+    private Task SetPanelHiddenAsync(string id, bool hide) => LiveHeader.OnSetHidden?.Invoke(id, hide) ?? Task.CompletedTask;
+    private Task StepPanelAsync(string id, int by) => LiveHeader.OnStep?.Invoke(id, by) ?? Task.CompletedTask;
+    private Task ResetPanelsAsync() => LiveHeader.OnResetLayout?.Invoke() ?? Task.CompletedTask;
+
     protected override void OnInitialized()
     {
         Sensing.Changed += OnSensingChanged;
-        Drawers.Changed += OnChanged;
+        Drawers.Changed += OnDrawersChanged;
+        LiveHeader.Changed += OnChanged;
         Navigation.LocationChanged += OnNavigated;
     }
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnDrawersChanged()
+    {
+        if (Drawers.Open is not null) _ = JS.TryInvokeVoidAsync("powatchMenus.closeMenus");
+        OnChanged();
+    }
 
     private object? _shown;
 
     /// <summary>The session changes several times a second; the header only draws these (the clock redraws the uptime).</summary>
     private void OnSensingChanged()
     {
-        var now = (Sensing.IsRunning, Sensing.Live.Demo, Sensing.Live.PendingBatches, Sensing.Live.LostTicks);
+        var now = (Sensing.IsRunning, Sensing.Paused, Sensing.Live.Demo, Sensing.Live.PendingBatches, Sensing.Live.LostTicks, Sensing.Live.LastError);
         if (now.Equals(_shown)) return;
         _shown = now;
         OnChanged();
     }
 
-    private void OnNavigated(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => OnChanged();
+    private void OnNavigated(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _ = JS.TryInvokeVoidAsync("powatchMenus.closeMenus");
+        OnChanged();
+    }
 
     public void Dispose()
     {
         Sensing.Changed -= OnSensingChanged;
-        Drawers.Changed -= OnChanged;
+        Drawers.Changed -= OnDrawersChanged;
+        LiveHeader.Changed -= OnChanged;
         Navigation.LocationChanged -= OnNavigated;
     }
 }

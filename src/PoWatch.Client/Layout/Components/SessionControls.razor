@@ -1,5 +1,6 @@
 @implements IDisposable
 @inject SensingSession Sensing
+@inject LiveHeaderState LiveHeader
 
 <span class="term-status @(Sensing.IsRunning ? (Sensing.Live.Demo ? "term-status--demo" : "term-status--live") : string.Empty)"
       data-test="session-status" title="@(Sensing.Live.Demo ? "Scripted demo, not a real camera" : null)">
@@ -14,20 +15,17 @@
     <RadzenButton Text="Stop" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
                   Click="@Sensing.StopAsync" data-test="header-stop" />
 }
-else if (StartActions is not null)
-{
-    @StartActions
-}
 else
 {
-    <a class="term-button term-button--primary" href="?start=camera" data-test="header-start">Start</a>
+    <RadzenButton Text="@(_starting ? "Starting..." : "Start camera")" Icon="videocam" Size="ButtonSize.Small"
+                  class="header-start-btn" Disabled="@_starting" Click="StartCameraAsync"
+                  title="Start camera" aria-label="Start camera" data-test="start-camera" />
 }
 
 @code {
-    [Parameter] public RenderFragment? StartActions { get; set; }
-
     private Timer? _clock;
     private bool _running;
+    private bool _starting;
     private string Uptime => Sensing.Live.StartedUtc is { } started
         ? (DateTimeOffset.UtcNow - started).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
         : "--:--:--";
@@ -37,6 +35,21 @@ else
         _running = Sensing.IsRunning;
         Sensing.Changed += OnChanged;
         _clock = new Timer(_ => { if (Sensing.IsRunning) InvokeAsync(StateHasChanged); }, null, 1000, 1000);
+    }
+
+    private async Task StartCameraAsync()
+    {
+        if (_starting) return;
+        _starting = true;
+        LiveHeader.SetStartError(null);
+        try
+        {
+            LiveHeader.SetStartError(await Sensing.StartAsync(demo: false));
+        }
+        finally
+        {
+            _starting = false;
+        }
     }
 
     private void OnChanged()
