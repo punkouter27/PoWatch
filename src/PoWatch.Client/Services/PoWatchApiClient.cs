@@ -121,6 +121,15 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<ObservePersonResultDto?> ObservePersonAsync(ObservePersonRequestDto request, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.PostAsJsonAsync("api/people/observe", request, Json.ObservePersonRequestDto, ct), Json.ObservePersonResultDto, cancellationToken);
 
+    public Task<PersonProfileDto?> RenamePersonAsync(string personId, string? name, CancellationToken cancellationToken = default) =>
+        ReadAsync(ct => httpClient.PutAsJsonAsync($"api/people/{Uri.EscapeDataString(personId)}/name", new RenamePersonRequestDto { Name = name }, Json.RenamePersonRequestDto, ct), Json.PersonProfileDto, cancellationToken);
+
+    public Task<PersonProfileDto?> MergePeopleAsync(string sourceId, string targetId, CancellationToken cancellationToken = default) =>
+        ReadAsync(ct => httpClient.PostAsync($"api/people/{Uri.EscapeDataString(sourceId)}/merge/{Uri.EscapeDataString(targetId)}", content: null, ct), Json.PersonProfileDto, cancellationToken);
+
+    public Task<bool> DeletePersonAsync(string personId, CancellationToken cancellationToken = default) =>
+        SendAsync(ct => httpClient.DeleteAsync($"api/people/{Uri.EscapeDataString(personId)}", ct), cancellationToken);
+
     public Task<PresenceStatsDto?> GetPresenceAsync(StatsQuery query, CancellationToken cancellationToken = default) =>
         GetStatsAsync("presence", query, Json.PresenceStatsDto, cancellationToken);
 

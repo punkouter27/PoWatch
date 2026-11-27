@@ -81,6 +81,12 @@ public sealed class AzurePersonProfileStore(AzureStorageClients clients, IOption
         return list;
     }
 
+    public async Task<PersonProfile?> GetAsync(string userId, string personId, CancellationToken cancellationToken)
+    {
+        var response = await _table.GetEntityIfExistsAsync<TableEntity>(Partition(userId), personId, cancellationToken: cancellationToken);
+        return response.HasValue ? ToProfile(response.Value!) : null;
+    }
+
     public async Task UpsertAsync(PersonProfile profile, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(profile);
@@ -96,14 +102,21 @@ public sealed class AzurePersonProfileStore(AzureStorageClients clients, IOption
             ["LastSeenUtc"] = profile.LastSeenUtc,
             ["StatsJson"] = StatsEntityMapper.ToJson(profile.Stats)
         };
+        if (!string.IsNullOrWhiteSpace(profile.CustomName)) entity["CustomName"] = profile.CustomName.Trim();
+        if (!string.IsNullOrWhiteSpace(profile.ThumbnailDataUrl)) entity["ThumbnailDataUrl"] = profile.ThumbnailDataUrl;
         await _table.UpsertEntityAsync(entity, TableUpdateMode.Replace, cancellationToken);
     }
+
+    public async Task DeleteAsync(string userId, string personId, CancellationToken cancellationToken) =>
+        await _table.DeleteEntityAsync(Partition(userId), personId, cancellationToken: cancellationToken);
 
     private static PersonProfile ToProfile(TableEntity e) => new()
     {
         Id = e.RowKey,
         UserId = e.GetString("UserId"),
         Number = e.GetInt32("Number") ?? 1,
+        CustomName = e.GetString("CustomName"),
+        ThumbnailDataUrl = e.GetString("ThumbnailDataUrl"),
         Descriptor = StatsEntityMapper.Unpack(e.GetBinary("Descriptor")),
         DescriptorCount = e.GetInt32("DescriptorCount") ?? 1,
         SessionsSeen = e.GetInt32("SessionsSeen") ?? 1,

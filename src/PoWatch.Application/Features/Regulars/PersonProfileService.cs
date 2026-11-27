@@ -38,6 +38,7 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
         var isNew = best is null;
         var returning = best is not null && best.LastSessionId != Guid.Empty && best.LastSessionId != request.SessionId;
 
+        var thumb = ValidThumbnail(request.ThumbnailDataUrl);
         PersonProfile updated;
         if (best is null)
         {
@@ -47,6 +48,7 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
                 Id = $"p-{Guid.NewGuid():N}",
                 UserId = userId,
                 Number = nextNum,
+                ThumbnailDataUrl = thumb,
                 Descriptor = unit,
                 DescriptorCount = 1,
                 SessionsSeen = 1,
@@ -60,6 +62,7 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
         {
             updated = best with
             {
+                ThumbnailDataUrl = best.ThumbnailDataUrl ?? thumb,
                 Descriptor = PersonProfile.Blend(best.Descriptor, best.DescriptorCount, unit),
                 DescriptorCount = best.DescriptorCount + 1,
                 SessionsSeen = returning ? best.SessionsSeen + 1 : Math.Max(1, best.SessionsSeen),
@@ -79,6 +82,98 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
             ReturningFromPreviousSession = returning
         };
     }
+
+    public async Task<PersonProfileDto?> RenameAsync(string userId, string personId, string? name, CancellationToken cancellationToken)
+    {
+        if (await store.GetAsync(userId, personId, cancellationToken) is not { } profile) return null;
+        var cleaned = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        if (cleaned is { Length: > 40 }) cleaned = cleaned[..40];
+        var updated = profile with { CustomName = cleaned };
+        await store.UpsertAsync(updated, cancellationToken);
+        return ToDto(updated);
+    }
+
+    public async Task<PersonProfileDto?> MergeAsync(string userId, string sourceId, string targetId, CancellationToken cancellationToken)
+    {
+        if (sourceId == targetId) return null;
+        var source = await store.GetAsync(userId, sourceId, cancellationToken);
+        var target = await store.GetAsync(userId, targetId, cancellationToken);
+        if (source is null || target is null) return null;
+
+        var merged = target with
+        {
+            CustomName = target.CustomName ?? source.CustomName,
+            ThumbnailDataUrl = target.ThumbnailDataUrl ?? source.ThumbnailDataUrl,
+            Descriptor = PersonProfile.Blend(target.Descriptor, target.DescriptorCount, source.Descriptor),
+            DescriptorCount = target.DescriptorCount + source.DescriptorCount,
+            SessionsSeen = target.SessionsSeen + source.SessionsSeen,
+            FirstSeenUtc = target.FirstSeenUtc < source.FirstSeenUtc ? target.FirstSeenUtc : source.FirstSeenUtc,
+            LastSeenUtc = target.LastSeenUtc > source.LastSeenUtc ? target.LastSeenUtc : source.LastSeenUtc,
+            Stats = Combine(target.Stats, source.Stats)
+        };
+        await store.UpsertAsync(merged, cancellationToken);
+        await store.DeleteAsync(userId, sourceId, cancellationToken);
+        return ToDto(merged);
+    }
+
+    public async Task<bool> DeleteAsync(string userId, string personId, CancellationToken cancellationToken)
+    {
+        if (await store.GetAsync(userId, personId, cancellationToken) is null) return false;
+        await store.DeleteAsync(userId, personId, cancellationToken);
+        return true;
+    }
+
+    private static string? ValidThumbnail(string? dataUrl) =>
+        dataUrl is { Length: > 0 and <= 24_576 } && dataUrl.StartsWith("data:image/jpeg;base64,", StringComparison.Ordinal)
+            ? dataUrl
+            : null;
+
+    private static PersonProfileStats Combine(PersonProfileStats a, PersonProfileStats b) => new()
+    {
+        FaceSamples = a.FaceSamples + b.FaceSamples,
+        BeautySum = a.BeautySum + b.BeautySum,
+        BeautyLow = a.BeautyLow is { } al && b.BeautyLow is { } bl ? Math.Min(al, bl) : a.BeautyLow ?? b.BeautyLow,
+        BeautyHigh = a.BeautyHigh is { } ah && b.BeautyHigh is { } bh ? Math.Max(ah, bh) : a.BeautyHigh ?? b.BeautyHigh,
+        SymmetrySum = a.SymmetrySum + b.SymmetrySum,
+        SymmetryCount = a.SymmetryCount + b.SymmetryCount,
+        GoldenSum = a.GoldenSum + b.GoldenSum,
+        GoldenCount = a.GoldenCount + b.GoldenCount,
+        ThirdsSum = a.ThirdsSum + b.ThirdsSum,
+        ThirdsCount = a.ThirdsCount + b.ThirdsCount,
+        FifthsSum = a.FifthsSum + b.FifthsSum,
+        FifthsCount = a.FifthsCount + b.FifthsCount,
+        AgeSum = a.AgeSum + b.AgeSum,
+        AgeCount = a.AgeCount + b.AgeCount,
+        AgeBand = a.AgeBand ?? b.AgeBand,
+        Presentation = a.Presentation ?? b.Presentation,
+        FaceShape = a.FaceShape ?? b.FaceShape,
+        AttentionSum = a.AttentionSum + b.AttentionSum,
+        AttentionCount = a.AttentionCount + b.AttentionCount,
+        SmileSum = a.SmileSum + b.SmileSum,
+        SmileCount = a.SmileCount + b.SmileCount,
+        ConcentrationSum = a.ConcentrationSum + b.ConcentrationSum,
+        ConcentrationCount = a.ConcentrationCount + b.ConcentrationCount,
+        BlinkRateSum = a.BlinkRateSum + b.BlinkRateSum,
+        BlinkRateCount = a.BlinkRateCount + b.BlinkRateCount,
+        FatigueSum = a.FatigueSum + b.FatigueSum,
+        FatigueCount = a.FatigueCount + b.FatigueCount,
+        TalkingSum = a.TalkingSum + b.TalkingSum,
+        TalkingCount = a.TalkingCount + b.TalkingCount,
+        DistanceBand = a.DistanceBand ?? b.DistanceBand,
+        BodySamples = a.BodySamples + b.BodySamples,
+        UprightSum = a.UprightSum + b.UprightSum,
+        UprightCount = a.UprightCount + b.UprightCount,
+        EnergySum = a.EnergySum + b.EnergySum,
+        EnergyCount = a.EnergyCount + b.EnergyCount,
+        OpenPostureSum = a.OpenPostureSum + b.OpenPostureSum,
+        OpenPostureCount = a.OpenPostureCount + b.OpenPostureCount,
+        ArmBalanceSum = a.ArmBalanceSum + b.ArmBalanceSum,
+        ArmBalanceCount = a.ArmBalanceCount + b.ArmBalanceCount,
+        LegBalanceSum = a.LegBalanceSum + b.LegBalanceSum,
+        LegBalanceCount = a.LegBalanceCount + b.LegBalanceCount,
+        ShoulderTiltSum = a.ShoulderTiltSum + b.ShoulderTiltSum,
+        ShoulderTiltCount = a.ShoulderTiltCount + b.ShoulderTiltCount
+    };
 
     private static PersonProfileStats Fold(PersonProfileStats s, ObservePersonRequestDto r)
     {
@@ -104,6 +199,20 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
             AgeCount = s.AgeCount + (r.AgeYears is not null ? 1 : 0),
             AgeBand = !string.IsNullOrWhiteSpace(r.AgeBand) ? r.AgeBand : s.AgeBand,
             Presentation = !string.IsNullOrWhiteSpace(r.Presentation) ? r.Presentation : s.Presentation,
+            FaceShape = !string.IsNullOrWhiteSpace(r.FaceShape) ? r.FaceShape : s.FaceShape,
+            AttentionSum = s.AttentionSum + (r.AttentionShare ?? 0),
+            AttentionCount = s.AttentionCount + (r.AttentionShare is not null ? 1 : 0),
+            SmileSum = s.SmileSum + (r.SmileScore ?? 0),
+            SmileCount = s.SmileCount + (r.SmileScore is not null ? 1 : 0),
+            ConcentrationSum = s.ConcentrationSum + (r.ConcentrationScore ?? 0),
+            ConcentrationCount = s.ConcentrationCount + (r.ConcentrationScore is not null ? 1 : 0),
+            BlinkRateSum = s.BlinkRateSum + (r.BlinkRatePerMin ?? 0),
+            BlinkRateCount = s.BlinkRateCount + (r.BlinkRatePerMin is not null ? 1 : 0),
+            FatigueSum = s.FatigueSum + (r.FatigueShare ?? 0),
+            FatigueCount = s.FatigueCount + (r.FatigueShare is not null ? 1 : 0),
+            TalkingSum = s.TalkingSum + (r.TalkingShare ?? 0),
+            TalkingCount = s.TalkingCount + (r.TalkingShare is not null ? 1 : 0),
+            DistanceBand = !string.IsNullOrWhiteSpace(r.DistanceBand) ? r.DistanceBand : s.DistanceBand,
             BodySamples = s.BodySamples + (hasBody ? 1 : 0),
             UprightSum = s.UprightSum + (r.UprightScore ?? 0),
             UprightCount = s.UprightCount + (r.UprightScore is not null ? 1 : 0),
@@ -127,7 +236,9 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
         {
             Id = p.Id,
             Number = p.Number,
+            CustomName = p.CustomName,
             DisplayName = p.DisplayName,
+            ThumbnailDataUrl = p.ThumbnailDataUrl,
             SessionsSeen = p.SessionsSeen,
             FirstSeenUtc = p.FirstSeenUtc,
             LastSeenUtc = p.LastSeenUtc,
@@ -143,6 +254,14 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
                 AgeMean = s.AgeCount > 0 ? Math.Round(s.AgeSum / s.AgeCount, 1) : null,
                 AgeBand = s.AgeBand,
                 Presentation = s.Presentation,
+                FaceShape = s.FaceShape,
+                AttentionShare = s.AttentionCount > 0 ? Math.Round(s.AttentionSum / s.AttentionCount, 2) : null,
+                SmileMean = s.SmileCount > 0 ? Math.Round(s.SmileSum / s.SmileCount, 0) : null,
+                ConcentrationMean = s.ConcentrationCount > 0 ? Math.Round(s.ConcentrationSum / s.ConcentrationCount, 0) : null,
+                BlinkRateMean = s.BlinkRateCount > 0 ? Math.Round(s.BlinkRateSum / s.BlinkRateCount, 1) : null,
+                FatigueShare = s.FatigueCount > 0 ? Math.Round(s.FatigueSum / s.FatigueCount, 3) : null,
+                TalkingShare = s.TalkingCount > 0 ? Math.Round(s.TalkingSum / s.TalkingCount, 2) : null,
+                DistanceBand = s.DistanceBand,
                 FaceSamples = s.FaceSamples,
                 UprightScore = s.UprightCount > 0 ? Math.Round(s.UprightSum / s.UprightCount, 1) : null,
                 MeanEnergy = s.EnergyCount > 0 ? Math.Round(s.EnergySum / s.EnergyCount, 3) : null,

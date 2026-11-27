@@ -40,9 +40,12 @@ public sealed class FaceTrends
     /// <summary>Mean beauty per stretch with a scored face, oldest first.</summary>
     public IReadOnlyList<double> BeautyHistory => _beauty;
 
-    /// <summary>1-minute average beauty &amp; age series for per-minute live graphs.</summary>
+    /// <summary>1-minute average beauty, age, attention, smile &amp; blink series for per-minute live graphs.</summary>
     public MinuteSeries BeautyMinutes { get; } = new();
     public MinuteSeries AgeMinutes { get; } = new();
+    public MinuteSeries AttentionMinutes { get; } = new();
+    public MinuteSeries SmileMinutes { get; } = new();
+    public MinuteSeries BlinkRateMinutes { get; } = new();
 
     /// <summary>Mean expected age in years per stretch with an aged face, oldest first.</summary>
     public IReadOnlyList<double> AgeHistory => _age;
@@ -99,6 +102,9 @@ public sealed class FaceTrends
                 _allAge.Add(years);
                 AgeMinutes.Add(years, seconds);
             }
+            if (face.AttentionShare is { } att && double.IsFinite(att)) AttentionMinutes.Add(att * 100, seconds);
+            if (face.SmileScore is { } smile && double.IsFinite(smile)) SmileMinutes.Add(smile, seconds);
+            if (face.BlinkRatePerMin is { } blink && double.IsFinite(blink)) BlinkRateMinutes.Add(blink, seconds);
             if (face.Male is { } male)
             {
                 if (male) { _binMale++; _allMale++; }

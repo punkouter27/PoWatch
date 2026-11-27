@@ -60,6 +60,27 @@ internal static class RegularEndpoints
             .WithName("ObservePerson")
             .WithSummary("Match a face descriptor across sessions in Azure Table Storage and fold in face/body appearance stats.");
 
+        people.MapPut("/{id}/name", async (string id, RenamePersonRequestDto request, UserId userId, PersonProfileService service, CancellationToken ct) =>
+            {
+                var updated = await service.RenameAsync(userId, id, request.Name, ct);
+                return updated is null ? Results.NotFound() : Results.Ok(updated);
+            })
+            .WithName("RenamePerson")
+            .WithSummary("Assign a real name (or clear back to Person #N) for an identified person.");
+
+        people.MapPost("/{sourceId}/merge/{targetId}", async (string sourceId, string targetId, UserId userId, PersonProfileService service, CancellationToken ct) =>
+            {
+                var merged = await service.MergeAsync(userId, sourceId, targetId, ct);
+                return merged is null ? Results.BadRequest(new { message = "Two distinct existing people are required to merge." }) : Results.Ok(merged);
+            })
+            .WithName("MergePeople")
+            .WithSummary("Merge two duplicate person entries into one.");
+
+        people.MapDelete("/{id}", async (string id, UserId userId, PersonProfileService service, CancellationToken ct) =>
+            await service.DeleteAsync(userId, id, ct) ? Results.NoContent() : Results.NotFound())
+            .WithName("DeletePerson")
+            .WithSummary("Delete an identified person profile.");
+
         return app;
     }
 }

@@ -1,0 +1,182 @@
+@page "/people"
+@inject PoWatchApiClient Api
+
+<PageTitle>People · PoWatch</PageTitle>
+<h1 class="visually-hidden">People</h1>
+
+<TerminalPanel Title="People" Class="people-page" Test="people-page">
+    <Aside>@_people.Count IDENTIFIED</Aside>
+    <ChildContent>
+        <p class="term-stat-hint">
+            Unique people detected by the camera start as <b>Person #1</b>, <b>Person #2</b>, etc.
+            Give anyone a real name below and PoWatch will use it on the Camera, Faces panel, and future sessions.
+        </p>
+
+        @if (!string.IsNullOrEmpty(_notice))
+        {
+            <p class="people-notice" role="status" data-test="people-notice">@_notice</p>
+        }
+
+        @if (!_loaded)
+        {
+            <Skeleton Heights="@([120, 120])" />
+        }
+        else if (_people.Count == 0)
+        {
+            <p class="term-empty" data-test="people-empty">
+                No unique people have been saved yet. Start the camera on <a class="term-link" href="">Live</a> and face the camera for a few seconds.
+            </p>
+        }
+        else
+        {
+            <div class="people-grid" data-test="people-grid">
+                @foreach (var person in _people)
+                {
+                    var id = person.Id;
+                    var others = _people.Where(p => p.Id != id).ToList();
+                    <article @key="id" class="person-card" data-test="@($"person-card-{person.Number}")">
+                        <div class="person-card-top">
+                            @if (!string.IsNullOrEmpty(person.ThumbnailDataUrl))
+                            {
+                                <img class="person-avatar" src="@person.ThumbnailDataUrl" alt="@person.DisplayName" />
+                            }
+                            else
+                            {
+                                <div class="person-avatar person-avatar--placeholder" aria-hidden="true">#@person.Number</div>
+                            }
+                            <div class="person-card-meta">
+                                <h3>@person.DisplayName</h3>
+                                <p class="term-stat-hint">
+                                    @(string.IsNullOrWhiteSpace(person.CustomName) ? "Unnamed" : $"Originally Person #{person.Number}")
+                                    · @person.SessionsSeen @(person.SessionsSeen == 1 ? "session" : "sessions")
+                                    · last seen @person.LastSeenUtc.ToLocalTime().ToString("d MMM HH:mm", CultureInfo.CurrentCulture)
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="person-rename-row">
+                            <RadzenTextBox class="pw-plain person-name-input"
+                                           Value="@GetDraft(person)"
+                                           Placeholder="@($"Name Person #{person.Number}…")"
+                                           aria-label="@($"Name for {person.DisplayName}")"
+                                           @oninput="@(e => _drafts[id] = e.Value?.ToString() ?? string.Empty)"
+                                           data-test="@($"person-name-{person.Number}")" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
+                                          Disabled="@_busy" Click="() => SaveNameAsync(person)"
+                                          data-test="@($"person-save-{person.Number}")">Save</RadzenButton>
+                            @if (!string.IsNullOrWhiteSpace(person.CustomName))
+                            {
+                                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button"
+                                              Disabled="@_busy" Click="() => ClearNameAsync(person)"
+                                              title="Reset back to temporary Person #N">Reset</RadzenButton>
+                            }
+                        </div>
+
+                        <FactRow Facts="@([
+                            new("Beauty", person.Stats.BeautyMean is { } bm ? $"{bm:0}" : null, person.Stats.BeautyLow is { } bl && person.Stats.BeautyHigh is { } bh ? $"Range {bl:0}–{bh:0}" : null),
+                            new("Age", person.Stats.AgeMean is { } am ? $"{am:0} yrs" : person.Stats.AgeBand),
+                            new("Shape", person.Stats.FaceShape),
+                            new("Focus", person.Stats.AttentionShare is { } att ? $"{att:P0}" : null),
+                            new("Smile", person.Stats.SmileMean is { } sm ? $"{sm:0}" : null),
+                            new("Blinks/m", person.Stats.BlinkRateMean is { } br ? $"{br:0}" : null),
+                            new("Upright", person.Stats.UprightScore is { } up ? $"{up:0}%" : null),
+                            new("Open", person.Stats.OpenPostureShare is { } op ? $"{op:P0}" : null),
+                        ])" />
+
+                        <div class="person-card-actions">
+                            @if (others.Count > 0)
+                            {
+                                <RadzenDropDown TValue="string" class="pw-plain person-merge-select"
+                                                Data="@others" TextProperty="DisplayName" ValueProperty="Id"
+                                                Value="@_mergeTarget.GetValueOrDefault(id)"
+                                                ValueChanged="@(v => _mergeTarget[id] = v)"
+                                                Placeholder="Merge into…" aria-label="@($"Merge {person.DisplayName} into another person")" />
+                                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button"
+                                              Disabled="@(_busy || string.IsNullOrEmpty(_mergeTarget.GetValueOrDefault(id)))"
+                                              Click="() => MergeAsync(id)" data-test="@($"person-merge-{person.Number}")">Merge</RadzenButton>
+                            }
+                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button person-delete"
+                                          Disabled="@_busy" Click="() => DeleteAsync(person)"
+                                          data-test="@($"person-delete-{person.Number}")">Delete</RadzenButton>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </ChildContent>
+</TerminalPanel>
+
+@code {
+    private bool _loaded;
+    private bool _busy;
+    private string? _notice;
+    private List<PersonProfileDto> _people = [];
+    private readonly Dictionary<string, string> _drafts = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _mergeTarget = new(StringComparer.Ordinal);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _people = [.. await Api.ListPeopleAsync()];
+        _loaded = true;
+    }
+
+    private string GetDraft(PersonProfileDto person) =>
+        _drafts.TryGetValue(person.Id, out var val) ? val : person.CustomName ?? string.Empty;
+
+    private async Task SaveNameAsync(PersonProfileDto person)
+    {
+        _busy = true;
+        _notice = null;
+        try
+        {
+            var draft = GetDraft(person).Trim();
+            if (await Api.RenamePersonAsync(person.Id, draft) is { } updated)
+            {
+                _drafts[person.Id] = updated.CustomName ?? string.Empty;
+                _notice = $"Saved {updated.DisplayName}.";
+                await LoadAsync();
+            }
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task ClearNameAsync(PersonProfileDto person)
+    {
+        _drafts[person.Id] = string.Empty;
+        await SaveNameAsync(person);
+    }
+
+    private async Task MergeAsync(string sourceId)
+    {
+        if (!_mergeTarget.TryGetValue(sourceId, out var targetId) || string.IsNullOrEmpty(targetId)) return;
+        _busy = true;
+        _notice = null;
+        try
+        {
+            if (await Api.MergePeopleAsync(sourceId, targetId) is { } merged)
+            {
+                _mergeTarget.Remove(sourceId);
+                _notice = $"Merged into {merged.DisplayName}.";
+                await LoadAsync();
+            }
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task DeleteAsync(PersonProfileDto person)
+    {
+        _busy = true;
+        _notice = null;
+        try
+        {
+            if (await Api.DeletePersonAsync(person.Id))
+            {
+                _notice = $"Deleted {person.DisplayName}.";
+                await LoadAsync();
+            }
+        }
+        finally { _busy = false; }
+    }
+}

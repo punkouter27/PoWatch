@@ -1,11 +1,9 @@
 namespace PoWatch.Shared.Services;
 
 /// <summary>
-/// What the camera reads from one face in view right now. <see cref="Label"/> is null until the face
-/// model has read it once; <see cref="AgeBand"/> and <see cref="Presentation"/> are the most likely
-/// class over every reading of this face so far, with that class's mean probability. Presentation is
-/// null below <see cref="FaceReadings.MinPresentationConfidence"/>: the model is unsure, and saying so
-/// is better than a guess.
+/// What the camera reads from one face in view right now: pose-gated roll-aligned Beauty, quality-weighted
+/// Age &amp; Presentation, plus blink rate, eye fatigue, iris gaze attention, smile, concentration, talking,
+/// screen distance, and geometric face shape.
 /// </summary>
 public sealed record FaceReadout(
     int Slot,
@@ -20,12 +18,19 @@ public sealed record FaceReadout(
     double? Symmetry = null,
     double? Golden = null,
     double? Thirds = null,
-    double? Fifths = null)
+    double? Fifths = null,
+    string? QualityLabel = null,
+    double? AttentionShare = null,
+    double? SmileScore = null,
+    double? ConcentrationScore = null,
+    double? BlinkRatePerMin = null,
+    double? FatigueShare = null,
+    bool IsTalking = false,
+    double? TalkingShare = null,
+    string? DistanceBand = null,
+    string? FaceShape = null,
+    double? HeadTiltDeg = null)
 {
-    /// <summary>
-    /// Whether the presentation model's estimate is male; false for female, null while unclear. Follows
-    /// <see cref="Presentation"/>, so a low-confidence guess counts for neither.
-    /// </summary>
     public bool? Male => Presentation switch
     {
         "male" => true,
@@ -34,72 +39,27 @@ public sealed record FaceReadout(
     };
 }
 
-/// <summary>
-/// The faces in front of the camera during one session, and what has been read from them: traditional
-/// beauty from the landmarks (<see cref="FaceGeometry"/>, smoothed over frames), an age band and a
-/// presentation estimate from two image classifiers, and a temporary label from <see cref="FaceLabeler"/>.
-/// It lives in memory for the session and is never stored or sent (ADR 0001 and 0002).
-/// </summary>
-/// <remarks>
-/// The page follows each face from frame to frame and gives it a slot number; a slot keeps its label
-/// for as long as it is followed. The descriptor is only needed when a slot is new, to tell a face
-/// that has come back from one never seen. One instance per session: not thread-safe.
-/// </remarks>
 public sealed class FaceReadings
 {
-    /// <summary>The age model's classes (jdp8/vit-age-classifier), in its output order.</summary>
     public static readonly string[] AgeBands = ["0–2", "3–9", "10–19", "20–29", "30–39", "40–49", "50–59", "60–69", "70+"];
-
-    /// <summary>Each age band's middle in years (70+ taken as 75), for an expected age that moves smoothly.</summary>
     public static readonly double[] AgeBandMiddles = [1, 6, 14.5, 24.5, 34.5, 44.5, 54.5, 64.5, 75];
-
-    /// <summary>The presentation model's classes (onnx-community/gender-classification-ONNX), in its output order.</summary>
     public static readonly string[] Presentations = ["female", "male"];
 
-    /// <summary>
-    /// Below this mean probability the presentation is shown as unclear. The model is surest of men:
-    /// on 40 LFW photos every one of its 5 misses was a woman, most of them above 0.9.
-    /// </summary>
     public const double MinPresentationConfidence = 0.8;
-
-    /// <summary>
-    /// Cosine distance under which two DINOv2-small face crops count as one person. DINOv2 is a general
-    /// image model, not a face recogniser: on LFW, 5% of different-person pairs were within 0.3 and
-    /// half of same-person pairs were past 0.39. So matching is tight, and only decides whether a new
-    /// slot is someone who came back; a miss gives them a new number rather than someone else's.
-    /// </summary>
     public const double DescriptorMatchDistance = 0.2;
-
-    /// <summary>
-    /// A followed face whose descriptor is this far from its own label is someone else who took its
-    /// place (one person leaning into the spot another just left), so the slot starts over rather than
-    /// averaging two people together. Far past the drift one face shows within a session.
-    /// </summary>
     public const double SwapDistance = 0.45;
-
-    /// <summary>How much of each new frame's beauty score goes into the shown one, so a blink does not jump it.</summary>
     public const double BeautySmoothing = 0.2;
-
-    /// <summary>x and y per mesh point, per face, in what <see cref="OnLandmarks"/> is handed.</summary>
     public const int MeshValues = MediaPipeFace.MeshPoints * 2;
 
     private readonly FaceLabeler _labeler = new(DescriptorMatchDistance);
     private readonly SortedDictionary<int, Face> _faces = [];
 
-    /// <summary>How many people this session has labelled.</summary>
     public int Labelled => _labeler.Count;
-
-    /// <summary>Whether the face models have read anyone this session (so they have loaded).</summary>
     public bool HasRead { get; private set; }
 
-    /// <summary>The faces in view, in slot order.</summary>
     public IReadOnlyList<FaceReadout> InView =>
         [.. _faces.Select(pair => pair.Value.Readout(pair.Key))];
 
-    /// <summary>
-    /// One frame's faces: a slot number each, and per slot <see cref="MeshValues"/> values (the 478
-    /// mesh points as x, y in units of the frame's width). Slots not in this frame have left view.
-    /// </summary>
     public void OnLandmarks(IReadOnlyList<double> slots, IReadOnlyList<double> meshes)
     {
         ArgumentNullException.ThrowIfNull(slots);
@@ -112,7 +72,25 @@ public sealed class FaceReadings
             var slot = (int)slots[i];
             seen.Add(slot);
             if (!_faces.TryGetValue(slot, out var face)) _faces[slot] = face = new Face();
-            if (MediaPipeFace.ToIbug68(meshes, offset) is { } points && FaceGeometry.Read(points) is { } score)
+
+            var metrics = FaceMetrics.Analyze(meshes, offset);
+            if (metrics is { } m)
+            {
+                face.ObserveMetrics(m);
+                // Pose- and neutral-mouth-gated, roll-aligned Beauty scoring (falls back on first frame so a score appears promptly).
+                var allowBeauty = face.Beauty is null || (m.IsFrontal && m.IsNeutralMouth);
+                if (allowBeauty && m.AlignedIbug68 is { } aligned && FaceGeometry.Read(aligned) is { } score)
+                {
+                    face.Beauty = face.Beauty is { } shown
+                        ? shown + (BeautySmoothing * (score.Beauty - shown))
+                        : score.Beauty;
+                    face.Symmetry = score.Symmetry;
+                    face.Golden = score.Golden;
+                    face.Thirds = score.Thirds;
+                    face.Fifths = score.Fifths;
+                }
+            }
+            else if (MediaPipeFace.ToIbug68(meshes, offset) is { } points && FaceGeometry.Read(points) is { } score)
             {
                 face.Beauty = face.Beauty is { } shown
                     ? shown + (BeautySmoothing * (score.Beauty - shown))
@@ -126,10 +104,6 @@ public sealed class FaceReadings
         foreach (var gone in _faces.Keys.Where(slot => !seen.Contains(slot)).ToList()) _faces.Remove(gone);
     }
 
-    /// <summary>
-    /// The face models' reading of one slot's face: age and presentation probabilities in the models'
-    /// class order, and a descriptor for its label. False when the slot has left view since.
-    /// </summary>
     public bool OnReading(int slot, IReadOnlyList<double> age, IReadOnlyList<double> presentation, IReadOnlyList<float> descriptor)
     {
         ArgumentNullException.ThrowIfNull(age);
@@ -138,13 +112,13 @@ public sealed class FaceReadings
         if (!_faces.TryGetValue(slot, out var face)) return false;
 
         if (face.Label is { } held && _labeler.DistanceTo(held, descriptor) > SwapDistance)
-        {
-            // Someone else in the same spot: nothing read so far is about them.
             _faces[slot] = face = new Face();
-        }
 
-        face.Age.Add(age);
-        face.Presentation.Add(presentation);
+        var weight = Math.Clamp(face.LastQuality, 0.15, 1.0);
+        face.Age.Add(age, weight);
+        face.Presentation.Add(presentation, weight);
+        face.RecordExpectedAge(age);
+
         if (face.Label is null)
         {
             var inView = _faces.Values.Where(f => f != face && f.Label is not null).Select(f => f.Label!).ToList();
@@ -161,24 +135,92 @@ public sealed class FaceReadings
 
     private sealed class Face
     {
-        public string? Label { get; set; }
+        private readonly Queue<double> _mouthWindow = new();
+        private readonly List<double> _ageEstimates = [];
+        private int _frames;
+        private int _lookingFrames;
+        private int _closedFrames;
+        private int _talkingFrames;
+        private int _blinks;
+        private bool _wasClosed;
+        private double _smileSum;
+        private double _concSum;
 
+        public string? Label { get; set; }
         public double? Beauty { get; set; }
         public double? Symmetry { get; set; }
         public double? Golden { get; set; }
         public double? Thirds { get; set; }
         public double? Fifths { get; set; }
-
+        public double LastQuality { get; private set; } = 1.0;
+        public string? QualityLabel { get; private set; }
+        public string? DistanceBand { get; private set; }
+        public string? FaceShape { get; private set; }
+        public double? HeadTiltDeg { get; private set; }
+        public bool IsTalking { get; private set; }
         public int Readings { get; set; }
 
-        public MeanProbabilities Age { get; } = new(AgeBands.Length);
+        public WeightedProbabilities Age { get; } = new(AgeBands.Length);
+        public WeightedProbabilities Presentation { get; } = new(Presentations.Length);
 
-        public MeanProbabilities Presentation { get; } = new(Presentations.Length);
+        public void ObserveMetrics(FaceFrameMetrics m)
+        {
+            _frames++;
+            LastQuality = m.Quality;
+            QualityLabel = m.QualityLabel;
+            DistanceBand = m.DistanceBand;
+            FaceShape = m.FaceShape;
+            HeadTiltDeg = m.RollDeg;
+            if (m.LookingAtScreen) _lookingFrames++;
+            if (m.EyesClosed) _closedFrames++;
+            if (m.EyesClosed && !_wasClosed) _blinks++;
+            _wasClosed = m.EyesClosed;
+            _smileSum += m.SmileScore;
+            _concSum += m.ConcentrationScore;
+
+            _mouthWindow.Enqueue(m.MouthOpen);
+            if (_mouthWindow.Count > 6) _mouthWindow.Dequeue();
+            if (_mouthWindow.Count >= 3)
+            {
+                var mean = _mouthWindow.Average();
+                var spread = _mouthWindow.Max() - _mouthWindow.Min();
+                IsTalking = mean > 0.035 && spread > 0.025;
+                if (IsTalking) _talkingFrames++;
+            }
+        }
+
+        public void RecordExpectedAge(IReadOnlyList<double> probabilities)
+        {
+            if (probabilities.Count != AgeBandMiddles.Length) return;
+            var total = 0.0;
+            foreach (var p in probabilities)
+            {
+                if (!double.IsFinite(p) || p < 0) return;
+                total += p;
+            }
+            if (total <= 0) return;
+            var expected = 0.0;
+            for (var i = 0; i < AgeBandMiddles.Length; i++) expected += (probabilities[i] / total) * AgeBandMiddles[i];
+            _ageEstimates.Add(expected);
+            if (_ageEstimates.Count > 25) _ageEstimates.RemoveAt(0);
+        }
+
+        private double? RobustAgeYears()
+        {
+            if (_ageEstimates.Count >= 3)
+            {
+                var sorted = _ageEstimates.OrderBy(v => v).ToList();
+                return Math.Round(sorted[sorted.Count / 2], 1);
+            }
+            return Age.Expected(AgeBandMiddles) is { } years ? Math.Round(years, 1) : null;
+        }
 
         public FaceReadout Readout(int slot)
         {
             var (age, ageP) = Age.Top();
             var (presentation, presentationP) = Presentation.Top();
+            // OnLandmarks fires at ~2 Hz (every 500 ms), so 120 frames ≈ 1 minute.
+            var blinkRate = _frames >= 6 ? Math.Round(_blinks / Math.Max(0.1, _frames / 120.0), 1) : (double?)null;
             return new FaceReadout(
                 slot,
                 Label,
@@ -188,23 +230,33 @@ public sealed class FaceReadings
                 presentation < 0 || presentationP < MinPresentationConfidence ? null : Presentations[presentation],
                 Math.Round(presentationP, 2),
                 Readings,
-                Age.Expected(AgeBandMiddles) is { } years ? Math.Round(years, 1) : null,
+                RobustAgeYears(),
                 Symmetry,
                 Golden,
                 Thirds,
-                Fifths);
+                Fifths,
+                QualityLabel,
+                _frames > 0 ? Math.Round((double)_lookingFrames / _frames, 2) : null,
+                _frames > 0 ? Math.Round(_smileSum / _frames, 0) : null,
+                _frames > 0 ? Math.Round(_concSum / _frames, 0) : null,
+                blinkRate,
+                _frames > 0 ? Math.Round((double)_closedFrames / _frames, 3) : null,
+                IsTalking,
+                _frames > 0 ? Math.Round((double)_talkingFrames / _frames, 2) : null,
+                DistanceBand,
+                FaceShape,
+                HeadTiltDeg);
         }
     }
 
-    /// <summary>The running mean of a classifier's probabilities; readings of the wrong width or not finite are dropped.</summary>
-    private sealed class MeanProbabilities(int classes)
+    private sealed class WeightedProbabilities(int classes)
     {
         private readonly double[] _sum = new double[classes];
-        private int _count;
+        private double _weightSum;
 
-        public void Add(IReadOnlyList<double> probabilities)
+        public void Add(IReadOnlyList<double> probabilities, double weight)
         {
-            if (probabilities.Count != _sum.Length) return;
+            if (probabilities.Count != _sum.Length || weight <= 0) return;
             var total = 0.0;
             foreach (var p in probabilities)
             {
@@ -212,27 +264,25 @@ public sealed class FaceReadings
                 total += p;
             }
             if (total <= 0) return;
-            for (var i = 0; i < _sum.Length; i++) _sum[i] += probabilities[i] / total;
-            _count++;
+            for (var i = 0; i < _sum.Length; i++) _sum[i] += (probabilities[i] / total) * weight;
+            _weightSum += weight;
         }
 
-        /// <summary>The probability-weighted mean of one value per class; null before any reading.</summary>
         public double? Expected(IReadOnlyList<double> values)
         {
-            if (_count == 0) return null;
+            if (_weightSum <= 0) return null;
             var sum = 0.0;
             for (var i = 0; i < _sum.Length; i++) sum += _sum[i] * values[i];
-            return sum / _count;
+            return sum / _weightSum;
         }
 
-        /// <summary>The most likely class and its mean probability, or (-1, 0) before any reading.</summary>
         public (int Index, double Probability) Top()
         {
-            if (_count == 0) return (-1, 0);
+            if (_weightSum <= 0) return (-1, 0);
             var best = 0;
             for (var i = 1; i < _sum.Length; i++)
                 if (_sum[i] > _sum[best]) best = i;
-            return (best, _sum[best] / _count);
+            return (best, _sum[best] / _weightSum);
         }
     }
 }

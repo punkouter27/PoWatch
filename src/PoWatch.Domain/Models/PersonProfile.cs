@@ -19,6 +19,20 @@ public sealed record PersonProfileStats
     public int AgeCount { get; init; }
     public string? AgeBand { get; init; }
     public string? Presentation { get; init; }
+    public string? FaceShape { get; init; }
+    public double AttentionSum { get; init; }
+    public int AttentionCount { get; init; }
+    public double SmileSum { get; init; }
+    public int SmileCount { get; init; }
+    public double ConcentrationSum { get; init; }
+    public int ConcentrationCount { get; init; }
+    public double BlinkRateSum { get; init; }
+    public int BlinkRateCount { get; init; }
+    public double FatigueSum { get; init; }
+    public int FatigueCount { get; init; }
+    public double TalkingSum { get; init; }
+    public int TalkingCount { get; init; }
+    public string? DistanceBand { get; init; }
 
     public int BodySamples { get; init; }
     public double UprightSum { get; init; }
@@ -47,6 +61,8 @@ public sealed record PersonProfile
     public required string Id { get; init; }
     public required string UserId { get; init; }
     public required int Number { get; init; }
+    public string? CustomName { get; init; }
+    public string? ThumbnailDataUrl { get; init; }
     public required float[] Descriptor { get; init; }
     public int DescriptorCount { get; init; }
     public int SessionsSeen { get; init; }
@@ -55,7 +71,7 @@ public sealed record PersonProfile
     public DateTimeOffset LastSeenUtc { get; init; }
     public PersonProfileStats Stats { get; init; } = new();
 
-    public string DisplayName => $"Person {Number}";
+    public string DisplayName => !string.IsNullOrWhiteSpace(CustomName) ? CustomName.Trim() : $"Person #{Number}";
 
     /// <summary>Cosine distance in [0, 2]; returns 2 if lengths differ or either vector is zero.</summary>
     public static double CosineDistance(IReadOnlyList<float> a, IReadOnlyList<float> b)

@@ -47,6 +47,7 @@ namespace PoWatch.Client.Services;
 [JsonSerializable(typeof(List<PersonProfileDto>))]
 [JsonSerializable(typeof(ObservePersonRequestDto))]
 [JsonSerializable(typeof(ObservePersonResultDto))]
+[JsonSerializable(typeof(RenamePersonRequestDto))]
 [JsonSerializable(typeof(List<MomentDto>))]
 [JsonSerializable(typeof(List<double>))]
 [JsonSerializable(typeof(AiModelsDto))]

@@ -116,7 +116,8 @@ public sealed partial class SensingSession
         double slot,
         [JSMarshalAs<JSType.Array<JSType.Number>>] double[] age,
         [JSMarshalAs<JSType.Array<JSType.Number>>] double[] presentation,
-        [JSMarshalAs<JSType.Array<JSType.Number>>] double[] descriptor)
+        [JSMarshalAs<JSType.Array<JSType.Number>>] double[] descriptor,
+        string? thumbnail)
     {
         if (s_faces is not { IsRunning: true, Paused: false } session) return;
         var slotId = (int)slot;
@@ -129,11 +130,11 @@ public sealed partial class SensingSession
         if (!session._lastPersonSync.TryGetValue(slotId, out var last) || now - last >= PersonSyncEvery)
         {
             session._lastPersonSync[slotId] = now;
-            _ = session.SyncPersonProfileAsync(slotId, desc);
+            _ = session.SyncPersonProfileAsync(slotId, desc, string.IsNullOrEmpty(thumbnail) ? null : thumbnail);
         }
     }
 
-    private async Task SyncPersonProfileAsync(int slot, float[] descriptor)
+    private async Task SyncPersonProfileAsync(int slot, float[] descriptor, string? thumbnail = null)
     {
         var face = _faces.InView.FirstOrDefault(f => f.Slot == slot);
         if (face is null || Live.Session is not { } session) return;
@@ -143,6 +144,7 @@ public sealed partial class SensingSession
         {
             SessionId = session.Id,
             Descriptor = [.. descriptor],
+            ThumbnailDataUrl = thumbnail,
             Beauty = face.Beauty,
             Symmetry = face.Symmetry,
             Golden = face.Golden,
@@ -151,6 +153,14 @@ public sealed partial class SensingSession
             AgeYears = face.AgeYears,
             AgeBand = face.AgeBand,
             Presentation = face.Presentation,
+            FaceShape = face.FaceShape,
+            AttentionShare = face.AttentionShare,
+            SmileScore = face.SmileScore,
+            ConcentrationScore = face.ConcentrationScore,
+            BlinkRatePerMin = face.BlinkRatePerMin,
+            FatigueShare = face.FatigueShare,
+            TalkingShare = face.TalkingShare,
+            DistanceBand = face.DistanceBand,
             UprightScore = singleBody ? Bodies.PostureScore : null,
             MeanEnergy = singleBody ? Bodies.MeanEnergy : null,
             OpenPostureShare = singleBody && Bodies.ObservedSeconds >= 5 ? Bodies.OpenSeconds / Bodies.ObservedSeconds : null,

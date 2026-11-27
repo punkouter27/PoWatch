@@ -295,3 +295,20 @@
 /* Inline form errors (FluentValidationValidator + ValidationMessage) sit on their own line under the field. */
 .form-error { flex-basis: 100%; color: var(--term-red); font: 12px var(--term-mono); margin: 2px 0 0; }
 .rule-form { flex-wrap: wrap; }
+
+/* ── People naming & profile management page (/people) ── */
+
+.people-notice { margin: 8px 0; padding: 6px 10px; border-radius: var(--term-radius); border: 1px solid var(--term-green); background: color-mix(in srgb, var(--term-green) 14%, transparent); font: 12px var(--term-mono); color: var(--term-text); }
+.people-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); gap: 12px; margin-top: 12px; }
+.person-card { display: grid; gap: 10px; align-content: start; padding: 12px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-panel-2); min-width: 0; }
+.person-card-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.person-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 1px solid var(--term-line); flex: none; }
+.person-avatar--placeholder { display: grid; place-items: center; background: var(--term-surface); font: 700 15px var(--term-mono); color: var(--term-accent); }
+.person-card-meta { min-width: 0; }
+.person-card-meta h3 { margin: 0; font: 600 15px var(--term-sans); color: var(--term-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person-card-meta p { margin: 2px 0 0; }
+.person-rename-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.person-name-input { flex: 1 1 auto; min-width: 0; padding: 5px 8px !important; font: 12px var(--term-mono) !important; background: var(--term-surface) !important; border: 1px solid var(--term-line) !important; border-radius: 4px !important; color: var(--term-text) !important; }
+.person-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 6px; border-top: 1px solid var(--term-line); }
+.person-merge-select { flex: 1 1 130px; min-width: 0; }
+.person-delete { margin-left: auto; color: var(--term-red); }

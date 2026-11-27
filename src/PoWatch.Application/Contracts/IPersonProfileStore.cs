@@ -6,5 +6,7 @@ namespace PoWatch.Application.Contracts;
 public interface IPersonProfileStore
 {
     Task<IReadOnlyList<PersonProfile>> ListAsync(string userId, CancellationToken cancellationToken);
+    Task<PersonProfile?> GetAsync(string userId, string personId, CancellationToken cancellationToken);
     Task UpsertAsync(PersonProfile profile, CancellationToken cancellationToken);
+    Task DeleteAsync(string userId, string personId, CancellationToken cancellationToken);
 }

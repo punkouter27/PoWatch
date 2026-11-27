@@ -252,6 +252,19 @@
     return createImageBitmap(_video, sx, sy, side, side, { resizeWidth: CROP_SIZE, resizeHeight: CROP_SIZE });
   }
 
+  /** Small 96×96 JPEG portrait data URL of a face crop, taken once when a slot is first read. */
+  function faceThumbnail(bitmap) {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 96;
+      c.height = 96;
+      c.getContext('2d')?.drawImage(bitmap, 0, 0, 96, 96);
+      return c.toDataURL('image/jpeg', 0.72);
+    } catch {
+      return '';
+    }
+  }
+
   /** Reads the face read least so far (a new face first). */
   async function readOne() {
     if (_reading || !_reader || !_video || !_slots.length || performance.now() < _readPausedUntil) return;
@@ -260,12 +273,13 @@
     try {
       const bitmap = await crop(face.points);
       if (!bitmap) return;
+      const thumb = face.reads === 0 ? faceThumbnail(bitmap) : '';
       const r = await _reader({ type: 'READ', bitmap }, [bitmap]);
       // follow() rebuilds the slots every frame, so the count goes on the face as it is now.
       const now = _slots.find((s) => s.slot === face.slot);
       if (now) now.reads++;
       (await dotnetExports()).PoWatch.Client.Services.SensingSession.OnFaceReading(
-        face.slot, new Float64Array(r.age), new Float64Array(r.presentation), new Float64Array(r.descriptor));
+        face.slot, new Float64Array(r.age), new Float64Array(r.presentation), new Float64Array(r.descriptor), thumb);
     } catch (err) {
       // A model that could not load is not asked again every 1.5 s; the Live models strip shows why.
       console.warn('Face reading failed:', err);

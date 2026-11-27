@@ -16,6 +16,14 @@ public sealed class PersonAppearanceStatsDto
     public double? AgeMean { get; init; }
     public string? AgeBand { get; init; }
     public string? Presentation { get; init; }
+    public string? FaceShape { get; init; }
+    public double? AttentionShare { get; init; }
+    public double? SmileMean { get; init; }
+    public double? ConcentrationMean { get; init; }
+    public double? BlinkRateMean { get; init; }
+    public double? FatigueShare { get; init; }
+    public double? TalkingShare { get; init; }
+    public string? DistanceBand { get; init; }
     public int FaceSamples { get; init; }
 
     public double? UprightScore { get; init; }
@@ -31,11 +39,18 @@ public sealed class PersonProfileDto
 {
     public string Id { get; init; } = string.Empty;
     public int Number { get; init; }
+    public string? CustomName { get; init; }
     public string DisplayName { get; init; } = string.Empty;
+    public string? ThumbnailDataUrl { get; init; }
     public int SessionsSeen { get; init; }
     public DateTimeOffset FirstSeenUtc { get; init; }
     public DateTimeOffset LastSeenUtc { get; init; }
     public PersonAppearanceStatsDto Stats { get; init; } = new();
+}
+
+public sealed class RenamePersonRequestDto
+{
+    public string? Name { get; init; }
 }
 
 /// <summary>Face descriptor + current face/body appearance metrics sent to match or update a returning person.</summary>
@@ -43,6 +58,7 @@ public sealed class ObservePersonRequestDto
 {
     public Guid SessionId { get; init; }
     public List<float> Descriptor { get; init; } = [];
+    public string? ThumbnailDataUrl { get; init; }
 
     public double? Beauty { get; init; }
     public double? Symmetry { get; init; }
@@ -52,6 +68,14 @@ public sealed class ObservePersonRequestDto
     public double? AgeYears { get; init; }
     public string? AgeBand { get; init; }
     public string? Presentation { get; init; }
+    public string? FaceShape { get; init; }
+    public double? AttentionShare { get; init; }
+    public double? SmileScore { get; init; }
+    public double? ConcentrationScore { get; init; }
+    public double? BlinkRatePerMin { get; init; }
+    public double? FatigueShare { get; init; }
+    public double? TalkingShare { get; init; }
+    public string? DistanceBand { get; init; }
 
     public double? UprightScore { get; init; }
     public double? MeanEnergy { get; init; }

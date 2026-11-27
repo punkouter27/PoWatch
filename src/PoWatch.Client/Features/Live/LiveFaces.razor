@@ -60,6 +60,10 @@
                                 {
                                     <span class="face-returning-badge" title="Recognised from previous sessions in Azure Table Storage">Returning · @profile.SessionsSeen sessions</span>
                                 }
+                                @if (face.QualityLabel is { } qual)
+                                {
+                                    <span class="cue-pill cue-pill--neutral" title="Pose and framing quality for Age &amp; Beauty">@qual</span>
+                                }
                                 <span>@Note(face)</span>
                                 @if (face.Symmetry is not null)
                                 {
@@ -69,6 +73,16 @@
                                         @(expanded ? "Hide" : "Why?")
                                     </RadzenButton>
                                 }
+                            </div>
+                            <div class="face-metrics-strip" data-test="face-extra-metrics">
+                                @if (face.AttentionShare is { } att) { <span>Focus <b>@($"{att:P0}")</b></span> }
+                                @if (face.SmileScore is { } sm) { <span>Smile <b>@($"{sm:0}")</b></span> }
+                                @if (face.ConcentrationScore is { } cc) { <span>Focus brow <b>@($"{cc:0}")</b></span> }
+                                @if (face.BlinkRatePerMin is { } br) { <span>Blinks <b>@($"{br:0}/m")</b></span> }
+                                @if (face.FatigueShare is { } ft && ft >= 0.05) { <span>Fatigue <b>@($"{ft:P0}")</b></span> }
+                                @if (face.IsTalking) { <span><b>Talking</b></span> }
+                                @if (face.DistanceBand is { } dist) { <span>Dist <b>@dist</b></span> }
+                                @if (face.FaceShape is { } shape) { <span>Shape <b>@shape</b></span> }
                             </div>
                             @if (profile is { Stats: { } hs } && (hs.FaceSamples > 1 || hs.BodySamples > 0))
                             {
@@ -229,6 +243,10 @@
         if (s.BeautyMean is { } bm)
             parts.Add(string.Create(ic, $"beauty {bm:0}") + (s.BeautyLow is { } bl && s.BeautyHigh is { } bh ? string.Create(ic, $" ({bl:0}–{bh:0})") : ""));
         if (s.AgeMean is { } am) parts.Add(string.Create(ic, $"age {am:0}"));
+        if (s.FaceShape is { } sh) parts.Add(sh);
+        if (s.AttentionShare is { } at) parts.Add(string.Create(ic, $"focus {at:P0}"));
+        if (s.SmileMean is { } sm) parts.Add(string.Create(ic, $"smile {sm:0}"));
+        if (s.BlinkRateMean is { } br) parts.Add(string.Create(ic, $"{br:0} blinks/m"));
         if (s.UprightScore is { } up) parts.Add(string.Create(ic, $"upright {up:0}%"));
         if (s.OpenPostureShare is { } op) parts.Add(string.Create(ic, $"open {op:P0}"));
         if (s.ArmBalance is { } ab) parts.Add(string.Create(ic, $"arms {ab * 100:0}/{(1 - ab) * 100:0}"));
