@@ -29,10 +29,15 @@ public sealed partial class Live
     private bool _demoEffects;
     private bool _effectsMounted;
     private bool _peopleHeat;
+    private string _spaceMode = "motion";
+    private ElementReference _fluidCanvas;
+    private bool _fluidMounted;
     private int _pickedCell = -1;
     private bool _showBoxes = true;
     private bool _showFaces = true;
     private bool _showPose = true;
+    private bool _privacyBlur;
+    private bool _voiceAlerts;
     private bool _cameraExpanded;
     private string _narrationSearch = string.Empty;
     private string? _selectedRegularId;
@@ -118,6 +123,18 @@ public sealed partial class Live
             if (showEffects) await JS.TryInvokeVoidAsync("powatchDemo.mount", _demoCanvas);
             else await JS.TryInvokeVoidAsync("powatchDemo.release");
         }
+        var wantFluid = _spaceMode is "thermal" or "fluid";
+        if (wantFluid != _fluidMounted)
+        {
+            _fluidMounted = wantFluid;
+            if (wantFluid) await JS.TryInvokeVoidAsync("powatchFluid.mount", _fluidCanvas, _spaceMode);
+            else await JS.TryInvokeVoidAsync("powatchFluid.release");
+        }
+        else if (wantFluid)
+        {
+            await JS.TryInvokeVoidAsync("powatchFluid.update", L.Heat.Select(v => (double)v).ToArray(), _spaceMode);
+        }
+
         if (firstRender)
         {
             _self = DotNetObjectReference.Create(this);
@@ -138,6 +155,20 @@ public sealed partial class Live
     }
 
     private void ToggleDemoEffects() => _demoEffects = !_demoEffects;
+
+    private async Task SetSpaceModeAsync(string mode)
+    {
+        _spaceMode = mode;
+        _peopleHeat = mode == "people";
+        if (mode is "thermal" or "fluid" && _fluidMounted)
+            await JS.TryInvokeVoidAsync("powatchFluid.update", L.Heat.Select(v => (double)v).ToArray(), mode);
+    }
+
+    private async Task ToggleVoiceAlertsAsync()
+    {
+        _voiceAlerts = !_voiceAlerts;
+        await JS.TryInvokeVoidAsync("powatchTts.setEnabled", _voiceAlerts);
+    }
 
     private void PickSpaceCell(int index) => _pickedCell = _pickedCell == index ? -1 : index;
 
@@ -367,6 +398,7 @@ public sealed partial class Live
     public async ValueTask DisposeAsync()
     {
         await JS.TryInvokeVoidAsync("powatchDemo.release");
+        await JS.TryInvokeVoidAsync("powatchFluid.release");
         Sensing.Changed -= OnSensingChanged;
         Feed.Changed -= OnStatsChanged;
         await JS.TryInvokeVoidAsync("powatchFeed.undock");

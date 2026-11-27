@@ -92,6 +92,8 @@
                                                 <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_showFaces ? "pw-plain on" : "pw-plain")" aria-pressed="@(_showFaces ? "true" : "false")" Click="ToggleFaceOverlayAsync" title="Toggle face points and labels" data-test="cam-toggle-faces">FACES</RadzenButton>
                                                 <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_showPose ? "pw-plain on" : "pw-plain")" aria-pressed="@(_showPose ? "true" : "false")" Click="TogglePoseOverlayAsync" title="Toggle pose skeleton" data-test="cam-toggle-pose">POSE</RadzenButton>
                                             }
+                                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_privacyBlur ? "pw-plain on" : "pw-plain")" aria-pressed="@(_privacyBlur ? "true" : "false")" Click="() => _privacyBlur = !_privacyBlur" title="Blur video preview while keeping stats live" data-test="cam-toggle-blur">BLUR</RadzenButton>
+                                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_voiceAlerts ? "pw-plain on" : "pw-plain")" aria-pressed="@(_voiceAlerts ? "true" : "false")" Click="ToggleVoiceAlertsAsync" title="Speak alerts and sit-break nudges on-device" data-test="cam-toggle-tts">VOICE</RadzenButton>
                                         </span>
                                         <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(Sensing.Paused ? "pw-plain cam-ctrl on" : "pw-plain cam-ctrl")" Click="TogglePause" title="Pause or resume sensing without ending the session" data-test="cam-pause">
                                             @(Sensing.Paused ? "Resume" : "Pause")
@@ -108,7 +110,7 @@
                                 <ChildContent>
                                     @* The camera element itself lives in the layout and is docked over this slot. *@
                                     <div class="live-stage">
-                                        <div class="live-feed" @ref="_slot">
+                                        <div class="live-feed @(_privacyBlur ? "live-feed--blur" : null)" @ref="_slot">
                                             @if (!Sensing.IsRunning || L.Demo)
                                             {
                                                 <canvas class="demo-flow" @ref="_demoCanvas" aria-hidden="true"></canvas>
@@ -124,10 +126,11 @@
                                                     var reg = L.RegularFor(track.TrackId);
                                                     var selected = _selectedRegularId is not null && reg?.Id == _selectedRegularId;
                                                     var dwell = DisplayText.Duration((DateTimeOffset.UtcNow - track.FirstSeenUtc).TotalSeconds);
+                                                    var distM = Math.Clamp(0.85 / Math.Max(0.15, track.Box.Y1 - track.Box.Y0), 0.4, 6.0);
                                                     <div @key="track.TrackId" class="live-box @(track.Label == "person" ? "live-box--person" : string.Empty) @(selected ? "live-box--selected" : string.Empty)"
                                                          data-uncertain="@(track.Box.Score < 0.6 ? "true" : "false")"
                                                          style="left: @Pct(track.Box.X0 * 100)%; top: @Pct(track.Box.Y0 * 100)%; width: @Pct((track.Box.X1 - track.Box.X0) * 100)%; height: @Pct((track.Box.Y1 - track.Box.Y0) * 100)%;">
-                                                        <span title="@($"Confidence {track.Box.Score:P0} · Track {track.TrackId}")">@(reg?.DisplayName ?? track.Label) · @dwell</span>
+                                                        <span title="@($"Confidence {track.Box.Score:P0} · ~{distM:0.0}m · Track {track.TrackId}")">@(reg?.DisplayName ?? track.Label) · @dwell · ~@(distM.ToString("0.0", CultureInfo.InvariantCulture))m</span>
                                                     </div>
                                                 }
                                             }
@@ -194,8 +197,10 @@
                             <TerminalPanel Title="Space" Class="cell-heat" Test="live-motion-grid">
                                 <Aside>
                                     <span class="space-switch" role="group" aria-label="Which heat to show">
-                                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_peopleHeat ? "pw-plain" : "pw-plain on")" aria-pressed="@(_peopleHeat ? "false" : "true")" Click="() => _peopleHeat = false" data-test="space-motion">MOTION NOW</RadzenButton>
-                                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_peopleHeat ? "pw-plain on" : "pw-plain")" aria-pressed="@(_peopleHeat ? "true" : "false")" Click="() => _peopleHeat = true" data-test="space-people">PEOPLE TODAY</RadzenButton>
+                                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_spaceMode == "motion" ? "pw-plain on" : "pw-plain")" aria-pressed="@(_spaceMode == "motion" ? "true" : "false")" Click='() => SetSpaceModeAsync("motion")' data-test="space-motion">MOTION</RadzenButton>
+                                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_spaceMode == "people" ? "pw-plain on" : "pw-plain")" aria-pressed="@(_spaceMode == "people" ? "true" : "false")" Click='() => SetSpaceModeAsync("people")' data-test="space-people">PEOPLE</RadzenButton>
+                                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_spaceMode == "thermal" ? "pw-plain on" : "pw-plain")" aria-pressed="@(_spaceMode == "thermal" ? "true" : "false")" Click='() => SetSpaceModeAsync("thermal")' data-test="space-thermal">THERMAL</RadzenButton>
+                                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_spaceMode == "fluid" ? "pw-plain on" : "pw-plain")" aria-pressed="@(_spaceMode == "fluid" ? "true" : "false")" Click='() => SetSpaceModeAsync("fluid")' data-test="space-fluid">FLUID</RadzenButton>
                                     </span>
                                 </Aside>
                                 <ChildContent>
@@ -204,7 +209,11 @@
                                         <div class="live-heat-mid">
                                             <span class="heat-edge heat-edge--side" aria-hidden="true">L</span>
                                             <div class="live-heat">
-                                                @if (_peopleHeat)
+                                                @if (_spaceMode is "thermal" or "fluid")
+                                                {
+                                                    <canvas class="fluid-canvas" @ref="_fluidCanvas" aria-label="Room motion thermal and fluid field"></canvas>
+                                                }
+                                                else if (_spaceMode == "people")
                                                 {
                                                     <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred today"
                                                               Selected="@_pickedCell" OnCellClick="PickSpaceCell"

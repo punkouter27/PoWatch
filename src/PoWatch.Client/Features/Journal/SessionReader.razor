@@ -1,5 +1,7 @@
 @using PoWatch.Shared.Services
+@implements IAsyncDisposable
 @inject PoWatchApiClient Api
+@inject IJSRuntime JS
 
 @* Compact no-scrollbar desktop bento layout for one session: top toolbar + slim story/numbers header,
    then a 2-column grid with Captured Images + Replay/Timeline on the left and full Stored Analysis on the right. *@
@@ -148,6 +150,7 @@ else
                                 {
                                     <section class="analysis-block" data-test="analysis-bodies">
                                         <h3>Body &amp; posture</h3>
+                                        <canvas class="cloth-canvas" @ref="_clothCanvas" aria-label="Posture and energy cloth ribbon"></canvas>
                                         <FactRow Facts="@([
                                             new("Upright", bodies.PostureScore is { } ps ? $"{ps:0}%" : null),
                                             new("Energy", bodies.MeanEnergy is { } me ? me.ToString("P0", CultureInfo.InvariantCulture) : null),
@@ -181,6 +184,25 @@ else
     private SpaceStatsDto? _space;
     private EnvironmentStatsDto? _environment;
     private IReadOnlyList<MomentDto> _moments = [];
+    private ElementReference _clothCanvas;
+    private bool _clothMounted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var bodies = _session?.Summary?.Bodies;
+        var want = bodies is not null;
+        if (want != _clothMounted)
+        {
+            _clothMounted = want;
+            if (want) await JS.TryInvokeVoidAsync("powatchCloth.mount", _clothCanvas, bodies!.EnergyHistory, bodies.PostureScore ?? 80);
+            else await JS.TryInvokeVoidAsync("powatchCloth.release");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_clothMounted) await JS.TryInvokeVoidAsync("powatchCloth.release");
+    }
 
     protected override async Task OnParametersSetAsync()
     {

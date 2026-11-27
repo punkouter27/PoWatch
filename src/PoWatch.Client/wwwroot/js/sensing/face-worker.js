@@ -23,6 +23,7 @@ function load() {
       baseOptions: { modelAssetPath: MODEL, delegate: 'GPU' },
       runningMode: 'VIDEO',
       numFaces: 4,
+      outputFaceBlendshapes: true,
     });
   })().catch((err) => {
     // A failed download is not remembered: the next frame tries again, as the detector does.
@@ -42,8 +43,20 @@ self.onmessage = async (event) => {
     const started = performance.now();
     const result = _landmarker.detectForVideo(bitmap, _lastAt);
     const faces = (result.faceLandmarks ?? []).map((points) => points.map((p) => [p.x, p.y]));
+    const blendshapes = (result.faceBlendshapes ?? []).map((b) => {
+      const map = Object.create(null);
+      for (const c of b.categories ?? []) map[c.categoryName] = c.score;
+      const avg = (a, b2) => ((map[a] ?? 0) + (map[b2] ?? 0)) * 0.5;
+      return [
+        avg('mouthSmileLeft', 'mouthSmileRight'),
+        avg('browDownLeft', 'browDownRight'),
+        avg('eyeBlinkLeft', 'eyeBlinkRight'),
+        map['jawOpen'] ?? 0,
+        avg('eyeWideLeft', 'eyeWideRight'),
+      ];
+    });
     // Points are normalised to each side; the page needs the frame's shape to make lengths compare.
-    self.postMessage({ faces, aspect: bitmap.height / bitmap.width, latencyMs: Math.round(performance.now() - started) });
+    self.postMessage({ faces, blendshapes, aspect: bitmap.height / bitmap.width, latencyMs: Math.round(performance.now() - started) });
   } catch (err) {
     self.postMessage({ faces: [], error: String(err?.message ?? err) });
   } finally {

@@ -140,6 +140,13 @@ public sealed partial class SensingSession
         var now = time.GetUtcNow();
         Live.RecordDetections(frame, now);
         Live.UpdateRegularPresence(now);
+        foreach (var track in frame.Active.Where(t => CentroidTracker.IsPresence(t.Label)))
+        {
+            var cx = (track.Box.X0 + track.Box.X1) * 0.5;
+            var cy = (track.Box.Y0 + track.Box.Y1) * 0.5;
+            var color = Live.RegularFor(track.TrackId) is { } r ? Live.RegularColor(r.Id) : null;
+            _ = js.TryInvokeVoidAsync("powatchFx.trail", cx, cy, color);
+        }
         foreach (var exited in frame.Exited) Live.ForgetTrack(exited.TrackId);
         foreach (var entered in frame.Entered) Announce(entered);
         Consider(_highlights.OnDetections(frame), atUtc);
@@ -174,6 +181,7 @@ public sealed partial class SensingSession
             _lastAlert[rule] = now;
             var text = $"{char.ToUpperInvariant(track.Label[0])}{track.Label[1..]} seen at {now:HH:mm}";
             Cue("alert");
+            _ = js.TryInvokeVoidAsync("powatchTts.speak", text);
             _ = js.TryInvokeVoidAsync("powatchCues.notify", text);
             // The hub relays it to every open tab of this user, this one included (the tray lists it).
             _ = api.RaiseAlertAsync(text);
@@ -190,6 +198,7 @@ public sealed partial class SensingSession
 
         var text = $"Sitting for {(int)Math.Round(sat.TotalMinutes)} minutes without a break: time to stand up";
         Cue("alert");
+        _ = js.TryInvokeVoidAsync("powatchTts.speak", text);
         _ = js.TryInvokeVoidAsync("powatchCues.notify", text);
         _ = api.RaiseAlertAsync(text);
     }

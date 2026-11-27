@@ -72,8 +72,19 @@
       return;
     }
     let sum = 0;
-    for (let i = 0; i < chunk.length; i++) sum += chunk[i] * chunk[i];
+    let crossings = 0;
+    let prev = chunk[0] ?? 0;
+    for (let i = 0; i < chunk.length; i++) {
+      const v = chunk[i];
+      sum += v * v;
+      if ((v >= 0) !== (prev >= 0)) crossings++;
+      prev = v;
+    }
     const loud = level(Math.sqrt(sum / chunk.length));
+    // Lightweight VAD gate: human speech has moderate zero-crossing rate (0.02..0.28) above noise floor;
+    // skips steady low-frequency fan hum and high-frequency static before invoking Whisper.
+    const zcr = crossings / Math.max(1, chunk.length);
+    const voiceLike = loud >= SPEECH_ON && zcr >= 0.015 && zcr <= 0.30;
     s.levels.push(loud);
 
     // The last second and a half, for the sound classifier and the speech pre-roll.
@@ -83,14 +94,14 @@
 
     if (s.speech) {
       s.speech.chunks.push(chunk);
-      if (loud >= SPEECH_ON) s.speech.lastLoud = now;
+      if (voiceLike) s.speech.lastLoud = now;
       const length = now - s.speech.startMs;
       if (now - s.speech.lastLoud >= SPEECH_END_MS || length >= SPEECH_MAX_MS) {
         const done = s.speech;
         s.speech = null;
         if (done.lastLoud - done.startMs >= SPEECH_MIN_MS) transcribe(concat(done.chunks), done.startMs);
       }
-    } else if (loud >= SPEECH_ON) {
+    } else if (voiceLike) {
       const preRoll = Math.ceil(PRE_ROLL_MS / (1000 * chunk.length / RATE));
       s.speech = { startMs: now, lastLoud: now, chunks: s.recent.slice(-preRoll) };
     }

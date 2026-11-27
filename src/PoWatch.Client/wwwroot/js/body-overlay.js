@@ -178,6 +178,7 @@
       if (event.data.error && !_warned) { _warned = true; console.warn('Body landmarks failed:', event.data.error); }
       if (event.data.aspect) _aspect = event.data.aspect;
       draw(bodies);
+      if (bodies.length > 0 && bodies[0].world) window.powatchPose3d?.update(bodies[0].world);
       follow(bodies);
       send();
     };

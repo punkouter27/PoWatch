@@ -1,10 +1,12 @@
 @* Room-wide pixel motion (against the usual daily mean) clearly separated from on-device body movement
    (limb energy, unified activity breakdown bar, visual left/right balance meter, and partial-body note). *@
 @using PoWatch.Shared.Services
+@implements IAsyncDisposable
 @inject SensingSession Sensing
+@inject IJSRuntime JS
 
 <TerminalPanel Title="Activity" Class="@(ZChip.IsUnusual(Anomaly("motion")?.Z) ? "cell-activity panel-alert" : "cell-activity")" Test="live-activity" Flush="true">
-    <Aside>@(ZChip.IsUnusual(Anomaly("motion")?.Z) ? "UNUSUAL · " : null)NOW vs USUAL@(Sensing.IsRunning && B.FullBodySeen ? " · FULL BODY" : null)</Aside>
+    <Aside>@(ZChip.IsUnusual(Anomaly("motion")?.Z) ? "UNUSUAL · " : null)@(Sensing.IsRunning ? L.SceneActivity.ToUpperInvariant() : "NOW vs USUAL")@(Sensing.IsRunning && B.FullBodySeen ? " · FULL BODY" : null)</Aside>
     <ChildContent>
         <p class="panel-subhead">ROOM MOTION</p>
         <div class="metric-cards">
@@ -28,6 +30,7 @@
         @if (Sensing.IsRunning && !L.Demo)
         {
             <p class="panel-subhead">BODY MOVEMENT</p>
+            <canvas class="pose-3d-canvas" @ref="_pose3dCanvas" aria-label="3D ergonomic pose avatar mirror"></canvas>
             <WhoList Rows="@Doing()" Label="What each body in view is doing" Test="body-activity" />
             @if (B.InView.Any(b => !b.FullBody))
             {
@@ -93,6 +96,24 @@
     private LiveSensingState L => Sensing.Live;
 
     private BodyReadings B => Sensing.Bodies;
+    private ElementReference _pose3dCanvas;
+    private bool _pose3dMounted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var want = Sensing.IsRunning && !L.Demo;
+        if (want != _pose3dMounted)
+        {
+            _pose3dMounted = want;
+            if (want) await JS.TryInvokeVoidAsync("powatchPose3d.mount", _pose3dCanvas);
+            else await JS.TryInvokeVoidAsync("powatchPose3d.release");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pose3dMounted) await JS.TryInvokeVoidAsync("powatchPose3d.release");
+    }
 
     private AnomalyDto? Anomaly(string metric) => Patterns?.Anomalies.FirstOrDefault(a => a.Metric == metric);
 

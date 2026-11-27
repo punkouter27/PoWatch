@@ -109,6 +109,17 @@ public sealed partial class SensingSession
         session.Notify();
     }
 
+    /// <summary>MediaPipe 52-weight blendshape summary [smile, brow, blink, jawOpen, eyeWide] per face slot.</summary>
+    [JSExport]
+    [SupportedOSPlatform("browser")]
+    internal static void OnFaceBlendshapes(
+        [JSMarshalAs<JSType.Array<JSType.Number>>] double[] slots,
+        [JSMarshalAs<JSType.Array<JSType.Number>>] double[] values)
+    {
+        if (s_faces is not { IsRunning: true, Paused: false } session) return;
+        session._faces.OnBlendshapes(slots, values);
+    }
+
     /// <summary>The face models' reading of one slot's face (<see cref="FaceReadings.OnReading"/>).</summary>
     [JSExport]
     [SupportedOSPlatform("browser")]

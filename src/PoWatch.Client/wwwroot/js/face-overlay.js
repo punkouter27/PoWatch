@@ -51,6 +51,7 @@
   let _aspect = 9 / 16;
   let _visible = true;
   let _highlightedSlot = null;
+  let _blendshapes = [];
 
   /** The client assembly's [JSExport] methods, as detector-bridge.js gets them. */
   function dotnetExports() {
@@ -231,7 +232,16 @@
       for (const p of s.points) { meshes[at++] = p[0]; meshes[at++] = p[1] * _aspect; }
     });
     try {
-      (await dotnetExports()).PoWatch.Client.Services.SensingSession.OnFaceLandmarks(slots, meshes);
+      const exp = (await dotnetExports()).PoWatch.Client.Services.SensingSession;
+      exp.OnFaceLandmarks(slots, meshes);
+      if (_blendshapes.length === _slots.length && _slots.length > 0) {
+        const bs = new Float64Array(_slots.length * 5);
+        for (let i = 0; i < _slots.length; i++) {
+          const row = _blendshapes[i] ?? [0, 0, 0, 0, 0];
+          for (let j = 0; j < 5; j++) bs[(i * 5) + j] = row[j] ?? 0;
+        }
+        exp.OnFaceBlendshapes(slots, bs);
+      }
     } catch (err) {
       console.warn('Face landmarks were not handed over:', err);
     }
@@ -309,6 +319,7 @@
       const faces = event.data?.faces;
       if (!faces) return;
       if (event.data.aspect) _aspect = event.data.aspect;
+      _blendshapes = event.data.blendshapes ?? [];
       // Slot numbers first: both the points and their chips are drawn for the faces they now name.
       follow(faces);
       draw();

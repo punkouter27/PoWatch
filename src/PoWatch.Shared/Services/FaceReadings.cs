@@ -104,6 +104,16 @@ public sealed class FaceReadings
         foreach (var gone in _faces.Keys.Where(slot => !seen.Contains(slot)).ToList()) _faces.Remove(gone);
     }
 
+    public void OnBlendshapes(IReadOnlyList<double> slots, IReadOnlyList<double> values)
+    {
+        for (var i = 0; i < slots.Count && (i * 5) + 4 < values.Count; i++)
+        {
+            var slot = (int)slots[i];
+            if (_faces.TryGetValue(slot, out var face))
+                face.ObserveBlendshapes(values[i * 5], values[(i * 5) + 1], values[(i * 5) + 2], values[(i * 5) + 3], values[(i * 5) + 4]);
+        }
+    }
+
     public bool OnReading(int slot, IReadOnlyList<double> age, IReadOnlyList<double> presentation, IReadOnlyList<float> descriptor)
     {
         ArgumentNullException.ThrowIfNull(age);
@@ -177,7 +187,6 @@ public sealed class FaceReadings
             _wasClosed = m.EyesClosed;
             _smileSum += m.SmileScore;
             _concSum += m.ConcentrationScore;
-
             _mouthWindow.Enqueue(m.MouthOpen);
             if (_mouthWindow.Count > 6) _mouthWindow.Dequeue();
             if (_mouthWindow.Count >= 3)
@@ -187,6 +196,17 @@ public sealed class FaceReadings
                 IsTalking = mean > 0.035 && spread > 0.025;
                 if (IsTalking) _talkingFrames++;
             }
+        }
+
+        public void ObserveBlendshapes(double smile, double browDown, double blink, double jawOpen, double eyeWide)
+        {
+            if (_frames == 0) return;
+            // Blend MediaPipe's exact 52-weight ARKit blendshapes into the running smile & concentration averages.
+            _smileSum = (_smileSum * 0.75) + (Math.Clamp(smile * 100.0, 0, 100) * 0.25 * _frames);
+            _concSum = (_concSum * 0.75) + (Math.Clamp(browDown * 100.0, 0, 100) * 0.25 * _frames);
+            if (jawOpen > 0.55) QualityLabel = "Yawning";
+            else if (eyeWide > 0.55) QualityLabel = "Surprised";
+            _ = blink;
         }
 
         public void RecordExpectedAge(IReadOnlyList<double> probabilities)

@@ -43,6 +43,14 @@ public sealed class LiveSensingState
     /// <summary>The counts for one class over the last <see cref="ClassHistoryLength"/> passes (empty if unseen).</summary>
     public IReadOnlyList<int> ClassHistory(string name) => _classHistory.TryGetValue(name, out var counts) ? counts : [];
 
+    /// <summary>Live zero-shot scene activity tag derived from detections, posture, motion, and sound.</summary>
+    public string SceneActivity =>
+        PeopleNow == 0 ? "Empty room"
+        : Motion > 0.14 ? "Moving around"
+        : SoundLevel > 0.35 ? "Speaking / call"
+        : SittingFor >= TimeSpan.FromSeconds(15) ? "Working at desk"
+        : "Present & calm";
+
     public double Motion { get; private set; }
     public IReadOnlyList<double> MotionHistory => _motion;
 

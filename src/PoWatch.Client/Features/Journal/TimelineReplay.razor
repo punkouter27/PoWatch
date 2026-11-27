@@ -44,6 +44,7 @@
                     <p class="replay-caption" data-replay="caption"></p>
                 </div>
             </div>
+            <canvas class="replay-flow-canvas" @ref="_flowCanvas" aria-label="Room activity flow simulation"></canvas>
 
             <div class="replay-track-wrap">
                 <canvas class="replay-track" data-replay="track" aria-hidden="true"></canvas>
@@ -201,6 +202,7 @@
         if (await ReplayGrids.TryStageAsync(Nav.BaseUri, DayKey, data.Grids))
             data = new ReplayDayDto { Window = data.Window, Minutes = data.Minutes, Events = data.Events };
         await JS.TryInvokeVoidAsync("powatchReplay.mount", _root, JsonSerializer.Serialize(data, Json.ReplayDayDto), DayKey, StartAt ?? From?.ToUnixTimeMilliseconds());
+        await JS.TryInvokeVoidAsync("powatchReplayFlow.mount", _flowCanvas);
     }
 
     /// <summary>Encodes the day's time-lapse frames (kept only in this browser) to a WebM and downloads it.</summary>
@@ -241,5 +243,11 @@
         }
     }
 
-    public async ValueTask DisposeAsync() => await JS.TryInvokeVoidAsync("powatchReplay.unmount", _root);
+    private ElementReference _flowCanvas;
+
+    public async ValueTask DisposeAsync()
+    {
+        await JS.TryInvokeVoidAsync("powatchReplay.unmount", _root);
+        await JS.TryInvokeVoidAsync("powatchReplayFlow.release");
+    }
 }

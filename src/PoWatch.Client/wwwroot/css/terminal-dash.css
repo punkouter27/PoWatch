@@ -137,17 +137,18 @@
     }
     .dash-grid :is(.live-who, .live-census, .env-words, .live-class-sparks, .live-lines .moment-list) { overflow: hidden; }
 
-    /* Under about a 900-high window (a cell of 240px or less): the footnotes and the second-tier readings go. */
-    @container cell (max-height: 240px) {
+    /* Under about a 900-high window (a cell of 270px or less): footnotes and secondary strips step out so 1440×900 never scrolls. */
+    @container cell (max-height: 270px) {
         .cell-faces > .term-panel-body > .term-stat-hint:last-child,
         .cell-faces :is([data-test="body-language-now"], [data-test="body-language"], [data-test="body-language-summary"]),
         .cell-metrics [data-test="metric-day-shape"],
-        .cell-env :is(.env-words, .stats-weird),
-        .cell-inframe :is([data-test="posture-split"], [data-test="live-posture"], [data-test="body-posture-score"], .live-class-sparks),
+        .cell-env :is(.env-words, .stats-weird, .env-light-spark),
+        .cell-inframe :is([data-test="posture-split"], [data-test="live-posture"], [data-test="body-posture-score"], .live-class-sparks, .inframe-people-spark),
         .cell-activity :is([data-test="body-activity"], [data-test="body-energy"], [data-test="body-activity-bar"],
-            [data-test="body-activity-split"], [data-test="body-balance"]) { display: none; }
-        /* Space keeps its heat map, smaller, so the facts under it stay on the cell. */
-        .cell-heat .term-heat { max-width: 150px; margin-inline: auto; }
+            [data-test="body-activity-split"], [data-test="body-balance"], .pose-3d-canvas),
+        .panel-subhead, .heat-edge, .heat-legend, .term-spark-avg-label, .term-spark-axis { display: none; }
+        /* Space keeps its heat map, compact, so the facts under it stay on the cell. */
+        .cell-heat .term-heat, .cell-heat .fluid-canvas { max-width: 132px; margin-inline: auto; }
     }
 
     /* Under about a 768-high window (a cell of 200px or less): the headline numbers tighten up, the sparklines
@@ -355,3 +356,8 @@
 .regular-live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--term-green); flex: none; }
 .regular-meta { display: grid; text-align: right; font: 11px var(--term-mono); color: var(--term-muted); }
 .regular-history { font-size: 10px; color: var(--term-dim); }
+
+/* ── Thermal/fluid canvas, 3D pose mirror, privacy blur ── */
+.live-feed--blur { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.fluid-canvas { display: block; width: 100%; max-width: 210px; aspect-ratio: 16 / 9; margin-inline: auto; border-radius: 4px; background: #05070a; }
+.pose-3d-canvas { display: block; width: 100%; height: 84px; border-radius: 4px; background: var(--term-panel-2); }

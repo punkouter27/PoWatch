@@ -11,21 +11,11 @@
         ctx?.clearRect(0, 0, innerWidth, innerHeight);
     }
 
-    function burst(pan = 0, seed, anchor) {
+    function burst(pan = 0, seed, anchor, accentColor) {
         if (visual.reduced.matches || document.hidden) return;
         const source = anchor ?? document.querySelector('.live-feed');
         if (source && !visual.visible(source)) return;
-        if (!canvas) {
-            canvas = document.createElement('canvas');
-            canvas.className = 'fx-burst';
-            canvas.setAttribute('aria-hidden', 'true');
-            document.body.append(canvas);
-            ctx = canvas.getContext('2d');
-        }
-        const dpr = Math.min(devicePixelRatio || 1, 2) * visual.quality;
-        canvas.width = Math.round(innerWidth * dpr);
-        canvas.height = Math.round(innerHeight * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ensureCanvas();
         const rect = source?.getBoundingClientRect() ?? { left: 0, top: innerHeight * 0.1, width: innerWidth, height: innerHeight * 0.5 };
         const x = rect.left + rect.width * (0.5 + Math.max(-1, Math.min(1, Number(pan) || 0)) * 0.4);
         const y = rect.top + rect.height * 0.45;
@@ -35,7 +25,46 @@
         for (let i = 0; i < count; i++) {
             const angle = rand() * Math.PI * 2, speed = 45 + rand() * 110;
             particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 35,
-                life: 0.7 + rand() * 0.4, color: colors[i % colors.length] });
+                life: 0.7 + rand() * 0.4, color: accentColor || colors[i % colors.length] });
+        }
+        if (!frame) { previous = 0; frame = requestAnimationFrame(tick); }
+    }
+
+    function ensureCanvas() {
+        if (!canvas) {
+            canvas = document.createElement('canvas');
+            canvas.className = 'fx-burst';
+            canvas.setAttribute('aria-hidden', 'true');
+            document.body.append(canvas);
+            ctx = canvas.getContext('2d');
+        }
+        const dpr = Math.min(devicePixelRatio || 1, 2) * visual.quality;
+        if (canvas.width !== Math.round(innerWidth * dpr) || canvas.height !== Math.round(innerHeight * dpr)) {
+            canvas.width = Math.round(innerWidth * dpr);
+            canvas.height = Math.round(innerHeight * dpr);
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    /** GPU-friendly glowing particle trail emitted along a tracked person's normalised centroid over .live-feed. */
+    function trail(xNorm, yNorm, color) {
+        if (visual.reduced.matches || document.hidden) return;
+        const source = document.querySelector('.live-feed');
+        if (!source || !visual.visible(source)) return;
+        ensureCanvas();
+        const rect = source.getBoundingClientRect();
+        const x = rect.left + rect.width * Math.max(0, Math.min(1, Number(xNorm) || 0.5));
+        const y = rect.top + rect.height * Math.max(0, Math.min(1, Number(yNorm) || 0.5));
+        particles = particles.slice(-140);
+        for (let i = 0; i < 4; i++) {
+            particles.push({
+                x: x + (Math.random() - 0.5) * 10,
+                y: y + (Math.random() - 0.5) * 10,
+                vx: (Math.random() - 0.5) * 24,
+                vy: -12 - Math.random() * 18,
+                life: 0.55 + Math.random() * 0.35,
+                color: color || colors[i % colors.length]
+            });
         }
         if (!frame) { previous = 0; frame = requestAnimationFrame(tick); }
     }
@@ -65,5 +94,5 @@
 
     document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
     visual.reduced.addEventListener('change', clear);
-    window.powatchFx = { burst, clear };
+    window.powatchFx = { burst, trail, clear };
 })();

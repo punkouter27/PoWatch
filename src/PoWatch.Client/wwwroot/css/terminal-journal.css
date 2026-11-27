@@ -243,3 +243,6 @@
 @media (max-width: 959.98px) {
     .session-top-row { grid-template-columns: 1fr; }
 }
+
+.cloth-canvas { display: block; width: 100%; height: 56px; border-radius: 4px; background: var(--term-surface); }
+.replay-flow-canvas { display: block; width: 100%; height: 76px; margin-top: 6px; border-radius: 4px; background: #05070a; }
