@@ -1,8 +1,9 @@
 @* A grid heatmap (16×9 frame grid, 7×24 weekday-by-hour, …). Shade runs from the smallest non-zero
    value to the largest, so a busy but even frame still shows where it is busiest; zero stays blank.
-   With OnCellClick the cells are clickable (the Journal picks a day this way); Selected outlines one. *@
-<div class="term-heat @(OnCellClick.HasDelegate ? "term-heat--pick" : null)" role="img" aria-label="@Label"
-     style="grid-template-columns: repeat(@Columns, minmax(0, 1fr));">
+   With OnCellClick the cells are clickable (the Journal picks a day this way); Selected outlines one.
+   With Backdrop (an image URL) the grid is laid over that picture, so a hot cell reads as a place. *@
+<div class="term-heat @(OnCellClick.HasDelegate ? "term-heat--pick" : null) @(Backdrop is null ? null : "term-heat--photo")" role="img" aria-label="@Label"
+     style="grid-template-columns: repeat(@Columns, minmax(0, 1fr));@(Backdrop is null ? null : $" background-image: url('{Backdrop}');")">
     @for (var i = 0; i < Columns * Rows; i++)
     {
         var index = i;
@@ -28,6 +29,9 @@
     [Parameter] public int Columns { get; set; } = 16;
     [Parameter] public int Rows { get; set; } = 9;
     [Parameter] public string Label { get; set; } = "Heatmap";
+
+    /// <summary>An image (a data URL of the camera) to lay the grid over; null for the plain grid.</summary>
+    [Parameter] public string? Backdrop { get; set; }
 
     /// <summary>Tooltip per cell index and value; defaults to the value alone.</summary>
     [Parameter] public Func<int, double, string>? CellTitle { get; set; }

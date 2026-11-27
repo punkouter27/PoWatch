@@ -5,15 +5,18 @@
 @inject SensingSession Sensing
 @inject IJSRuntime JS
 
-<TerminalPanel Title="Activity" Class="@(ZChip.IsUnusual(Anomaly("motion")?.Z) ? "cell-activity panel-alert" : "cell-activity")" Test="live-activity" Flush="true">
-    <Aside>@(ZChip.IsUnusual(Anomaly("motion")?.Z) ? "UNUSUAL · " : null)@(Sensing.IsRunning ? L.SceneActivity.ToUpperInvariant() : "NOW vs USUAL")@(Sensing.IsRunning && B.FullBodySeen ? " · FULL BODY" : null)</Aside>
+<TerminalPanel Title="Activity" Class="@(Unusual ? "cell-activity panel-alert" : "cell-activity")" Test="live-activity" Flush="true">
+    <Aside>@(Unusual ? "UNUSUAL · " : null)@(Sensing.IsRunning ? L.SceneActivity.ToUpperInvariant() : "NOW vs USUAL")@(Sensing.IsRunning && B.FullBodySeen ? " · FULL BODY" : null)</Aside>
     <ChildContent>
         <p class="panel-subhead">ROOM MOTION</p>
         <div class="metric-cards">
             <RadzenCard class="metric-card">
                 <StatCell Label="Activity level" Value="@(Sensing.IsRunning ? L.Motion.ToString("P1", CultureInfo.InvariantCulture) : "—")"
-                          Hint="@(Sensing.IsRunning ? $"Now · usual daily mean {DisplayText.Percent(Anomaly("motion")?.Mean)}" : "Available while observing")" Test="metric-motion">
-                    <ZChip Z="@Anomaly("motion")?.Z" Today="@(Sensing.IsRunning ? L.Motion : null)" Mean="@Anomaly("motion")?.Mean" />
+                          Hint="@(!Sensing.IsRunning ? "Available while observing" : HasBaseline ? $"Now · usual daily mean {DisplayText.Percent(Anomaly("motion")?.Mean)}" : "Now · share of the frame moving")" Test="metric-motion">
+                    @if (HasBaseline)
+                    {
+                        <ZChip Z="@Anomaly("motion")?.Z" Today="@(Sensing.IsRunning ? L.Motion : null)" Mean="@Anomaly("motion")?.Mean" />
+                    }
                 </StatCell>
                 <Sparkline Values="@(Sensing.IsRunning && L.MotionMinutes.Points.Count > 1 ? L.MotionMinutes.Points : L.MotionHistory)"
                            Baseline="@UsualMotionLine()"
@@ -24,7 +27,7 @@
         </div>
         <FactRow Test="activity-facts" Facts="@([
             new("Peak now", Sensing.IsRunning && L.MotionHistory.Count > 0 ? L.MotionHistory.Max().ToString("P0", CultureInfo.InvariantCulture) : null, "The most motion in the last minute"),
-            new("Busiest at", Presence?.BusiestStartUtc is { } busiest ? DisplayText.LocalTime(busiest) : null, Presence is { } p ? $"The busiest stretch this session started here, at {p.BusiestMotion.ToString("P0", CultureInfo.InvariantCulture)} motion" : null),
+            new("Busiest at", Presence is { SecondsObserved: >= BusiestAfterSeconds, BusiestStartUtc: { } busiest } ? DisplayText.LocalTime(busiest) : null, Presence is { } p ? $"The busiest stretch this session started here, at {p.BusiestMotion.ToString("P0", CultureInfo.InvariantCulture)} motion" : null),
             new("Longest still", Presence is { LongestStillSeconds: >= 1 } still ? DisplayText.Duration(still.LongestStillSeconds) : null, "The longest stretch with no motion at all"),
         ])" />
         @if (Sensing.IsRunning && !L.Demo)
@@ -117,9 +120,16 @@
 
     private AnomalyDto? Anomaly(string metric) => Patterns?.Anomalies.FirstOrDefault(a => a.Metric == metric);
 
+    /// <summary>"Busiest at" a few minutes in is just "now"; it says something after twenty minutes.</summary>
+    private const double BusiestAfterSeconds = 1200;
+
+    private bool HasBaseline => Baseline.Ready(Patterns);
+
+    private bool Unusual => HasBaseline && ZChip.IsUnusual(Anomaly("motion")?.Z);
+
     private IReadOnlyList<double>? UsualMotionLine()
     {
-        if (Anomaly("motion")?.Mean is not { } mean || mean <= 0 || L.MotionHistory.Count < 2) return null;
+        if (!HasBaseline || Anomaly("motion")?.Mean is not { } mean || mean <= 0 || L.MotionHistory.Count < 2) return null;
         return [mean, mean];
     }
 

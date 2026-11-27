@@ -11,7 +11,6 @@
             <FactRow Test="regulars-facts" Facts="@([
                 new("Known here", L.Regulars.Count(r => Here(r.Id)).ToString(CultureInfo.InvariantCulture), "Regulars in the frame right now"),
                 new("New faces", L.Tracks.Count(t => t.Label == "person" && L.RegularFor(t.TrackId) is null).ToString(CultureInfo.InvariantCulture), "People in the frame right now who are not a regular"),
-                new("Peak together", L.PeakConcurrency.ToString(CultureInfo.InvariantCulture), "The most tracked at once this session"),
             ])" />
         }
         @{ var ordered = OrderedRegulars(); }

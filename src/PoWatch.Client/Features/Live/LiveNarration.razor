@@ -16,6 +16,17 @@
         <span class="term-stat-hint">@Status</span>
         <TranscriptLink Entries="@filtered" Title="@TranscriptTitle" FileName="@TranscriptFile" />
     </div>
+    @if (Recording && _summary is { } summary)
+    {
+        <p class="live-census narration-summary" data-test="narration-summary" role="status"
+           title="@(_summaryByAi ? "Written by the browser's own language model, on this device" : "Put together from the lines below")">
+            <span class="live-heat-label">LAST @SummaryMinutes MIN</span>@summary
+            @if (_summaryByAi)
+            {
+                <small class="term-stat-hint"> · on-device AI</small>
+            }
+        </p>
+    }
     <FactRow Test="narration-facts" Facts="@([
         new("Per minute", PerMinute(all), "Lines written per minute over the session"),
         new("Saw", Count(all, "caption", "moment"), "Scene descriptions and notable moments"),
@@ -78,6 +89,13 @@
     private ElementReference _watchedList;
 
     private LiveSensingState L => Sensing.Live;
+
+    private const int SummaryMinutes = 15;
+    private static readonly TimeSpan SummaryEvery = TimeSpan.FromMinutes(2);
+    private string? _summary;
+    private bool _summaryByAi;
+    private bool _summarizing;
+    private DateTimeOffset _summaryAt;
 
     private DateTimeOffset? Started => Recording ? L.Session?.StartedUtc : _startedUtc;
 
@@ -167,7 +185,68 @@
             return;
         }
         (_wasRecording, _lastRender) = (recording, DateTimeOffset.UtcNow);
+        if (recording && !_summarizing && DateTimeOffset.UtcNow - _summaryAt >= SummaryEvery
+            && L.Session?.StartedUtc is { } began && DateTimeOffset.UtcNow - began >= TimeSpan.FromMinutes(1))
+        {
+            _ = InvokeAsync(SummarizeAsync);
+        }
         InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// The last quarter hour in one line. The facts are counted here; when the browser has its own
+    /// language model (Chrome's Prompt API, powatchLocalAi) it rewords them into a sentence on this
+    /// device, otherwise the facts are joined as they are. Nothing is sent anywhere.
+    /// </summary>
+    private async Task SummarizeAsync()
+    {
+        _summarizing = true;
+        _summaryAt = DateTimeOffset.UtcNow;
+        try
+        {
+            var facts = SummaryFacts();
+            if (facts.Count == 0) return;
+            var plain = string.Join("; ", facts) + ".";
+            var worded = await JS.TryInvokeAsync<string>("powatchLocalAi.rewrite",
+                "You summarise what a home room camera noticed. Using only the facts given, write one plain sentence of at most 30 words, present tense. Never guess beyond the facts.",
+                $"Facts from the last {SummaryMinutes} minutes: {plain}");
+            (_summary, _summaryByAi) = string.IsNullOrWhiteSpace(worded)
+                ? (char.ToUpperInvariant(plain[0]) + plain[1..], false)
+                : (worded.Length > 240 ? worded[..240].TrimEnd() + "…" : worded, true);
+            StateHasChanged();
+        }
+        finally
+        {
+            _summarizing = false;
+        }
+    }
+
+    /// <summary>"1 person here, calm", "sitting 12m", "heard throat clearing ×2", …; empty when there is nothing to say.</summary>
+    private List<string> SummaryFacts()
+    {
+        var since = DateTimeOffset.UtcNow.AddMinutes(-SummaryMinutes);
+        var recent = L.Narration.Where(e => e.AtUtc >= since).ToList();
+        var facts = new List<string>
+        {
+            L.PeopleNow switch
+            {
+                0 => "nobody in view",
+                1 => $"1 person here, {L.SceneActivity.ToLowerInvariant()}",
+                var n => $"{n} people here, {L.SceneActivity.ToLowerInvariant()}",
+            },
+        };
+        if (L.SittingFor >= TimeSpan.FromMinutes(1)) facts.Add($"sitting {DisplayText.Duration(L.SittingFor.TotalSeconds)}");
+        var comings = recent.Count(e => e.Kind is "enter" or "exit");
+        if (comings > 0) facts.Add($"{comings} comings and goings");
+        var heard = recent.Where(e => e.Kind == "sound").GroupBy(e => e.Text.ToLowerInvariant())
+            .OrderByDescending(g => g.Count()).Take(3)
+            .Select(g => g.Count() > 1 ? $"{g.Key} ×{g.Count()}" : g.Key).ToList();
+        if (heard.Count > 0) facts.Add($"heard {string.Join(", ", heard)}");
+        var said = recent.Count(e => e.Kind == "speech");
+        if (said > 0) facts.Add($"{said} thing{(said == 1 ? "" : "s")} said");
+        if (recent.LastOrDefault(e => e.Kind == "caption") is { } latest) facts.Add($"latest view: {latest.Text.TrimEnd('.')}");
+        if (L.ObjectChanges.FirstOrDefault(c => c.AtUtc >= since) is { } change) facts.Add($"{change.Name} {(change.Appeared ? "appeared" : "gone")}");
+        return facts;
     }
 
     /// <summary>A minimap pin picked this line: light it for a moment and a half.</summary>

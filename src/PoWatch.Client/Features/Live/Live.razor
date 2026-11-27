@@ -177,15 +177,15 @@
                                                 }
                                                 else if (_spaceMode == "people")
                                                 {
-                                                    <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred today"
+                                                    <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred today" Backdrop="@SpaceBackdrop"
                                                               Selected="@_pickedCell" OnCellClick="PickSpaceCell"
-                                                              CellTitle="@((i, v) => $"{ColorNamer.ZoneName(i)} · {v:P0}")" />
+                                                              CellTitle="@((i, v) => $"{ColorNamer.ZoneName(i)} ({ColorNamer.ZoneCode(i)}) · {v:P0}")" />
                                                 }
                                                 else
                                                 {
-                                                    <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now"
+                                                    <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" Backdrop="@SpaceBackdrop"
                                                               Selected="@_pickedCell" OnCellClick="PickSpaceCell"
-                                                              CellTitle="@((i, v) => $"{ColorNamer.ZoneName(i)} · {v:P0} motion")" />
+                                                              CellTitle="@((i, v) => $"{ColorNamer.ZoneName(i)} ({ColorNamer.ZoneCode(i)}) · {v:P0} motion")" />
                                                 }
                                             </div>
                                             <span class="heat-edge heat-edge--side" aria-hidden="true">R</span>
@@ -213,9 +213,13 @@
                                         var wentOut = space.Exits.Values.Sum();
                                         var net = cameIn - wentOut;
                                         var netLabel = net == 0 ? "balanced" : $"{(net > 0 ? "+" : "")}{net} net";
+                                        var hot = space.HottestCell >= 0 ? ColorNamer.ZoneName(space.HottestCell) : null;
+                                        var favourite = space.FavouriteSpotCell >= 0 ? ColorNamer.ZoneName(space.FavouriteSpotCell) : null;
+                                        @* Where things move and where people stay are usually the same spot at a desk: one fact then. *@
+                                        var sameSpot = hot is not null && hot == favourite;
                                         <FactRow Test="stats-space" Facts="@([
-                                            new("Hot spot", space.HottestCell >= 0 ? ColorNamer.ZoneName(space.HottestCell) : "—", "The grid zone with the most motion today"),
-                                            new("Favourite", space.FavouriteSpotCell >= 0 ? ColorNamer.ZoneName(space.FavouriteSpotCell) : "—", "Where tracked people and animals were centred most today"),
+                                            new(sameSpot ? "Hot spot & favourite" : "Hot spot", hot ?? "—", sameSpot ? "Where the most motion was and where people were centred most today" : "The zone with the most motion today"),
+                                            new("Favourite", sameSpot ? null : favourite, "Where tracked people and animals were centred most today"),
                                             new("Traffic", $"{cameIn} in · {wentOut} out", $"Tracks crossing frame edges today ({netLabel})"),
                                             new("Net flow", netLabel, space.BusiestEdge != "None" ? $"Busiest door: {space.BusiestEdge}" : "Entries minus exits today"),
                                         ])" />

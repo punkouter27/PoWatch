@@ -85,20 +85,26 @@ public static class ColorNamer
         return $"#{r:x2}{g:x2}{b:x2}";
     }
 
-    /// <summary>Human-readable zone name for a 16×9 grid cell index, e.g. "Center-left (G5)".</summary>
+    /// <summary>Human-readable zone name for a 16×9 grid cell index, e.g. "Middle left" or "Bottom far right".</summary>
     public static string ZoneName(int index, int columns = 16, int rows = 9)
     {
         if (index < 0 || index >= columns * rows) return "—";
         var col = index % columns;
         var row = index / columns;
-        var code = $"{(char)('A' + col)}{row + 1}";
+        // Five bands across and three down, in words: "Bottom far left", "Top centre", "Centre".
         var vertical = row < rows / 3 ? "Top" : row >= (rows * 2) / 3 ? "Bottom" : "Middle";
-        var horizontal = col < columns / 3 ? "left" : col >= (columns * 2) / 3 ? "right" : "center";
-        var label = vertical == "Middle" && horizontal == "center"
-            ? "Center"
-            : vertical == "Middle"
-                ? $"Center-{horizontal}"
-                : $"{vertical}-{horizontal}";
-        return $"{label} ({code})";
+        var horizontal = Math.Clamp(col * 5 / columns, 0, 4) switch
+        {
+            0 => "far left",
+            1 => "left",
+            2 => "centre",
+            3 => "right",
+            _ => "far right",
+        };
+        return vertical == "Middle" && horizontal == "centre" ? "Centre" : $"{vertical} {horizontal}";
     }
+
+    /// <summary>The spreadsheet-style cell code ("I4") for a tooltip beside <see cref="ZoneName"/>.</summary>
+    public static string ZoneCode(int index, int columns = 16) =>
+        index < 0 ? "—" : $"{(char)('A' + (index % columns))}{(index / columns) + 1}";
 }

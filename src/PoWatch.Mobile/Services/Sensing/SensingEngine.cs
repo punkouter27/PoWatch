@@ -49,7 +49,7 @@ public sealed class SensingEngine(ApiClient api, Outbox outbox, ICameraSource ca
     private readonly HashSet<string> _observing = new(StringComparer.Ordinal);
     private readonly Dictionary<WatchRule, DateTimeOffset> _lastAlert = [];
     private TickBatcher _batcher = new(TimeProvider.System);
-    private CentroidTracker _tracker = new();
+    private CentroidTracker _tracker = CentroidTracker.ForLive();
     private HighlightRules _highlights = new(TimeProvider.System);
     private CancellationTokenSource? _run;
     private DateTimeOffset _lastPixel, _lastDetect, _lastThumb, _lastAccel = DateTimeOffset.UtcNow;
@@ -125,7 +125,7 @@ public sealed class SensingEngine(ApiClient api, Outbox outbox, ICameraSource ca
         lock (_gate)
         {
             _batcher = new TickBatcher(TimeProvider.System);
-            _tracker = new CentroidTracker();
+            _tracker = CentroidTracker.ForLive();
             _highlights = new HighlightRules(TimeProvider.System);
             _regularOfTrack.Clear();
             _observing.Clear();

@@ -12,7 +12,7 @@ public static class LivePanels
     /// <summary>Every panel in its default order: row by row, with the camera in the middle cell.</summary>
     public static readonly IReadOnlyList<(string Id, string Title)> All =
     [
-        ("metrics", "Key metrics"),
+        ("metrics", "Session"),
         ("inframe", "In frame"),
         ("faces", "Faces"),
         ("space", "Space"),

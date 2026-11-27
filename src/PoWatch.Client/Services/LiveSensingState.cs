@@ -161,6 +161,8 @@ public sealed class LiveSensingState
             if (counts.Count > ClassHistoryLength) counts.RemoveAt(0);
         }
 
+        TrackObjectChanges(nowUtc);
+
         foreach (var entered in frame.Entered)
         {
             _classesSeen[entered.Label] = _classesSeen.GetValueOrDefault(entered.Label) + 1;
@@ -230,6 +232,58 @@ public sealed class LiveSensingState
 
     public void ForgetTrack(string trackId) => _regularByTrack.Remove(trackId);
 
+    /// <summary>What has appeared in or gone from the scene since it settled, newest first (things, not people or pets).</summary>
+    public IReadOnlyList<ObjectChange> ObjectChanges => _objectChanges;
+
+    /// <summary>Things seen in the first half-minute are the room as it is, not news.</summary>
+    private static readonly TimeSpan SceneSettles = TimeSpan.FromSeconds(30);
+
+    /// <summary>How long a thing must stay to have appeared, and stay gone to have left (the detector misses things now and then).</summary>
+    private static readonly TimeSpan AppearsAfter = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan GoneAfter = TimeSpan.FromSeconds(30);
+    private const int ObjectChangesKept = 12;
+
+    private readonly Dictionary<string, bool> _objectSettled = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DateTimeOffset> _objectFlipping = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<ObjectChange> _objectChanges = [];
+    private DateTimeOffset? _firstDetectionUtc;
+
+    /// <summary>
+    /// Settles each thing's in-or-out state with a little hysteresis and notes the flips: "laptop appeared
+    /// 14:32", "cup gone 14:50". A static list of what is in the room says nothing new; a change does.
+    /// </summary>
+    private void TrackObjectChanges(DateTimeOffset nowUtc)
+    {
+        _firstDetectionUtc ??= nowUtc;
+        var settling = nowUtc - _firstDetectionUtc.Value < SceneSettles;
+        foreach (var name in ClassesNow.Keys.Concat(_objectSettled.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToList())
+        {
+            if (CentroidTracker.IsPresence(name)) continue;
+            var present = ClassesNow.GetValueOrDefault(name) > 0;
+            var settled = _objectSettled.GetValueOrDefault(name);
+            if (present == settled)
+            {
+                _objectFlipping.Remove(name);
+                continue;
+            }
+            if (settling && present)
+            {
+                _objectSettled[name] = true;
+                continue;
+            }
+            if (!_objectFlipping.TryGetValue(name, out var since))
+            {
+                _objectFlipping[name] = nowUtc;
+                continue;
+            }
+            if (nowUtc - since < (present ? AppearsAfter : GoneAfter)) continue;
+            _objectSettled[name] = present;
+            _objectFlipping.Remove(name);
+            _objectChanges.Insert(0, new ObjectChange(since, name, present));
+            if (_objectChanges.Count > ObjectChangesKept) _objectChanges.RemoveAt(_objectChanges.Count - 1);
+        }
+    }
+
     public void RecordCaption(ParsedCaption caption, DateTimeOffset atUtc)
     {
         LastCaptionUtc = atUtc;
@@ -249,6 +303,9 @@ public sealed class LiveSensingState
         return times.Count / RateWindow.TotalSeconds;
     }
 }
+
+/// <summary>A thing that appeared in (or went from) the scene, at the moment it first did.</summary>
+public sealed record ObjectChange(DateTimeOffset AtUtc, string Name, bool Appeared);
 
 /// <summary>
 /// What the recap card shows: the session, how long the tab was away (null when the session just

@@ -48,11 +48,7 @@
                 @Card("Heart rate · exp", Now(f => f.HeartRateBpm, "0"), "bpm", T.HeartRate, "0", null, false, " bpm", "face-pulse-trend",
                       "Mean camera heart rate per minute (experimental)", T.HeartRate.Mean is null ? "Experimental · hold still in good light" : null)
             </div>
-            <FactRow Test="faces-facts" Facts="@([
-                new("In view", Sensing.Faces.Count.ToString(CultureInfo.InvariantCulture), "Faces the landmarker sees right now"),
-                new("Most at once", T.FacesHistory.Count > 0 ? T.FacesHistory.Max().ToString("0", CultureInfo.InvariantCulture) : null, "The most faces in view together this session"),
-                new("Labelled", Sensing.FacesLabelled.ToString(CultureInfo.InvariantCulture), "Temporary Person labels given this session; forgotten when it ends"),
-            ])" />
+            @* How many are in view and the most at once live in In frame; labelled is in this panel's title bar. *@
 
             @if (Sensing.Faces.Count == 0)
             {
@@ -187,6 +183,14 @@
 
     private FaceTrends T => Sensing.FaceTrends;
 
+    /// <summary>
+    /// Why a reading has no value yet. Beauty comes from landmarks at once, but age (and mood) wait for
+    /// the face models, so "waiting for a face" with a face plainly in view was misleading.
+    /// </summary>
+    private string Waiting => Sensing.Faces.Count == 0
+        ? "Waiting for a face"
+        : !Sensing.FacesRead ? "Face models loading…" : "Reading this face…";
+
     /// <summary>One reading averaged over the faces in view right now; "—" when none has it.</summary>
     private string Now(Func<FaceReadout, double?> read, string format)
     {
@@ -229,16 +233,16 @@
     private string ShapeHint()
     {
         var ic = CultureInfo.InvariantCulture;
-        if (T.CommonShape is not { } common) return "Waiting for a face";
+        if (T.CommonShape is not { } common) return Waiting;
         var text = $"Mostly {common.Shape} {common.Share.ToString("0", ic)}%";
         return T.FaceRatio.Mean is { } ratio ? $"{text} · L/W {ratio.ToString("0.00", ic)}" : text;
     }
 
-    /// <summary>"Session 54 · range 49–61"; waiting text before the first point.</summary>
-    private static string Span(double? mean, (double Low, double High)? range, string format)
+    /// <summary>"Session 54 · range 49–61"; before the first point, why there is none yet.</summary>
+    private string Span(double? mean, (double Low, double High)? range, string format)
     {
         var ic = CultureInfo.InvariantCulture;
-        if (mean is not { } m) return "Waiting for a face";
+        if (mean is not { } m) return Waiting;
         var text = $"Session {m.ToString(format, ic)}";
         return range is { } r ? $"{text} · range {r.Low.ToString(format, ic)}–{r.High.ToString(format, ic)}" : text;
     }

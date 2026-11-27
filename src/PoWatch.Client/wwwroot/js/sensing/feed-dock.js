@@ -70,5 +70,21 @@
     if (_video) _video.classList.toggle('is-still', !!on);
   }
 
-  window.powatchFeed = { dock, undock, watchReturn, unwatchReturn, still };
+  // A small, dim still of the camera for the Space heatmap to sit on, so a hot zone reads as a place
+  // in the room rather than a grid code. Stays in the page: never uploaded or stored.
+  function frame(width) {
+    try {
+      if (!_video || _video.readyState < 2 || !_video.videoWidth) return null;
+      const w = Math.max(64, Math.min(640, width || 320));
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = Math.round(w * _video.videoHeight / _video.videoWidth);
+      c.getContext('2d')?.drawImage(_video, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', 0.6);
+    } catch {
+      return null;
+    }
+  }
+
+  window.powatchFeed = { dock, undock, watchReturn, unwatchReturn, still, frame };
 })();

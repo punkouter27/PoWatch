@@ -49,6 +49,13 @@ public sealed partial class Live
     private bool _wasRunning;
     private string? _error;
     private PresenceStatsDto? _presence;
+
+    /// <summary>A still of the camera the Space heatmap sits on; refreshed with the stats, at most once a minute.</summary>
+    private string? _spaceBackdrop;
+    private DateTimeOffset _spaceBackdropAt;
+
+    /// <summary>No picture behind the heat while the preview is blurred, in the demo, or before the camera runs.</summary>
+    private string? SpaceBackdrop => _privacyBlur || !Sensing.IsRunning || Sensing.Live.Demo ? null : _spaceBackdrop;
     private SpaceStatsDto? _space;
     private PatternStatsDto? _patterns;
     private ObjectStatsDto? _objects;
@@ -347,6 +354,11 @@ public sealed partial class Live
         var patterns = Api.GetPatternsAsync(today);
         var objects = Api.GetObjectsAsync(query);
         await Task.WhenAll(presence, space, patterns, objects);
+        if (Sensing.IsRunning && !Sensing.Live.Demo && DateTimeOffset.UtcNow - _spaceBackdropAt >= TimeSpan.FromMinutes(1))
+        {
+            _spaceBackdropAt = DateTimeOffset.UtcNow;
+            _spaceBackdrop = await JS.TryInvokeAsync<string>("powatchFeed.frame", 320) ?? _spaceBackdrop;
+        }
         // A newer range owns the panels now.
         if (query.Range != _query.Range || query.SessionId != _query.SessionId || query.Date != _query.Date) return;
         (_presence, _space, _patterns, _objects) = (presence.Result, space.Result, patterns.Result, objects.Result);

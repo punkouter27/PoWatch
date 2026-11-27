@@ -1,0 +1,118 @@
+@* One clock for the whole session: a strip per signal (who was here, room motion, sound, light, upright
+   posture), shaded minute by minute, over a row of ticks for what was seen, said, heard and who came and
+   went. Strips that change together are the story: the lights dim, motion stops, someone leaves. Each
+   strip is right-aligned to now, so the same column is the same minute in every row. *@
+@implements IDisposable
+@inject SensingSession Sensing
+
+@* Nothing at all while idle: the panel's cell is sized for the numbers under it. *@
+@if (Sensing.IsRunning)
+{
+    var lanes = Lanes();
+    var span = Math.Max(2, lanes.Max(l => l.Points.Count));
+    var now = DateTimeOffset.UtcNow;
+    <div class="session-timeline" data-test="session-timeline" role="group" aria-label="This session minute by minute">
+        @foreach (var lane in lanes)
+        {
+            var offset = span - lane.Points.Count;
+            <div class="tl-lane" title="@lane.Title">
+                <span class="tl-label">@lane.Label</span>
+                <svg class="tl-strip @lane.Tone" viewBox="0 0 @span 1" preserveAspectRatio="none" aria-hidden="true">
+                    @for (var i = 0; i < lane.Points.Count; i++)
+                    {
+                        var shade = Math.Clamp(lane.Points[i] / lane.Max, 0, 1);
+                        @if (shade > 0.02)
+                        {
+                            <rect x="@(offset + i)" y="0" width="1.02" height="1" opacity="@Fraction(0.15 + (0.85 * shade))" />
+                        }
+                    }
+                </svg>
+                <span class="tl-now">@lane.Now</span>
+            </div>
+        }
+        <div class="tl-lane tl-lane--events" title="Each tick is a line in Narration: seen (blue), said (green), heard (amber), came in or left (accent)">
+            <span class="tl-label">EVENTS</span>
+            <svg class="tl-strip tl-strip--events" viewBox="0 0 @span 1" preserveAspectRatio="none" aria-hidden="true">
+                @foreach (var entry in L.Narration)
+                {
+                    var x = span - (now - entry.AtUtc).TotalMinutes;
+                    @if (x >= 0)
+                    {
+                        <rect class="tl-tick @TickClass(entry.Kind)" x="@Fraction(Math.Min(x, span - 0.12))" y="0.1" width="0.12" height="0.8" />
+                    }
+                }
+            </svg>
+            <span class="tl-now">@L.Narration.Count(e => now - e.AtUtc < TimeSpan.FromMinutes(1))/m</span>
+        </div>
+        <div class="tl-axis" aria-hidden="true">
+            <span></span>
+            <span>−@(span)m</span>
+            <span>now</span>
+        </div>
+    </div>
+}
+
+@code {
+    private sealed record Lane(string Label, IReadOnlyList<double> Points, double Max, string Now, string Tone, string Title);
+
+    private DateTimeOffset _lastRender;
+
+    private LiveSensingState L => Sensing.Live;
+
+    protected override void OnInitialized() => Sensing.Changed += OnSensingChanged;
+
+    /// <summary>The strips move a minute at a time, so twice a second would be waste; every two seconds is plenty.</summary>
+    private void OnSensingChanged()
+    {
+        if (DateTimeOffset.UtcNow - _lastRender < TimeSpan.FromSeconds(2)) return;
+        _lastRender = DateTimeOffset.UtcNow;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Sensing.Changed -= OnSensingChanged;
+
+    private List<Lane> Lanes()
+    {
+        var ic = CultureInfo.InvariantCulture;
+        var lanes = new List<Lane>
+        {
+            new("PEOPLE", L.PeopleMinutes.Points, Math.Max(1, Peak(L.PeopleMinutes.Points)), L.PeopleNow.ToString(ic), "tl-strip--accent",
+                "People in frame, averaged per minute"),
+            // A floor on the scale, so a near-still room does not shade as full as a busy one.
+            new("MOTION", L.MotionMinutes.Points, Math.Max(0.05, Peak(L.MotionMinutes.Points)), L.Motion.ToString("P0", ic), "tl-strip--cyan",
+                "Room motion per minute; darker is busier"),
+        };
+        if (L.SoundMinutes.Points.Count > 0)
+        {
+            lanes.Add(new("SOUND", L.SoundMinutes.Points, Math.Max(0.05, Peak(L.SoundMinutes.Points)), L.SoundLevel.ToString("P0", ic), "tl-strip--amber",
+                "Ambient sound level per minute"));
+        }
+        if (L.LightMinutes.Points.Count > 0)
+        {
+            lanes.Add(new("LIGHT", L.LightMinutes.Points, 1, L.Light is { } light ? light.ToString("P0", ic) : "—", "tl-strip--light",
+                "Room brightness per minute; a sharp step is a light switched"));
+        }
+        if (Sensing.Bodies.UprightMinutes.Points.Count > 0)
+        {
+            lanes.Add(new("UPRIGHT", Sensing.Bodies.UprightMinutes.Points, 100,
+                Sensing.Bodies.PostureScore is { } up ? $"{up.ToString("0", ic)}%" : "—", "tl-strip--green",
+                "Share of each minute sitting or standing upright rather than slumped"));
+        }
+        return lanes;
+    }
+
+    private static string? TickClass(string kind) => kind switch
+    {
+        "caption" => "tl-tick--caption",
+        "moment" => "tl-tick--moment",
+        "speech" => "tl-tick--speech",
+        "sound" => "tl-tick--sound",
+        "enter" => "tl-tick--enter",
+        "exit" => "tl-tick--exit",
+        _ => null,
+    };
+
+    private static double Peak(IReadOnlyList<double> points) => points.Count == 0 ? 0 : points.Max();
+
+    private static string Fraction(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+}

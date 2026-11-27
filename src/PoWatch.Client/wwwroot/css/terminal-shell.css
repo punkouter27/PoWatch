@@ -456,6 +456,12 @@ a.term-button { display: inline-flex; align-items: center; text-decoration: none
 }
 
 
+/* Laid over a still of the camera: cells see-through, heat as a translucent wash over the room. */
+.term-heat--photo { background-size: cover; background-position: center; background-color: var(--term-bg); }
+.term-heat--photo .term-heat-cell { background: transparent; aspect-ratio: auto; height: 100%; }
+.term-heat--photo .term-heat-cell > span { background: color-mix(in srgb, var(--term-accent) 65%, transparent); }
+.term-heat--photo { aspect-ratio: 16 / 9; grid-auto-rows: 1fr; }
+
 .term-heat--pick .term-heat-cell { cursor: pointer; }
 .term-heat--pick .term-heat-cell:hover { outline: 1px solid var(--term-muted); z-index: 1; }
 .term-heat-cell--selected { outline: 2px solid var(--term-cyan); z-index: 2; }

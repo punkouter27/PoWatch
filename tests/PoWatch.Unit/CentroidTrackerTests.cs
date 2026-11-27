@@ -67,5 +67,19 @@ public sealed class CentroidTrackerTests
         Assert.Equal(3, frame.PresenceCells.Count);
         Assert.Contains(5 * 16 + 8, frame.PresenceCells);
         Assert.Equal(new Dictionary<string, int> { ["person"] = 2, ["cat"] = 1, ["cup"] = 1 }, frame.CountsByLabel);
+
+        // Live sensing puts new tracks on probation: a one-pass phantom never enters, counts or leaves,
+        // and a real arrival enters by its first edge once it has been seen two seconds apart.
+        var live = CentroidTracker.ForLive();
+        var blip = live.Update(T0, [Box("person", 0.00, 0.3, 0.10, 0.8)]);
+        Assert.Empty(blip.Entered);
+        Assert.Empty(blip.Active);
+        Assert.Empty(blip.CountsByLabel);
+        Assert.Empty(live.Update(T0.AddSeconds(20), []).Exited);
+        live.Update(T0.AddSeconds(30), [Box("person", 0.00, 0.3, 0.10, 0.8)]);
+        Assert.Empty(live.Update(T0.AddSeconds(31), [Box("person", 0.02, 0.3, 0.12, 0.8)]).Entered);
+        var confirmed = live.Update(T0.AddSeconds(32), [Box("person", 0.04, 0.3, 0.14, 0.8)]);
+        Assert.Equal("Left", Assert.Single(confirmed.Entered).Edge);
+        Assert.Single(confirmed.Active);
     }
 }

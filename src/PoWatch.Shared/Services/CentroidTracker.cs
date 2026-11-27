@@ -39,9 +39,18 @@ public sealed record TrackerFrame(
 /// best IoU first, then nearest centre within reach. A track that goes unseen for longer than the
 /// gap is closed with its dwell time and the frame edge it was nearest when last seen, so brief
 /// occlusions do not split one visitor into two.
+/// <para>
+/// With <paramref name="confirmAfter"/> set, a new track is on probation: it is not in frame, counted,
+/// or entered until it has been seen on two passes at least that far apart, and one that vanishes
+/// before then leaves silently. A one-frame phantom box (a reflection, a chair read as a person) or a
+/// detector that drops and re-finds someone sitting still then no longer reads as a stream of visits.
+/// </para>
 /// </summary>
-public sealed class CentroidTracker(TimeSpan? gap = null)
+public sealed class CentroidTracker(TimeSpan? gap = null, TimeSpan? confirmAfter = null)
 {
+    /// <summary>The settings live sensing uses: an 8 s gap and a 2 s probation (see the class remarks).</summary>
+    public static CentroidTracker ForLive() => new(TimeSpan.FromSeconds(8), TimeSpan.FromSeconds(2));
+
     public const double MinScore = 0.5;
     public const double MinIou = 0.3;
     public const double MaxCentreJump = 0.15;
@@ -58,6 +67,10 @@ public sealed class CentroidTracker(TimeSpan? gap = null)
     };
 
     private readonly TimeSpan _gap = gap ?? TimeSpan.FromSeconds(3);
+    private readonly TimeSpan _confirmAfter = confirmAfter ?? TimeSpan.Zero;
+
+    /// <summary>Tracks still on probation, with the edge they first showed at (reported when they are confirmed).</summary>
+    private readonly Dictionary<string, string> _pending = new(StringComparer.Ordinal);
     /// <summary>How many of a track's latest posture readings are weighed.</summary>
     private const int PostureReadings = 5;
 
@@ -116,8 +129,25 @@ public sealed class CentroidTracker(TimeSpan? gap = null)
                     Posture = Settle(id, detection.Posture, atUtc)
                 };
                 seen.Add(id);
-                entered.Add(new TrackEntered(id, detection.Label, EdgeOf(detection), atUtc));
+                if (_confirmAfter > TimeSpan.Zero) _pending[id] = EdgeOf(detection);
+                else entered.Add(new TrackEntered(id, detection.Label, EdgeOf(detection), atUtc));
             }
+        }
+
+        // Probation ends on a second sighting far enough after the first: the track comes in by its first edge.
+        foreach (var (id, edge) in _pending.ToList())
+        {
+            if (!seen.Contains(id) || _tracks[id].Age < _confirmAfter) continue;
+            _pending.Remove(id);
+            entered.Add(new TrackEntered(id, _tracks[id].Label, edge, atUtc));
+        }
+
+        // A track that vanished while still on probation was never there: no exit, no visit.
+        foreach (var id in _pending.Keys.Where(id => !seen.Contains(id) && atUtc - _tracks[id].LastSeenUtc > _gap).ToList())
+        {
+            _pending.Remove(id);
+            _tracks.Remove(id);
+            _postures.Remove(id);
         }
 
         var exited = _tracks.Values
@@ -130,7 +160,7 @@ public sealed class CentroidTracker(TimeSpan? gap = null)
             _postures.Remove(exit.TrackId);
         }
 
-        var active = _tracks.Values.Where(t => seen.Contains(t.TrackId)).OrderBy(t => t.TrackId, StringComparer.Ordinal).ToList();
+        var active = _tracks.Values.Where(t => seen.Contains(t.TrackId) && !_pending.ContainsKey(t.TrackId)).OrderBy(t => t.TrackId, StringComparer.Ordinal).ToList();
 
         return new TrackerFrame(
             active,

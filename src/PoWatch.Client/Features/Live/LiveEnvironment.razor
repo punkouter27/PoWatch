@@ -2,8 +2,8 @@
 @using PoWatch.Shared.Services
 @inject SensingSession Sensing
 
-@* Always rendered to prevent 3×3 grid jumps: shows live light curve, mic level & sound freshness,
-   human-named room colour palette, and clickable Most Said chips that filter Narration. *@
+@* Always rendered to prevent 3×3 grid jumps: shows live light curve with when the lights went on and off,
+   mic level & sound freshness, and clickable Most Said chips that filter Narration. *@
 <TerminalPanel Title="Room insights" Class="cell-env" Test="live-environment" Flush="true">
     <ChildContent>
         @if (HasReadings)
@@ -53,9 +53,22 @@
                 new("Sunset", env.SunsetUtc is { } set ? DisplayText.LocalTime(set) : null, "Today's sunset where you are"),
                 new("Captions", env.CaptionCount > 0 ? env.CaptionCount.ToString(CultureInfo.InvariantCulture) : null, "How many times the scene was described in words this session"),
             ])" />
-            @* The room's own colours with human-friendly names alongside hex codes. *@
-            <ShareBar Label="The room's main colours this session" Test="env-palette" Legend="true"
-                      Parts="@([.. env.Palette.Take(5).Select(c => new ShareBar.Part(ColorNamer.Describe(c.Rgb), c.Share, $"#{c.Rgb:x6}", $"{c.Share:P0} · #{c.Rgb:x6}"))])" />
+            @* When the light changed, which the curve above shows only as a step. *@
+            @if (env.Switches.Count > 0)
+            {
+                <p class="live-census" data-test="env-switches" title="When the room's lights went on or off this session">
+                    <span class="live-heat-label">LIGHTS</span>
+                    @for (var i = 0; i < Math.Min(4, env.Switches.Count); i++)
+                    {
+                        var sw = env.Switches[env.Switches.Count - 1 - i];
+                        @if (i > 0)
+                        {
+                            <span aria-hidden="true"> · </span>
+                        }
+                        <span>@(sw.On ? "on" : "off") <b>@DisplayText.LocalTime(sw.AtUtc)</b></span>
+                    }
+                </p>
+            }
             @if (env.Words.Count > 0)
             {
                 <p class="live-census env-words" data-test="env-words" title="Click a word to filter Narration">
@@ -85,7 +98,7 @@
         }
         else if (!HasReadings && !HasHistory)
         {
-            <p class="term-empty" data-test="env-empty">Light level, ambient sounds, room colour palette and caption themes appear here once watching begins.</p>
+            <p class="term-empty" data-test="env-empty">Light level and when the lights switch, ambient sounds and caption themes appear here once watching begins.</p>
         }
     </ChildContent>
 </TerminalPanel>
@@ -94,7 +107,7 @@
     [Parameter] public EventCallback<string> OnWordPick { get; set; }
 
     private LiveSensingState L => Sensing.Live;
-    private bool HasHistory => Data is { } d && (d.WeirdestCaption is not null || d.Palette.Count > 0 || d.Words.Count > 0 || d.CaptionCount > 0 || d.LightCurve.Count > 0);
+    private bool HasHistory => Data is { } d && (d.WeirdestCaption is not null || d.Words.Count > 0 || d.CaptionCount > 0 || d.LightCurve.Count > 0);
 
     private IReadOnlyList<double> LightSeries()
     {

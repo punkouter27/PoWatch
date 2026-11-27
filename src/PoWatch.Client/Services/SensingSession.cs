@@ -24,7 +24,7 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
     private static readonly TimeSpan ChapterEvery = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan ChapterSettle = TimeSpan.FromSeconds(30);
 
-    private readonly CentroidTracker _tracker = new();
+    private readonly CentroidTracker _tracker = CentroidTracker.ForLive();
     private TickBatcher _batcher = new(time);
     private VlmScheduler _vlm = new(time);
     private HighlightRules _highlights = new(time);

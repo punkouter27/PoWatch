@@ -35,6 +35,22 @@
         {
             <WhoList Rows="@WhoIsHere()" Label="Tracked right now" />
         }
+        @* What changed beats what is there: a laptop that has been on the desk all along says nothing new. *@
+        @if (Sensing.IsRunning && L.ObjectChanges.Count > 0)
+        {
+            <p class="live-census" data-test="object-changes" title="Things that appeared or went since the scene settled, newest first">
+                <span class="live-heat-label">CHANGES</span>
+                @for (var i = 0; i < Math.Min(5, L.ObjectChanges.Count); i++)
+                {
+                    var change = L.ObjectChanges[i];
+                    @if (i > 0)
+                    {
+                        <span aria-hidden="true"> · </span>
+                    }
+                    <span>@change.Name <b>@(change.Appeared ? "appeared" : "gone")</b> @DisplayText.LocalTime(change.AtUtc)</span>
+                }
+            </p>
+        }
         @if (census.Count == 0)
         {
             <p class="term-empty">Nothing seen yet.</p>
