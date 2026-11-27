@@ -1,19 +1,19 @@
-@* How much is moving right now, against the usual day; then, from the body points (body-overlay.js),
-   what each person is doing, how much their limbs move over the session, and whether the left and right
-   sides move evenly. Body readings are this session's only (docs/adr/0003-body-readings-on-device.md). *@
+@* Room-wide pixel motion (against the usual daily mean) clearly separated from on-device body movement
+   (limb energy, unified activity breakdown bar, visual left/right balance meter, and partial-body note). *@
 @using PoWatch.Shared.Services
 @inject SensingSession Sensing
 
 <TerminalPanel Title="Activity" Class="@(ZChip.IsUnusual(Anomaly("motion")?.Z) ? "cell-activity panel-alert" : "cell-activity")" Test="live-activity" Flush="true">
     <Aside>@(ZChip.IsUnusual(Anomaly("motion")?.Z) ? "UNUSUAL · " : null)NOW vs USUAL@(Sensing.IsRunning && B.FullBodySeen ? " · FULL BODY" : null)</Aside>
     <ChildContent>
+        <p class="panel-subhead">ROOM MOTION</p>
         <div class="metric-cards">
             <RadzenCard class="metric-card">
                 <StatCell Label="Activity level" Value="@(Sensing.IsRunning ? L.Motion.ToString("P1", CultureInfo.InvariantCulture) : "—")"
                           Hint="@(Sensing.IsRunning ? $"Now · usual daily mean {DisplayText.Percent(Anomaly("motion")?.Mean)}" : "Available while observing")" Test="metric-motion">
-                    <ZChip Z="@Anomaly("motion")?.Z" />
+                    <ZChip Z="@Anomaly("motion")?.Z" Today="@(Sensing.IsRunning ? L.Motion : null)" Mean="@Anomaly("motion")?.Mean" />
                 </StatCell>
-                <Sparkline Values="@L.MotionHistory" Label="Activity over the last minute" />
+                <Sparkline Values="@L.MotionHistory" Baseline="@UsualMotionLine()" Label="Activity over the last minute with usual daily mean baseline" />
             </RadzenCard>
         </div>
         <FactRow Test="activity-facts" Facts="@([
@@ -23,7 +23,12 @@
         ])" />
         @if (Sensing.IsRunning && !L.Demo)
         {
+            <p class="panel-subhead">BODY MOVEMENT</p>
             <WhoList Rows="@Doing()" Label="What each body in view is doing" Test="body-activity" />
+            @if (B.InView.Any(b => !b.FullBody))
+            {
+                <p class="term-stat-hint partial-body-hint" data-test="body-partial-hint">Legs out of frame — leg balance paused.</p>
+            }
             @if (B.MeanEnergy is { } mean)
             {
                 <div class="live-census" data-test="body-energy" title="How much arms and legs move, measured against the body's own size, averaged every 5 seconds while someone is in view">
@@ -31,19 +36,42 @@
                     <Sparkline Values="@B.EnergyHistory" Max="1" Label="Limb energy over this session" />
                 </div>
             }
-            <ShareBar Label="Person-time by activity this session" Test="body-activity-bar" Legend="false"
-                      Parts="@([.. B.ActivitySeconds.OrderByDescending(p => p.Value).Select(p => new ShareBar.Part(Word(p.Key), p.Value))])" />
-            @if (ActivityLine() is { } done)
+            <ShareBar Label="Person-time by activity this session" Test="body-activity-bar" Legend="true"
+                      Parts="@([.. B.ActivitySeconds.Where(p => p.Value >= 1).OrderByDescending(p => p.Value).Select(p => new ShareBar.Part(Word(p.Key), p.Value, Note: DisplayText.Duration(p.Value)))])" />
+            @if (B.ArmBalance is not null || B.LegBalance is not null || B.ShoulderTilt is not null)
             {
-                <p class="live-census" data-test="body-activity-split" title="Person-time this session per activity, read from body points on this machine">
-                    <span class="live-heat-label">DOING</span>@done
-                </p>
-            }
-            @if (BalanceLine() is { } balance)
-            {
-                <p class="live-census" data-test="body-balance" title="Left side's share of how far each side's limbs moved this session (50/50 is even), counted only while both sides were seen; and the mean tilt of the shoulders">
-                    <span class="live-heat-label">LEFT/RIGHT</span>@balance
-                </p>
+                <div class="balance-block" data-test="body-balance">
+                    @if (B.ArmBalance is { } arms)
+                    {
+                        var pct = Math.Clamp((int)Math.Round(arms * 100), 0, 100);
+                        <div class="balance-row" title="@($"Arms {pct}% left / {100 - pct}% right")">
+                            <span class="live-heat-label">ARMS</span>
+                            <span class="balance-side">L</span>
+                            <div class="balance-track"><span class="balance-dot" style="left: @pct%"></span></div>
+                            <span class="balance-side">R</span>
+                            <span class="meter-val">@pct/@(100 - pct)</span>
+                        </div>
+                    }
+                    @if (B.LegBalance is { } legs)
+                    {
+                        var pct = Math.Clamp((int)Math.Round(legs * 100), 0, 100);
+                        <div class="balance-row" title="@($"Legs {pct}% left / {100 - pct}% right")">
+                            <span class="live-heat-label">LEGS</span>
+                            <span class="balance-side">L</span>
+                            <div class="balance-track"><span class="balance-dot" style="left: @pct%"></span></div>
+                            <span class="balance-side">R</span>
+                            <span class="meter-val">@pct/@(100 - pct)</span>
+                        </div>
+                    }
+                    @if (B.ShoulderTilt is { } tilt)
+                    {
+                        <div class="balance-row">
+                            <span class="live-heat-label">SHOULDERS</span>
+                            <span class="tilt-icon" style="transform: rotate(@((-tilt).ToString("0.#", CultureInfo.InvariantCulture))deg)" aria-hidden="true">━</span>
+                            <span class="meter-val">@(Math.Abs(tilt) < 1.5 ? "Level" : FormattableString.Invariant($"{(tilt > 0 ? "Left" : "Right")} {Math.Abs(tilt):0}° lower"))</span>
+                        </div>
+                    }
+                </div>
             }
         }
     </ChildContent>
@@ -61,6 +89,12 @@
 
     private AnomalyDto? Anomaly(string metric) => Patterns?.Anomalies.FirstOrDefault(a => a.Metric == metric);
 
+    private IReadOnlyList<double>? UsualMotionLine()
+    {
+        if (Anomaly("motion")?.Mean is not { } mean || mean <= 0 || L.MotionHistory.Count < 2) return null;
+        return [mean, mean];
+    }
+
     private List<WhoList.Row> Doing() =>
         [.. B.InView.Select(b => new WhoList.Row($"Body {b.Slot}",
             $"{Word(b.Activity)} · energy {b.Energy.ToString("P0", CultureInfo.InvariantCulture)}{(b.FullBody ? null : " · upper body")}"))];
@@ -74,24 +108,4 @@
         < 0.35 => "fidgety",
         _ => "lively",
     };
-
-    /// <summary>"still 20m 10s · gesturing 3m 02s · walking 40s", longest first; null before a second was read.</summary>
-    private string? ActivityLine()
-    {
-        var parts = B.ActivitySeconds.Where(p => p.Value >= 1).OrderByDescending(p => p.Value)
-            .Select(p => $"{Word(p.Key)} {DisplayText.Duration(p.Value)}").ToList();
-        return parts.Count == 0 ? null : string.Join(" · ", parts);
-    }
-
-    /// <summary>"arms 48/52 · legs 55/45 · left shoulder 3° lower"; null before either side has moved enough.</summary>
-    private string? BalanceLine()
-    {
-        var ic = CultureInfo.InvariantCulture;
-        var parts = new List<string>(3);
-        if (B.ArmBalance is { } arms) parts.Add(string.Create(ic, $"arms {arms * 100:0}/{(1 - arms) * 100:0}"));
-        if (B.LegBalance is { } legs) parts.Add(string.Create(ic, $"legs {legs * 100:0}/{(1 - legs) * 100:0}"));
-        if (B.ShoulderTilt is { } tilt)
-            parts.Add(Math.Abs(tilt) < 1.5 ? "shoulders level" : string.Create(ic, $"{(tilt > 0 ? "left" : "right")} shoulder {Math.Abs(tilt):0}° lower"));
-        return parts.Count == 0 ? null : string.Join(" · ", parts);
-    }
 }

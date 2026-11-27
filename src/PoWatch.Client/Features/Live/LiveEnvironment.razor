@@ -1,8 +1,9 @@
 @inherits StatsTabBase<EnvironmentStatsDto>
+@using PoWatch.Shared.Services
 @inject SensingSession Sensing
 
-@if (HasReadings || HasHistory || (!Query.IsEmpty && (Loading || Data is null)))
-{
+@* Always rendered to prevent 3×3 grid jumps: shows live light curve, mic level & sound freshness,
+   human-named room colour palette, and clickable Most Said chips that filter Narration. *@
 <TerminalPanel Title="Room insights" Class="cell-env" Test="live-environment" Flush="true">
     <ChildContent>
         @if (HasReadings)
@@ -12,10 +13,26 @@
                 {
                     <StatCell Label="Light" Value="@Light" Hint="@Lights" Test="metric-light" />
                 }
-                @if (!string.IsNullOrEmpty(L.LastSound))
+                @if (!string.IsNullOrEmpty(L.LastSound) || Sensing.Listening)
                 {
-                    <StatCell Label="Last sound" Value="@Sound" Hint="@SoundHint" Test="metric-sound" />
+                    <div class="term-stat" data-test="metric-sound">
+                        <span class="term-stat-label">Last sound</span>
+                        <span class="term-stat-value">@Sound</span>
+                        <span class="term-stat-hint">@SoundHint</span>
+                        @if (Sensing.Listening && L.AudioStatus == "listening")
+                        {
+                            <div class="mic-level" title="Live microphone level" aria-hidden="true">
+                                <span style="width: @((int)Math.Round(L.SoundLevel * 100))%"></span>
+                            </div>
+                        }
+                    </div>
                 }
+            </div>
+        }
+        @if (LightSeries() is { Count: > 1 } lightCurve)
+        {
+            <div class="env-light-spark" data-test="env-light-curve">
+                <Sparkline Values="@lightCurve" Max="1" Cyan="true" Label="Room brightness over this session" />
             </div>
         }
         @if (Data is { } env)
@@ -26,16 +43,20 @@
                 new("Sunset", env.SunsetUtc is { } set ? DisplayText.LocalTime(set) : null, "Today's sunset where you are"),
                 new("Captions", env.CaptionCount > 0 ? env.CaptionCount.ToString(CultureInfo.InvariantCulture) : null, "How many times the scene was described in words this session"),
             ])" />
-            @* The room's own colours, as the camera saw them: data, so not theme tokens. *@
-            <ShareBar Label="The room's main colours this session" Test="env-palette" Legend="false"
-                      Parts="@([.. env.Palette.Select(c => new ShareBar.Part($"#{c.Rgb:x6}", c.Share, $"#{c.Rgb:x6}"))])" />
+            @* The room's own colours with human-friendly names alongside hex codes. *@
+            <ShareBar Label="The room's main colours this session" Test="env-palette" Legend="true"
+                      Parts="@([.. env.Palette.Take(5).Select(c => new ShareBar.Part(ColorNamer.Describe(c.Rgb), c.Share, $"#{c.Rgb:x6}", $"{c.Share:P0} · #{c.Rgb:x6}"))])" />
             @if (env.Words.Count > 0)
             {
-                <p class="live-census env-words" data-test="env-words" title="The words the captions used most this session">
+                <p class="live-census env-words" data-test="env-words" title="Click a word to filter Narration">
                     <span class="live-heat-label">MOST SAID</span>
                     @foreach (var word in env.Words.Take(8))
                     {
-                        <span class="word-chip">@word.Word <b>@word.Count</b></span>
+                        var w = word.Word;
+                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain word-chip"
+                                      Click="() => OnWordPick.InvokeAsync(w)" title="@($"Filter narration by '{w}'")">
+                            @w <b>@word.Count</b>
+                        </RadzenButton>
                     }
                 </p>
             }
@@ -52,19 +73,30 @@
         {
             <p class="live-error" role="status">Could not load this session's insights. Check System status or try again shortly.</p>
         }
+        else if (!HasReadings && !HasHistory)
+        {
+            <p class="term-empty" data-test="env-empty">Light level, ambient sounds, room colour palette and caption themes appear here once watching begins.</p>
+        }
     </ChildContent>
 </TerminalPanel>
-}
 
 @code {
+    [Parameter] public EventCallback<string> OnWordPick { get; set; }
+
     private LiveSensingState L => Sensing.Live;
-    private bool HasHistory => Data is { } d && (d.WeirdestCaption is not null || d.Palette.Count > 0 || d.Words.Count > 0 || d.CaptionCount > 0);
+    private bool HasHistory => Data is { } d && (d.WeirdestCaption is not null || d.Palette.Count > 0 || d.Words.Count > 0 || d.CaptionCount > 0 || d.LightCurve.Count > 0);
+
+    private IReadOnlyList<double> LightSeries()
+    {
+        if (Sensing.IsRunning && L.LightHistory.Count > 1) return L.LightHistory;
+        return Data?.LightCurve.Select(p => p.Luminance).ToList() ?? [];
+    }
 
     private static string? LastSwitch(EnvironmentStatsDto env) => env.Switches.Count == 0
         ? "The lights have not been switched this session"
         : $"Lights last switched {(env.Switches[^1].On ? "on" : "off")} at {DisplayText.LocalTime(env.Switches[^1].AtUtc)}";
 
-    private bool HasReadings =>Sensing.IsRunning && (L.Light is not null || !string.IsNullOrEmpty(L.LastSound));
+    private bool HasReadings => Sensing.IsRunning && (L.Light is not null || !string.IsNullOrEmpty(L.LastSound) || Sensing.Listening);
 
     protected override Task<EnvironmentStatsDto?> LoadAsync(StatsQuery query) => Api.GetEnvironmentAsync(query);
     protected override bool ShouldRender() => true;
@@ -80,7 +112,19 @@
         _ => "DARK",
     };
 
-    private string Sound => string.IsNullOrEmpty(L.LastSound) ? "—" : L.LastSound!;
+    private string Sound => string.IsNullOrEmpty(L.LastSound) ? "Quiet" : L.LastSound!;
 
-    private string SoundHint => Sensing.Listening ? (L.AudioStatus ?? "listening").ToUpperInvariant() : "NOT LISTENING";
+    private string SoundHint
+    {
+        get
+        {
+            if (L.LastSoundUtc is { } at)
+            {
+                var ago = Math.Max(0, (int)(DateTimeOffset.UtcNow - at).TotalSeconds);
+                var fresh = ago < 5 ? "just now" : $"{DisplayText.Duration(ago)} ago";
+                return $"{fresh} · {(Sensing.Listening ? (L.AudioStatus ?? "listening") : "muted")}".ToUpperInvariant();
+            }
+            return Sensing.Listening ? (L.AudioStatus ?? "listening").ToUpperInvariant() : "NOT LISTENING";
+        }
+    }
 }

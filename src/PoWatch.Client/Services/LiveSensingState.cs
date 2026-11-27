@@ -11,6 +11,7 @@ public sealed class LiveSensingState
 
     private readonly Queue<DateTimeOffset> _pixelTimes = new();
     private readonly List<double> _motion = [];
+    private readonly List<double> _light = [];
     private readonly float[] _heat = new float[144];
 
     public SessionDto? Session { get; set; }
@@ -47,6 +48,7 @@ public sealed class LiveSensingState
 
     /// <summary>The room's mean brightness in [0, 1] from the latest pixel sample (null before the first).</summary>
     public double? Light { get; private set; }
+    public IReadOnlyList<double> LightHistory => _light;
 
     /// <summary>Exponentially smoothed motion per grid cell, for the overlay.</summary>
     public IReadOnlyList<float> Heat => _heat;
@@ -56,6 +58,14 @@ public sealed class LiveSensingState
 
     /// <summary>The latest sound the classifier named, and when.</summary>
     public string? LastSound { get; private set; }
+    public DateTimeOffset? LastSoundUtc { get; private set; }
+
+    /// <summary>Latest microphone loudness level in [0, 1].</summary>
+    public double SoundLevel { get; private set; }
+
+    /// <summary>When the latest highlight snapshot was captured, for HUD feedback.</summary>
+    public DateTimeOffset? LastSnapshotUtc { get; private set; }
+    public string? LastSnapshotReason { get; private set; }
 
     /// <summary>Everything this session saw, said, heard, and who came and went, newest last: Live's narration.</summary>
     public IReadOnlyList<TimelineEntry> Narration => _narration;
@@ -76,7 +86,17 @@ public sealed class LiveSensingState
     public void RecordSound(DateTimeOffset atUtc, string label)
     {
         LastSound = label;
+        LastSoundUtc = atUtc;
         Narrate(new TimelineEntry(atUtc, "sound", label));
+    }
+
+    public void RecordSoundLevel(double mean) => SoundLevel = Math.Clamp(mean, 0, 1);
+
+    public void RecordMoment(DateTimeOffset atUtc, string reason, string? imageUrl = null)
+    {
+        LastSnapshotUtc = atUtc;
+        LastSnapshotReason = reason;
+        Narrate(new TimelineEntry(atUtc, "moment", reason, ImageUrl: imageUrl));
     }
 
     public DateTimeOffset? LastCaptionUtc { get; private set; }
@@ -94,6 +114,7 @@ public sealed class LiveSensingState
         Motion = sample.Motion;
         Light = sample.Luminance;
         Push(_motion, sample.Motion);
+        Push(_light, sample.Luminance);
         if (sample.Grid.Count == _heat.Length)
         {
             for (var i = 0; i < _heat.Length; i++) _heat[i] = (0.85f * _heat[i]) + (0.15f * sample.Grid[i]);
@@ -142,20 +163,48 @@ public sealed class LiveSensingState
     }
 
     private readonly Dictionary<string, RegularDto> _regularByTrack = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RegularDto> _regularsSeen = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DateTimeOffset> _regularLastSeen = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, double> _regularSessionSeconds = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _regularColors = new(StringComparer.Ordinal);
+    private DateTimeOffset? _lastDetectionUtc;
 
     public RegularDto? RegularFor(string trackId) => _regularByTrack.GetValueOrDefault(trackId);
 
     /// <summary>The regulars recognised this session, one per person, in the order they were first recognised.</summary>
-    public IReadOnlyList<RegularDto> Regulars =>
-        _regularByTrack.Values.DistinctBy(r => r.Id).ToList();
+    public IReadOnlyList<RegularDto> Regulars => _regularsSeen.Values.ToList();
+
+    /// <summary>When a regular was last seen in this session.</summary>
+    public DateTimeOffset? RegularLastSeen(string regularId) => _regularLastSeen.TryGetValue(regularId, out var at) ? at : null;
+
+    /// <summary>How many seconds a regular has been in view during this session.</summary>
+    public double RegularSessionSeconds(string regularId) => _regularSessionSeconds.GetValueOrDefault(regularId);
+
+    /// <summary>Anonymous dominant appearance colour swatch for a regular, derived from their histogram.</summary>
+    public string? RegularColor(string regularId) => _regularColors.GetValueOrDefault(regularId);
 
     /// <summary>The name of a regular seen this session, by id; null when they have not been.</summary>
-    public string? RegularNamed(string regularId) => _regularByTrack.Values.FirstOrDefault(r => r.Id == regularId)?.DisplayName;
+    public string? RegularNamed(string regularId) => _regularsSeen.TryGetValue(regularId, out var r) ? r.DisplayName : null;
 
-    public void AssignRegular(string trackId, RegularDto regular)
+    public void AssignRegular(string trackId, RegularDto regular, IReadOnlyList<float>? signature = null)
     {
         _regularByTrack[trackId] = regular;
+        _regularsSeen[regular.Id] = regular;
+        _regularLastSeen[regular.Id] = DateTimeOffset.UtcNow;
+        if (ColorNamer.HexFromSignature(signature) is { } hex) _regularColors[regular.Id] = hex;
         NameLines(trackId, regular.DisplayName);
+    }
+
+    public void UpdateRegularPresence(DateTimeOffset nowUtc)
+    {
+        var dt = _lastDetectionUtc is { } last ? Math.Clamp((nowUtc - last).TotalSeconds, 0, 5) : 0;
+        _lastDetectionUtc = nowUtc;
+        var activeRegularIds = Tracks.Select(t => RegularFor(t.TrackId)?.Id).OfType<string>().Distinct(StringComparer.Ordinal);
+        foreach (var id in activeRegularIds)
+        {
+            _regularLastSeen[id] = nowUtc;
+            if (dt > 0) _regularSessionSeconds[id] = _regularSessionSeconds.GetValueOrDefault(id) + dt;
+        }
     }
 
     public void ForgetTrack(string trackId) => _regularByTrack.Remove(trackId);

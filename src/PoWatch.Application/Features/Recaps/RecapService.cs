@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using PoWatch.Application.Contracts;
@@ -39,7 +40,22 @@ public sealed class RecapService(
             $"{start:ddd d MMM, HH:mm} · {TemplateRecap.Duration(session.Duration(DateTimeOffset.UtcNow))}",
             await MomentsAsync(userId, session, cancellationToken),
             cancellationToken, sessionId);
-        return await WriteAsync(facts, cancellationToken);
+        var recap = await WriteAsync(facts, cancellationToken);
+        var summary = ParseSummary(session.SummaryJson);
+        return summary is null ? recap : recap with { SessionSummary = summary };
+    }
+
+    private static SessionSummaryDto? ParseSummary(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize(json, RecapSummaryJson.Default.SessionSummaryDto);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>A recap of part of a session, [<paramref name="fromUtc"/>, <paramref name="toUtc"/>): one story chapter.</summary>
@@ -157,3 +173,7 @@ public sealed class RecapService(
         }
     }
 }
+
+[JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+[JsonSerializable(typeof(SessionSummaryDto))]
+internal sealed partial class RecapSummaryJson : JsonSerializerContext;

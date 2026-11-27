@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using PoWatch.Api.Features.Stats;
+using PoWatch.Api.Hosting;
 using PoWatch.Api.Security;
 using PoWatch.Application.Features.Sessions;
 using PoWatch.Domain.Models;
@@ -9,6 +11,8 @@ namespace PoWatch.Api.Features.Sessions;
 
 internal static class SessionEndpoints
 {
+    private const int MaxSummaryBytes = 32_768;
+
     internal static SessionDto ToDto(this Session session, DateTimeOffset nowUtc) => new()
     {
         Id = session.Id,
@@ -16,8 +20,22 @@ internal static class SessionEndpoints
         EndedUtc = session.EndedUtc,
         TimeZoneId = session.TimeZoneId,
         IsRunning = session.IsRunning,
-        DurationSeconds = session.Duration(nowUtc).TotalSeconds
+        DurationSeconds = session.Duration(nowUtc).TotalSeconds,
+        Summary = ParseSummary(session.SummaryJson)
     };
+
+    private static SessionSummaryDto? ParseSummary(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize(json, ApiJson.Default.SessionSummaryDto);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     internal static IEndpointRouteBuilder MapSessionsFeature(this IEndpointRouteBuilder app)
     {
@@ -45,6 +63,16 @@ internal static class SessionEndpoints
         })
         .WithName("StopSession")
         .WithSummary("Stop a session; stopping twice keeps the first end time.");
+
+        group.MapPut("/{id:guid}/summary", async (Guid id, SessionSummaryDto summary, UserId userId, SessionService service, CancellationToken ct) =>
+        {
+            var json = JsonSerializer.Serialize(summary, ApiJson.Default.SessionSummaryDto);
+            if (json.Length > MaxSummaryBytes) return Results.BadRequest(new { message = "Summary payload is too large." });
+            var session = await service.SaveSummaryAsync(userId, id, json, ct);
+            return session is null ? Results.NotFound() : Results.Ok(session.ToDto(service.Now));
+        })
+        .WithName("SaveSessionSummary")
+        .WithSummary("Store session-level on-device aggregate summaries (faces, bodies) for Journal analysis.");
 
         group.MapGet("/", async (int? take, DateTimeOffset? from, DateTimeOffset? to, UserId userId, SessionService service, CancellationToken ct) =>
         {

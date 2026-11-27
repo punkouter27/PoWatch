@@ -41,6 +41,7 @@
   /** The bodies in view: { slot, cx, cy, body }. */
   let _slots = [];
   let _aspect = 9 / 16;
+  let _visible = true;
 
   function dotnetExports() {
     _exports ??= Promise.resolve(globalThis.getDotnetRuntime(0))
@@ -60,8 +61,9 @@
       }
     }
     const { left, top, width, height, clipPath, visibility } = _video.style;
-    Object.assign(_canvas.style, { left, top, width, height, clipPath, visibility });
-    return visibility === 'visible' ? _canvas : null;
+    const shown = _visible && visibility === 'visible';
+    Object.assign(_canvas.style, { left, top, width, height, clipPath, visibility: shown ? 'visible' : 'hidden' });
+    return shown ? _canvas : null;
   }
 
   function size(canvas) {
@@ -197,5 +199,12 @@
     }
   }
 
-  window.powatchBodies = { start, stop };
+  function setVisible(visible) {
+    _visible = Boolean(visible);
+    if (!_visible && _canvas) {
+      _canvas.style.visibility = 'hidden';
+    }
+  }
+
+  window.powatchBodies = { start, stop, setVisible };
 })();

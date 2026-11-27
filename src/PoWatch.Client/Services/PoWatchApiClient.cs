@@ -24,6 +24,10 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<SessionDto?> StopSessionAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.PostAsync($"api/sessions/{sessionId}/stop", content: null, ct), Json.SessionDto, cancellationToken);
 
+    /// <summary>Saves the session's captured aggregate summary (faces, bodies) for Journal analysis.</summary>
+    public Task<SessionDto?> SaveSessionSummaryAsync(Guid sessionId, SessionSummaryDto summary, CancellationToken cancellationToken = default) =>
+        ReadAsync(ct => httpClient.PutAsJsonAsync($"api/sessions/{sessionId}/summary", summary, Json.SessionSummaryDto, ct), Json.SessionDto, cancellationToken);
+
     /// <summary>One of the caller's sessions; null when it is not theirs, does not exist, or the call failed.</summary>
     public Task<SessionDto?> GetSessionAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.GetAsync($"api/sessions/{sessionId}", ct), Json.SessionDto, cancellationToken);

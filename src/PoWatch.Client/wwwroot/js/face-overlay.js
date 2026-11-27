@@ -49,6 +49,8 @@
   /** The label chips on screen, by slot, reused rather than rebuilt every frame. */
   const _chips = new Map();
   let _aspect = 9 / 16;
+  let _visible = true;
+  let _highlightedSlot = null;
 
   /** The client assembly's [JSExport] methods, as detector-bridge.js gets them. */
   function dotnetExports() {
@@ -74,8 +76,9 @@
       }
     }
     const { left, top, width, height, clipPath, visibility } = _video.style;
-    Object.assign(_canvas.style, { left, top, width, height, clipPath, visibility });
-    return visibility === 'visible' ? _canvas : null;
+    const shown = _visible && visibility === 'visible';
+    Object.assign(_canvas.style, { left, top, width, height, clipPath, visibility: shown ? 'visible' : 'hidden' });
+    return shown ? _canvas : null;
   }
 
   function size(canvas) {
@@ -110,8 +113,9 @@
       }
     }
     const { left, top, width, height, clipPath, visibility } = _video.style;
-    Object.assign(_tags.style, { left, top, width, height, clipPath, visibility });
-    return visibility === 'visible' ? _tags : null;
+    const shown = _visible && visibility === 'visible';
+    Object.assign(_tags.style, { left, top, width, height, clipPath, visibility: shown ? 'visible' : 'hidden' });
+    return shown ? _tags : null;
   }
 
   /** Each face's label, by slot, as .NET knows them (SensingSession.PushFaceLabels). */
@@ -145,6 +149,7 @@
       const name = _labels.get(face.slot);
       chip.textContent = name || '…';
       chip.dataset.reading = name ? 'false' : 'true';
+      chip.classList.toggle('is-highlighted', _highlightedSlot === face.slot);
       chip.style.left = `${Math.round(x)}px`;
       // On the hairline, but never off the top of the picture (the chip is drawn 19px tall above its point).
       chip.style.top = `${Math.max(20, Math.round(y) - 4)}px`;
@@ -320,5 +325,22 @@
     }
   }
 
-  window.powatchFaces = { start, stop, labels };
+  function setVisible(visible) {
+    _visible = Boolean(visible);
+    if (!_visible) {
+      if (_canvas) _canvas.style.visibility = 'hidden';
+      if (_tags) _tags.style.visibility = 'hidden';
+    } else if (_video) {
+      draw();
+    }
+  }
+
+  function highlight(slot) {
+    _highlightedSlot = slot == null ? null : Math.round(slot);
+    for (const [s, chip] of _chips) {
+      chip.classList.toggle('is-highlighted', _highlightedSlot === s);
+    }
+  }
+
+  window.powatchFaces = { start, stop, labels, setVisible, highlight };
 })();

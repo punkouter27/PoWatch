@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
+using PoWatch.Shared.Models;
 
 namespace PoWatch.Api.Hosting;
 
@@ -25,5 +26,6 @@ internal sealed record DiagBootKeyVault(bool Enabled, bool UriConfigured);
 [JsonSerializable(typeof(HealthReportBody))]
 [JsonSerializable(typeof(DiagBootBody))]
 [JsonSerializable(typeof(ProblemDetails))]
+[JsonSerializable(typeof(SessionSummaryDto))]
 [JsonSerializable(typeof(string))]
 internal sealed partial class ApiJson : JsonSerializerContext;

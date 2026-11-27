@@ -1,10 +1,9 @@
-@* Face readings: the temporary labels the camera gives the people in front of it, and what its landmarks
-   and the face models say about them. Read on this device and never stored — the labels last one
-   session (docs/adr/0001-face-statistics-on-device.md, docs/adr/0002-session-scoped-face-labels.md).
-   Under them, the body language the body points show (arms crossed, leaning in…), also this session's only (ADR 0003). *@
+@* Face readings (temporary labels, classical beauty breakdown, age, presentation) and a clearly separated
+   Body language sub-card with colour-coded cues. Hovering a face highlights its hairline chip on Camera. *@
 @using PoWatch.Shared.Services
 @implements IDisposable
 @inject SensingSession Sensing
+@inject IJSRuntime JS
 
 <TerminalPanel Title="Faces" Class="cell-faces" Test="live-faces" Flush="true">
     <Aside>ON DEVICE@(Sensing.FacesLabelled > 0 ? $" · {Sensing.FacesLabelled} LABELLED" : null)</Aside>
@@ -19,7 +18,6 @@
         }
         else
         {
-            @* Moving averages over the session: one point per 5 s while a face was in view (FaceTrends). *@
             <div class="metric-cards" data-test="face-trends">
                 <RadzenCard class="metric-card">
                     <StatCell Label="Beauty" Value="@Now(f => f.Beauty, "0")" Hint="@Span(T.SessionBeauty, T.BeautyRange, "0")" Test="face-beauty-trend" />
@@ -35,37 +33,109 @@
                 new("Most at once", T.FacesHistory.Count > 0 ? T.FacesHistory.Max().ToString("0", CultureInfo.InvariantCulture) : null, "The most faces in view together this session"),
                 new("Labelled", Sensing.FacesLabelled.ToString(CultureInfo.InvariantCulture), "Temporary Person labels given this session; forgotten when it ends"),
             ])" />
-            <WhoList Rows="@Rows()" Label="Faces in view" Test="faces-list" Empty="No face in view." />
+
+            @if (Sensing.Faces.Count == 0)
+            {
+                <p class="term-empty" data-test="faces-list-empty">No face in view.</p>
+            }
+            else
+            {
+                <ul class="live-who face-rows" aria-label="Faces in view" data-test="faces-list">
+                    @foreach (var face in Sensing.Faces)
+                    {
+                        var slot = face.Slot;
+                        var expanded = _expandedSlot == slot;
+                        <li @key="slot" class="face-row" @onmouseenter="() => HighlightAsync(slot)" @onmouseleave="() => HighlightAsync(null)">
+                            <div class="face-row-head">
+                                <b>@(face.Label ?? "Reading…")</b>
+                                <span>@Note(face)</span>
+                                @if (face.Symmetry is not null)
+                                {
+                                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain face-why-btn"
+                                                  Click="() => _expandedSlot = expanded ? null : slot"
+                                                  title="Show classical beauty canon breakdown" data-test="face-breakdown-toggle">
+                                        @(expanded ? "Hide" : "Why?")
+                                    </RadzenButton>
+                                }
+                            </div>
+                            @if (expanded && face.Symmetry is { } sym)
+                            {
+                                <div class="face-breakdown" data-test="face-breakdown">
+                                    <span>Symmetry <b>@($"{sym:P0}")</b></span>
+                                    @if (face.Golden is { } phi) { <span>φ ratio <b>@($"{phi:P0}")</b></span> }
+                                    @if (face.Thirds is { } th) { <span>Thirds <b>@($"{th:P0}")</b></span> }
+                                    @if (face.Fifths is { } fi) { <span>Fifths <b>@($"{fi:P0}")</b></span> }
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+
             @if (!Sensing.FacesRead && Sensing.Faces.Count > 0)
             {
-                <p class="term-stat-hint" data-test="faces-loading">Loading the face models (about 190 MB the first time) for age, presentation and labels.</p>
+                <div class="model-progress" data-test="faces-loading" role="status">
+                    <span class="term-stat-hint">Loading face models (~190 MB first time) for age, presentation &amp; labels…</span>
+                    <div class="model-progress-track"><span class="model-progress-bar"></span></div>
+                </div>
             }
-            @if (Sensing.Bodies.InView.Count > 0)
+
+            @if (Sensing.Bodies.InView.Count > 0 || BodySummary() is not null)
             {
-                <p class="live-census" data-test="body-language-now"><span class="live-heat-label">BODY LANGUAGE</span></p>
-                <WhoList Rows="@BodyRows()" Label="Body language of each body in view" Test="body-language" />
-            }
-            @if (BodySummary() is { } summary)
-            {
-                <p class="live-census" data-test="body-language-summary" title="Person-time this session, read from body points on this machine">
-                    <span class="live-heat-label">SESSION</span>@summary
-                </p>
+                <div class="sub-card" data-test="body-language-card">
+                    <p class="panel-subhead" data-test="body-language-now">BODY LANGUAGE</p>
+                    @if (Sensing.Bodies.InView.Count > 0)
+                    {
+                        <ul class="live-who body-cue-list" aria-label="Body language of each body in view" data-test="body-language">
+                            @foreach (var body in Sensing.Bodies.InView)
+                            {
+                                <li @key="body.Slot">
+                                    <b>Body @body.Slot</b>
+                                    <span class="cue-pills">
+                                        @if (body.Cues == BodyCues.None)
+                                        {
+                                            <span class="cue-pill cue-pill--open">open</span>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var cue in Cues(body.Cues))
+                                            {
+                                                <span class="cue-pill @CueTone(cue)">@Words(cue)</span>
+                                            }
+                                        }
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    @if (BodySummary() is { } summary)
+                    {
+                        <p class="live-census" data-test="body-language-summary" title="Person-time this session, read from body points on this machine">
+                            <span class="live-heat-label">SESSION</span>@summary
+                        </p>
+                    }
+                </div>
             }
         }
-        <p class="term-stat-hint">Beauty is the classical canon (symmetry, thirds, fifths, φ) read from the landmarks. Age and presentation are model estimates and can be wrong. Nothing about a face leaves this device or is stored.</p>
+        <p class="term-stat-hint">Beauty is the classical canon (symmetry, thirds, fifths, φ) read from landmarks. Age &amp; presentation are model estimates. Session aggregates may be saved to your Journal; raw face descriptors never leave this device.</p>
     </ChildContent>
 </TerminalPanel>
 
 @code {
+    private int? _expandedSlot;
+
     // Live passes this panel no parameters, so its re-renders skip it: it follows the session itself.
     protected override void OnInitialized() => Sensing.Changed += OnSensingChanged;
 
     private void OnSensingChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => Sensing.Changed -= OnSensingChanged;
+    public void Dispose()
+    {
+        Sensing.Changed -= OnSensingChanged;
+        _ = JS.TryInvokeVoidAsync("powatchFaces.highlight", (object?)null);
+    }
 
-    private List<WhoList.Row> Rows() =>
-        [.. Sensing.Faces.Select(f => new WhoList.Row(f.Label ?? "Reading…", Note(f)))];
+    private Task HighlightAsync(int? slot) => JS.TryInvokeVoidAsync("powatchFaces.highlight", slot);
 
     private FaceTrends T => Sensing.FaceTrends;
 
@@ -85,11 +155,15 @@
         return range is { } r ? $"{text} · range {r.Low.ToString(format, ic)}–{r.High.ToString(format, ic)}" : text;
     }
 
-    private List<WhoList.Row> BodyRows() =>
-        [.. Sensing.Bodies.InView.Select(b => new WhoList.Row($"Body {b.Slot}", b.Cues == BodyCues.None ? "open" : string.Join(" · ", Cues(b.Cues))))];
+    private static IEnumerable<BodyCues> Cues(BodyCues cues) =>
+        Enum.GetValues<BodyCues>().Where(c => c != BodyCues.None && cues.HasFlag(c));
 
-    private static IEnumerable<string> Cues(BodyCues cues) =>
-        Enum.GetValues<BodyCues>().Where(c => c != BodyCues.None && cues.HasFlag(c)).Select(Words);
+    private static string CueTone(BodyCues cue) => cue switch
+    {
+        BodyCues.ArmsCrossed or BodyCues.HandToFace => "cue-pill--closed",
+        BodyCues.LeaningIn or BodyCues.HandsOnHips => "cue-pill--engaged",
+        _ => "cue-pill--neutral",
+    };
 
     private static string Words(BodyCues cue) => cue switch
     {

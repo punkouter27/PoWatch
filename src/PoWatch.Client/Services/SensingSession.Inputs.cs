@@ -19,14 +19,16 @@ public sealed partial class SensingSession
     [JSInvokable]
     public void OnSoundLevel(double mean, double max)
     {
-        if (IsRunning) _batcher.AddSound(time.GetUtcNow(), mean, max);
+        if (!IsRunning || Paused) return;
+        _batcher.AddSound(time.GetUtcNow(), mean, max);
+        Live.RecordSoundLevel(mean);
     }
 
     /// <summary>Words the speech model heard, starting at <paramref name="atIso"/>, with the speaker's voice embedding (JSON), if one was taken.</summary>
     [JSInvokable]
     public void OnHeard(string atIso, string text, string? voiceJson)
     {
-        if (!IsRunning || string.IsNullOrWhiteSpace(text)) return;
+        if (!IsRunning || Paused || string.IsNullOrWhiteSpace(text)) return;
         float[]? voice = null;
         try
         {
@@ -43,7 +45,7 @@ public sealed partial class SensingSession
     [JSInvokable]
     public void OnSound(string atIso, string label, double score)
     {
-        if (!IsRunning || string.IsNullOrWhiteSpace(label)) return;
+        if (!IsRunning || Paused || string.IsNullOrWhiteSpace(label)) return;
         AddSound(At(atIso), label.Trim(), score);
     }
 
@@ -69,7 +71,7 @@ public sealed partial class SensingSession
     [JSInvokable]
     public void OnPixelSample(string json)
     {
-        if (!IsRunning || JsonSerializer.Deserialize(json, Json.PixelSamplePayload) is not { } p) return;
+        if (!IsRunning || Paused || JsonSerializer.Deserialize(json, Json.PixelSamplePayload) is not { } p) return;
         AddPixel(new PixelSample(p.AtUtc, p.Motion, p.Luminance, p.Grid, p.Palette));
     }
 
@@ -90,7 +92,7 @@ public sealed partial class SensingSession
 
     private void OnDetections(DateTimeOffset atUtc, double latencyMs, string[] labels, double[] values)
     {
-        if (!IsRunning) return;
+        if (!IsRunning || Paused) return;
         var detections = new List<Detection>(labels.Length);
         var at = 0;
         foreach (var label in labels)
@@ -135,7 +137,9 @@ public sealed partial class SensingSession
         var frame = _tracker.Update(atUtc, detections);
         _inFrame = [.. frame.Active.Select(t => t.Label)];
         _batcher.AddDetections(atUtc, frame, trackId => Live.RegularFor(trackId)?.Id);
-        Live.RecordDetections(frame, time.GetUtcNow());
+        var now = time.GetUtcNow();
+        Live.RecordDetections(frame, now);
+        Live.UpdateRegularPresence(now);
         foreach (var exited in frame.Exited) Live.ForgetTrack(exited.TrackId);
         foreach (var entered in frame.Entered) Announce(entered);
         Consider(_highlights.OnDetections(frame), atUtc);
@@ -198,6 +202,13 @@ public sealed partial class SensingSession
     /// first (the only image that ever leaves the browser); in demo mode, or without image storage,
     /// the moment is kept without a picture.
     /// </summary>
+    private Task CapturePeriodicSnapshotAsync()
+    {
+        if (!IsRunning || Paused || _capturing || _video is null || _scene is not null) return Task.CompletedTask;
+        Consider(new Highlight("Periodic check-in snapshot", 0.5), time.GetUtcNow());
+        return Task.CompletedTask;
+    }
+
     private void Consider(Highlight? highlight, DateTimeOffset atUtc)
     {
         if (highlight is null) return;
@@ -215,9 +226,11 @@ public sealed partial class SensingSession
     {
         // Offline or out of storage: the moment is kept without its picture.
         string? path = null;
+        string? previewUrl = null;
         try
         {
             var image = await js.TryInvokeAsync<string>("powatchPixels.snapshot", _video);
+            previewUrl = image;
             var upload = image is null ? null : await api.CreateSnapshotUploadAsync(DateOnly.FromDateTime(atUtc.ToLocalTime().DateTime));
             if (upload is not null && await js.TryInvokeVoidAsync("powatchBlobUpload.uploadFrame", upload.UploadUrl, image))
                 path = upload.Path;
@@ -227,12 +240,13 @@ public sealed partial class SensingSession
             _capturing = false;
         }
 
-        AddMoment(highlight, atUtc, path);
+        AddMoment(highlight, atUtc, path, previewUrl);
     }
 
-    private void AddMoment(Highlight highlight, DateTimeOffset atUtc, string? imagePath)
+    private void AddMoment(Highlight highlight, DateTimeOffset atUtc, string? imagePath, string? previewUrl = null)
     {
         _batcher.AddEvent(new SceneEventDto { AtUtc = atUtc, Kind = "Notable", Text = highlight.Reason, Score = highlight.Score, ImagePath = imagePath });
+        Live.RecordMoment(atUtc, highlight.Reason, previewUrl);
         Notify();
     }
 
@@ -253,7 +267,7 @@ public sealed partial class SensingSession
         var result = await api.ObserveRegularAsync(new ObserveRegularRequestDto { Class = track.Label, Signature = [.. track.Signature] });
         if (result is null || !IsRunning) return;
         // Regulars stay anonymous ("Person 3"): nobody is asked to name them.
-        Live.AssignRegular(track.TrackId, result.Regular);
+        Live.AssignRegular(track.TrackId, result.Regular, track.Signature);
         Notify();
     }
 
@@ -284,7 +298,7 @@ public sealed partial class SensingSession
         // The grounded prompt doubles as the scene key: same objects, same counts, same prompt.
         var prompt = CaptionParser.Prompt(_inFrame ?? []);
         var scene = _inFrame is null ? null : prompt;
-        if (!Captions || _vlmBusy || !_vlm.IsDueFor(scene) || _video is null) return;
+        if (!Captions || Paused || _vlmBusy || !_vlm.IsDueFor(scene) || _video is null) return;
         _vlmBusy = true;
         try
         {

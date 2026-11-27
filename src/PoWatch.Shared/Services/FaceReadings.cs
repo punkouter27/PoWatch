@@ -16,7 +16,11 @@ public sealed record FaceReadout(
     string? Presentation,
     double PresentationConfidence,
     int Readings,
-    double? AgeYears = null)
+    double? AgeYears = null,
+    double? Symmetry = null,
+    double? Golden = null,
+    double? Thirds = null,
+    double? Fifths = null)
 {
     /// <summary>
     /// Whether the presentation model's estimate is male; false for female, null while unclear. Follows
@@ -113,6 +117,10 @@ public sealed class FaceReadings
                 face.Beauty = face.Beauty is { } shown
                     ? shown + (BeautySmoothing * (score.Beauty - shown))
                     : score.Beauty;
+                face.Symmetry = score.Symmetry;
+                face.Golden = score.Golden;
+                face.Thirds = score.Thirds;
+                face.Fifths = score.Fifths;
             }
         }
         foreach (var gone in _faces.Keys.Where(slot => !seen.Contains(slot)).ToList()) _faces.Remove(gone);
@@ -156,6 +164,10 @@ public sealed class FaceReadings
         public string? Label { get; set; }
 
         public double? Beauty { get; set; }
+        public double? Symmetry { get; set; }
+        public double? Golden { get; set; }
+        public double? Thirds { get; set; }
+        public double? Fifths { get; set; }
 
         public int Readings { get; set; }
 
@@ -176,7 +188,11 @@ public sealed class FaceReadings
                 presentation < 0 || presentationP < MinPresentationConfidence ? null : Presentations[presentation],
                 Math.Round(presentationP, 2),
                 Readings,
-                Age.Expected(AgeBandMiddles) is { } years ? Math.Round(years, 1) : null);
+                Age.Expected(AgeBandMiddles) is { } years ? Math.Round(years, 1) : null,
+                Symmetry,
+                Golden,
+                Thirds,
+                Fifths);
         }
     }
 

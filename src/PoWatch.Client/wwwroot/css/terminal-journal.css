@@ -206,3 +206,15 @@
     -webkit-backdrop-filter: var(--term-glass-blur);
     backdrop-filter: var(--term-glass-blur);
 }
+
+/* ── Journal session report: captured images gallery & stored session analysis ── */
+
+.session-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.session-snap { margin: 0; border: 1px solid var(--term-line); border-radius: var(--term-radius); overflow: hidden; background: var(--term-panel-2); }
+.session-snap img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.session-snap figcaption { display: grid; gap: 2px; padding: 6px 8px; font: 11px var(--term-mono); color: var(--term-muted); }
+.session-snap figcaption time { color: var(--term-text); font-weight: 600; }
+
+.session-analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.analysis-block { display: grid; gap: 8px; align-content: start; padding: 10px; border: 1px solid var(--term-line); border-radius: var(--term-radius); background: var(--term-panel-2); }
+.analysis-block h3 { margin: 0; font: 600 11px var(--term-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--term-dim); }

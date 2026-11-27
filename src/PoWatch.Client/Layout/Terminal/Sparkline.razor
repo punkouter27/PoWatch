@@ -1,20 +1,37 @@
 @* A tiny inline SVG trend line. Cheap enough to put one in every table row, which a chart control is not.
-   An optional Baseline draws faintly behind it on the same scale (today over a usual day). *@
-<svg class="term-spark @(Cyan ? "term-spark--cyan" : string.Empty)" viewBox="0 0 100 28" preserveAspectRatio="none"
-     role="img" aria-label="@Label">
-    @if (_baseline.Length > 0)
+   An optional Baseline draws faintly behind it on the same scale (today over a usual day), NowSlot marks
+   the current position with a vertical hairline, and AxisLabels adds start/mid/end labels beneath. *@
+<div class="term-spark-wrap">
+    <svg class="term-spark @(Cyan ? "term-spark--cyan" : string.Empty)" viewBox="0 0 100 28" preserveAspectRatio="none"
+         role="img" aria-label="@Label">
+        @if (_baseline.Length > 0)
+        {
+            <polyline class="term-spark-base" points="@_baseline" />
+        }
+        @if (_nowX is { } x)
+        {
+            <line class="term-spark-now" x1="@x" y1="0" x2="@x" y2="28" />
+        }
+        @if (_points.Length > 0)
+        {
+            <polyline points="@_points" />
+        }
+    </svg>
+    @if (AxisLabels is { Length: > 0 })
     {
-        <polyline class="term-spark-base" points="@_baseline" />
+        <div class="term-spark-axis" aria-hidden="true">
+            @foreach (var lbl in AxisLabels)
+            {
+                <span>@lbl</span>
+            }
+        </div>
     }
-    @if (_points.Length > 0)
-    {
-        <polyline points="@_points" />
-    }
-</svg>
+</div>
 
 @code {
     private string _points = string.Empty;
     private string _baseline = string.Empty;
+    private string? _nowX;
 
     [Parameter, EditorRequired] public IReadOnlyList<double> Values { get; set; } = [];
 
@@ -27,6 +44,12 @@
     /// <summary>How many points span the full width; Values' own count when null. Set it to draw a partial day.</summary>
     [Parameter] public int? Slots { get; set; }
 
+    /// <summary>Optional 0-based slot index to highlight with a vertical "now" hairline.</summary>
+    [Parameter] public int? NowSlot { get; set; }
+
+    /// <summary>Optional labels distributed evenly under the sparkline (e.g. ["00:00", "12:00", "23:00"]).</summary>
+    [Parameter] public string[]? AxisLabels { get; set; }
+
     [Parameter] public bool Cyan { get; set; }
     [Parameter] public string Label { get; set; } = "Trend";
 
@@ -34,8 +57,12 @@
     {
         var max = Max ?? Math.Max(Values.DefaultIfEmpty().Max(), Baseline?.DefaultIfEmpty().Max() ?? 0);
         if (max <= 0) max = 1;
-        _points = Line(Values, Slots ?? Values.Count, max);
+        var slots = Slots ?? Values.Count;
+        _points = Line(Values, slots, max);
         _baseline = Baseline is null ? string.Empty : Line(Baseline, Slots ?? Baseline.Count, max);
+        _nowX = NowSlot is { } n && slots >= 2
+            ? FormattableString.Invariant($"{Math.Clamp(n, 0, slots - 1) * (100.0 / (slots - 1)):0.##}")
+            : null;
     }
 
     private static string Line(IReadOnlyList<double> values, int slots, double max)

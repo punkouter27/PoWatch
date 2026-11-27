@@ -20,6 +20,53 @@ public sealed class SessionDto
     public string TimeZoneId { get; init; } = string.Empty;
     public bool IsRunning { get; init; }
     public double DurationSeconds { get; init; }
+
+    /// <summary>Session-level aggregates captured on the device (faces, bodies, posture, energy) for Journal reports.</summary>
+    public SessionSummaryDto? Summary { get; init; }
+}
+
+/// <summary>
+/// Aggregate-only summary of on-device face and body readings saved with a session so Journal reports
+/// can analyse everything captured alongside the session's snapshots. Never holds embeddings or per-face rows.
+/// </summary>
+public sealed class SessionSummaryDto
+{
+    public FaceSummaryDto? Faces { get; init; }
+    public BodySummaryDto? Bodies { get; init; }
+}
+
+public sealed class FaceSummaryDto
+{
+    public double? MeanBeauty { get; init; }
+    public double? BeautyLow { get; init; }
+    public double? BeautyHigh { get; init; }
+    public double? MeanAge { get; init; }
+    public double? AgeLow { get; init; }
+    public double? AgeHigh { get; init; }
+    public int MaxFacesAtOnce { get; init; }
+    public int FacesLabelled { get; init; }
+    public double? MaleShare { get; init; }
+    public double? FemaleShare { get; init; }
+    public List<double> BeautyHistory { get; init; } = [];
+    public List<double> AgeHistory { get; init; } = [];
+}
+
+public sealed class BodySummaryDto
+{
+    public double ObservedSeconds { get; init; }
+    public double? PostureScore { get; init; }
+    public double UprightSeconds { get; init; }
+    public double SlumpedSeconds { get; init; }
+    public double LongestSlumpSeconds { get; init; }
+    public double? MeanEnergy { get; init; }
+    public bool FullBodySeen { get; init; }
+    public double? ArmBalance { get; init; }
+    public double? LegBalance { get; init; }
+    public double? ShoulderTilt { get; init; }
+    public double OpenSeconds { get; init; }
+    public Dictionary<string, double> ActivitySeconds { get; init; } = [];
+    public Dictionary<string, double> CueSeconds { get; init; } = [];
+    public List<double> EnergyHistory { get; init; } = [];
 }
 
 /// <summary>One ten-minute chapter of a session's story.</summary>

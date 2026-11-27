@@ -124,6 +124,32 @@ public static class RecapReportRenderer
                         col.Item().Row(row => { row.ConstantItem(12).Text("•"); row.RelativeItem().Text(highlight); });
                 }
 
+                if (recap.SessionSummary is { } summary && (summary.Faces is not null || summary.Bodies is not null))
+                {
+                    col.Item().Text("Captured Session Analysis (Aggregates)").FontSize(12).Bold();
+                    if (summary.Faces is { } faces)
+                    {
+                        var faceParts = new List<string>();
+                        if (faces.MeanBeauty is { } b) faceParts.Add($"Mean beauty {b:0}" + (faces.BeautyLow is { } bl && faces.BeautyHigh is { } bh ? $" (range {bl:0}–{bh:0})" : ""));
+                        if (faces.MeanAge is { } a) faceParts.Add($"Mean age {a:0} yrs" + (faces.AgeLow is { } al && faces.AgeHigh is { } ah ? $" (range {al:0}–{ah:0})" : ""));
+                        if (faces.MaxFacesAtOnce > 0) faceParts.Add($"Peak faces at once: {faces.MaxFacesAtOnce}");
+                        if (faces.MaleShare is { } m && faces.FemaleShare is { } f) faceParts.Add($"Presentation: {m:0}% M / {f:0}% F");
+                        if (faceParts.Count > 0)
+                            col.Item().Text("Faces: " + string.Join(" · ", faceParts)).FontSize(9.5f);
+                    }
+                    if (summary.Bodies is { } bodies)
+                    {
+                        var bodyParts = new List<string>();
+                        if (bodies.PostureScore is { } ps) bodyParts.Add($"Upright {ps:0}%");
+                        if (bodies.MeanEnergy is { } me) bodyParts.Add($"Limb energy {me:P0}");
+                        if (bodies.ObservedSeconds >= 1) bodyParts.Add($"Open posture {(bodies.OpenSeconds / bodies.ObservedSeconds):P0}");
+                        if (bodies.ArmBalance is { } ab) bodyParts.Add($"Arm L/R {ab * 100:0}/{(1 - ab) * 100:0}");
+                        if (bodies.ShoulderTilt is { } st) bodyParts.Add(Math.Abs(st) < 1.5 ? "Shoulders level" : $"Shoulder tilt {(st > 0 ? "L" : "R")} {Math.Abs(st):0}°");
+                        if (bodyParts.Count > 0)
+                            col.Item().Text("Body & posture: " + string.Join(" · ", bodyParts)).FontSize(9.5f);
+                    }
+                }
+
                 if (recap.Moments.Count > 0)
                 {
                     col.Item().Text("Moments").FontSize(12).Bold();

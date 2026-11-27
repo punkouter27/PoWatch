@@ -26,7 +26,7 @@
             </StartActions>
         </SessionControls>
         <a href="diag" class="term-button session-health" data-test="session-health">
-            @(L.LastError is not null || L.LostTicks > 0 ? "Needs attention" : L.PendingBatches > 0 ? "Saving queued" : Sensing.IsRunning ? "Sensing active" : "System status")
+            @(L.LastError is not null || L.LostTicks > 0 ? "Needs attention" : L.PendingBatches > 0 ? "Saving queued" : Sensing.IsRunning ? (Sensing.Paused ? "Paused" : "Sensing active") : "System status")
         </a>
         @* Which panels show and in what order, saved to the account. Dragging a panel's grip does the same. *@
         <details class="export-menu panels-menu" data-test="panels-menu">
@@ -73,17 +73,37 @@
 
     @* The nine panels in the user's order (saved per account); hidden ones leave no gap, the rest fill the
        grid in order. Each panel's title bar carries a grip to drag it onto another panel's place and a ×. *@
-    <div class="dash-grid" @ref="_grid" data-test="live-grid">
+    <div class="dash-grid @(_cameraExpanded ? "dash-grid--cam-expanded" : null)" @ref="_grid" data-test="live-grid">
         @foreach (var (id, index) in VisiblePanels.Select((id, i) => (id, i + 1)))
         {
-            <div @key="id" class="live-slot" data-slot="@index" data-panel="@id" data-test="live-slot-@id">
+            <div @key="id" class="live-slot @(id == LivePanels.Camera && _cameraExpanded ? "live-slot--expanded" : null)" data-slot="@index" data-panel="@id" data-test="live-slot-@id">
                 <CascadingValue Name="PanelTools" Value="@PanelTools(id)">
                     @switch (id)
                     {
                         case LivePanels.Camera:
                             <TerminalPanel Title="Camera" Class="live-camera" Test="live-camera" Flush="true">
                                 <Aside>
-                                    @(Sensing.IsRunning ? (L.Demo ? "DEMO SCENE" : "CAMERA") : "STANDBY")
+                                    @if (Sensing.IsRunning)
+                                    {
+                                        <span class="space-switch" role="group" aria-label="Camera overlays">
+                                            <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_showBoxes ? "pw-plain on" : "pw-plain")" aria-pressed="@(_showBoxes ? "true" : "false")" Click="() => _showBoxes = !_showBoxes" title="Toggle object boxes" data-test="cam-toggle-boxes">BOXES</RadzenButton>
+                                            @if (!L.Demo)
+                                            {
+                                                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_showFaces ? "pw-plain on" : "pw-plain")" aria-pressed="@(_showFaces ? "true" : "false")" Click="ToggleFaceOverlayAsync" title="Toggle face points and labels" data-test="cam-toggle-faces">FACES</RadzenButton>
+                                                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(_showPose ? "pw-plain on" : "pw-plain")" aria-pressed="@(_showPose ? "true" : "false")" Click="TogglePoseOverlayAsync" title="Toggle pose skeleton" data-test="cam-toggle-pose">POSE</RadzenButton>
+                                            }
+                                        </span>
+                                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(Sensing.Paused ? "pw-plain cam-ctrl on" : "pw-plain cam-ctrl")" Click="TogglePause" title="Pause or resume sensing without ending the session" data-test="cam-pause">
+                                            @(Sensing.Paused ? "Resume" : "Pause")
+                                        </RadzenButton>
+                                    }
+                                    else
+                                    {
+                                        <span>STANDBY</span>
+                                    }
+                                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain cam-ctrl" Click="ToggleCameraExpandAsync" title="@(_cameraExpanded ? "Exit expanded view" : "Expand camera")" data-test="cam-expand">
+                                        @(_cameraExpanded ? "⤡" : "⤢")
+                                    </RadzenButton>
                                 </Aside>
                                 <ChildContent>
                                     @* The camera element itself lives in the layout and is docked over this slot. *@
@@ -97,13 +117,19 @@
                                                     Effects @(_demoEffects ? "on" : "off")
                                                 </RadzenButton>
                                             }
-                                            @foreach (var track in Sensing.IsRunning ? L.Tracks : [])
+                                            @if (Sensing.IsRunning && !Sensing.Paused && _showBoxes)
                                             {
-                                                <div @key="track.TrackId" class="live-box @(track.Label == "person" ? "live-box--person" : string.Empty)"
-                                                     data-uncertain="@(track.Box.Score < 0.6 ? "true" : "false")"
-                                                     style="left: @Pct(track.Box.X0 * 100)%; top: @Pct(track.Box.Y0 * 100)%; width: @Pct((track.Box.X1 - track.Box.X0) * 100)%; height: @Pct((track.Box.Y1 - track.Box.Y0) * 100)%;">
-                                                    <span title="@($"Confidence {track.Box.Score:P0} · Track {track.TrackId}")">@(L.RegularFor(track.TrackId)?.DisplayName ?? track.Label)@(track.Box.Score < 0.6 ? " · uncertain" : null)</span>
-                                                </div>
+                                                @foreach (var track in L.Tracks)
+                                                {
+                                                    var reg = L.RegularFor(track.TrackId);
+                                                    var selected = _selectedRegularId is not null && reg?.Id == _selectedRegularId;
+                                                    var dwell = DisplayText.Duration((DateTimeOffset.UtcNow - track.FirstSeenUtc).TotalSeconds);
+                                                    <div @key="track.TrackId" class="live-box @(track.Label == "person" ? "live-box--person" : string.Empty) @(selected ? "live-box--selected" : string.Empty)"
+                                                         data-uncertain="@(track.Box.Score < 0.6 ? "true" : "false")"
+                                                         style="left: @Pct(track.Box.X0 * 100)%; top: @Pct(track.Box.Y0 * 100)%; width: @Pct((track.Box.X1 - track.Box.X0) * 100)%; height: @Pct((track.Box.Y1 - track.Box.Y0) * 100)%;">
+                                                        <span title="@($"Confidence {track.Box.Score:P0} · Track {track.TrackId}")">@(reg?.DisplayName ?? track.Label) · @dwell</span>
+                                                    </div>
+                                                }
                                             }
 
                                             @if (!Sensing.IsRunning)
@@ -111,6 +137,13 @@
                                                 <div class="live-standby" data-test="live-standby">
                                                     <p>Point a camera at anything, press Start, walk away.</p>
                                                     <p class="term-stat-hint">Use Start camera above.</p>
+                                                </div>
+                                            }
+                                            else if (Sensing.Paused)
+                                            {
+                                                <div class="live-paused" data-test="live-paused">
+                                                    <p>PAUSED · PRIVACY SHUTTER</p>
+                                                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button" Click="TogglePause">Resume sensing</RadzenButton>
                                                 </div>
                                             }
                                             else if (Sensing.Live.Demo)
@@ -121,13 +154,17 @@
                                             {
                                                 @* A broadcast-style corner readout: on air, the clock, who is in view, how long it has run. *@
                                                 <div class="live-hud" aria-hidden="true" data-test="live-hud">
-                                                    <span class="live-hud-rec">●</span> @DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture)
-                                                    · @L.PeopleNow IN VIEW
+                                                    <span class="@(Sensing.Paused ? "live-hud-paused" : "live-hud-rec")">●</span> @DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture)
+                                                    · @(Sensing.Paused ? "PAUSED" : $"{L.PeopleNow} IN VIEW")
                                                     @if (L.Session?.StartedUtc is { } began)
                                                     {
                                                         <text> · @DisplayText.Duration((DateTimeOffset.UtcNow - began).TotalSeconds)</text>
                                                     }
                                                 </div>
+                                                @if (L.LastSnapshotUtc is { } snapAt && DateTimeOffset.UtcNow - snapAt < TimeSpan.FromSeconds(4))
+                                                {
+                                                    <div class="live-snap-toast" role="status" data-test="live-snap-toast">Snapshot saved</div>
+                                                }
                                             }
                                         </div>
                                     </div>
@@ -148,13 +185,12 @@
                             <TerminalPanel Title="Narration" Class="cell-narration" Test="live-narration-panel" Flush="true">
                                 <Aside>NEWEST FIRST</Aside>
                                 <ChildContent>
-                                    <LiveNarration SessionId="@_sessionId" />
+                                    <LiveNarration SessionId="@_sessionId" SearchQuery="@_narrationSearch" SearchQueryChanged="OnNarrationSearchChanged" />
                                 </ChildContent>
                             </TerminalPanel>
                             break;
                         case "space":
-                            @* The room's space in one grid: where motion is right now, or where people and animals were centred
-                               today; then the hottest spots and the edge of the frame things mostly come and go by. *@
+                            @* The room's space in one 16×9 grid with edge labels, colour legend, clickable cell details, human zone names, and net doorway traffic. *@
                             <TerminalPanel Title="Space" Class="cell-heat" Test="live-motion-grid">
                                 <Aside>
                                     <span class="space-switch" role="group" aria-label="Which heat to show">
@@ -163,23 +199,54 @@
                                     </span>
                                 </Aside>
                                 <ChildContent>
-                                    <div class="live-heat">
-                                        @if (_peopleHeat)
-                                        {
-                                            <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred today" CellTitle="@((i, v) => $"{Cell(i)} · {v:P0}")" />
-                                        }
-                                        else
-                                        {
-                                            <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now" />
-                                        }
+                                    <div class="live-heat-frame">
+                                        <span class="heat-edge heat-edge--top" aria-hidden="true">TOP</span>
+                                        <div class="live-heat-mid">
+                                            <span class="heat-edge heat-edge--side" aria-hidden="true">L</span>
+                                            <div class="live-heat">
+                                                @if (_peopleHeat)
+                                                {
+                                                    <HeatGrid Values="@(_space?.PresenceHeat ?? [])" Label="Where tracked people and animals were centred today"
+                                                              Selected="@_pickedCell" OnCellClick="PickSpaceCell"
+                                                              CellTitle="@((i, v) => $"{ColorNamer.ZoneName(i)} · {v:P0}")" />
+                                                }
+                                                else
+                                                {
+                                                    <HeatGrid Values="@L.Heat.Select(v => (double)v).ToList()" Label="Where motion is happening right now"
+                                                              Selected="@_pickedCell" OnCellClick="PickSpaceCell"
+                                                              CellTitle="@((i, v) => $"{ColorNamer.ZoneName(i)} · {v:P0} motion")" />
+                                                }
+                                            </div>
+                                            <span class="heat-edge heat-edge--side" aria-hidden="true">R</span>
+                                        </div>
+                                        <span class="heat-edge heat-edge--bottom" aria-hidden="true">BOTTOM</span>
                                     </div>
+                                    <div class="heat-legend" aria-hidden="true" data-test="space-legend">
+                                        <span>Quiet</span>
+                                        <span class="heat-legend-bar"></span>
+                                        <span>Busy</span>
+                                    </div>
+                                    @if (_pickedCell >= 0)
+                                    {
+                                        var val = _peopleHeat
+                                            ? (_space is { PresenceHeat.Count: > 0 } && _pickedCell < _space.PresenceHeat.Count ? _space.PresenceHeat[_pickedCell] : 0)
+                                            : (_pickedCell < L.Heat.Count ? L.Heat[_pickedCell] : 0);
+                                        <p class="live-census space-picked" data-test="space-picked">
+                                            <span class="live-heat-label">CELL</span>
+                                            <b>@ColorNamer.ZoneName(_pickedCell)</b> · @val.ToString("P0", CultureInfo.InvariantCulture) @(_peopleHeat ? "presence today" : "motion now")
+                                        </p>
+                                    }
                                     @if (_space is { } space)
                                     {
+                                        var cameIn = space.Entries.Values.Sum();
+                                        var wentOut = space.Exits.Values.Sum();
+                                        var net = cameIn - wentOut;
+                                        var netLabel = net == 0 ? "balanced" : $"{(net > 0 ? "+" : "")}{net} net";
                                         <FactRow Test="stats-space" Facts="@([
-                                            new("Hot spot", space.HottestCell >= 0 ? Cell(space.HottestCell) : "—", "The grid cell with the most motion today"),
-                                            new("Favourite spot", space.FavouriteSpotCell >= 0 ? Cell(space.FavouriteSpotCell) : "—", "Where tracked people and animals were centred most today"),
-                                            new("Came in", space.Entries.Values.Sum().ToString(CultureInfo.InvariantCulture), "Tracks that entered across a frame edge today"),
-                                            new("Went out", space.Exits.Values.Sum().ToString(CultureInfo.InvariantCulture), "Tracks that left across a frame edge today"),
+                                            new("Hot spot", space.HottestCell >= 0 ? ColorNamer.ZoneName(space.HottestCell) : "—", "The grid zone with the most motion today"),
+                                            new("Favourite", space.FavouriteSpotCell >= 0 ? ColorNamer.ZoneName(space.FavouriteSpotCell) : "—", "Where tracked people and animals were centred most today"),
+                                            new("Traffic", $"{cameIn} in · {wentOut} out", $"Tracks crossing frame edges today ({netLabel})"),
+                                            new("Net flow", netLabel, space.BusiestEdge != "None" ? $"Busiest door: {space.BusiestEdge}" : "Entries minus exits today"),
                                         ])" />
                                         @* Which edge of the frame is the door: entries and exits together, per edge. *@
                                         <ShareBar Label="Comings and goings by frame edge today" Test="space-edges"
@@ -193,10 +260,10 @@
                             </TerminalPanel>
                             break;
                         case "environment":
-                            <LiveEnvironment Query="@_query" />
+                            <LiveEnvironment Query="@_query" OnWordPick="PickWord" />
                             break;
                         case "regulars":
-                            <LiveRegulars />
+                            <LiveRegulars SelectedRegularId="@_selectedRegularId" OnSelectRegular="SelectRegular" />
                             break;
                         case "activity":
                             <LiveActivity Patterns="@_patterns" Presence="@_presence" />

@@ -55,6 +55,16 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
 
     public bool IsRunning => _cts is not null;
 
+    /// <summary>Privacy shutter: pauses sensing inputs without stopping the session.</summary>
+    public bool Paused { get; private set; }
+
+    public void SetPaused(bool paused)
+    {
+        if (Paused == paused) return;
+        Paused = paused;
+        Notify();
+    }
+
     /// <summary>Whether a camera session also runs the vision model for captions.</summary>
     public bool Captions
     {
@@ -218,8 +228,11 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         }
 
         _ = RunLoopAsync(FlushEvery, FlushAsync, _cts.Token);
+        _ = RunLoopAsync(TimeSpan.FromSeconds(30), _ => SaveSummaryAsync(), _cts.Token);
+        if (!demo) _ = RunLoopAsync(TimeSpan.FromMinutes(5), _ => CapturePeriodicSnapshotAsync(), _cts.Token);
         _ = ChapterLoopAsync(session.Id, _cts.Token);
         _ = RunLoopAsync(demo ? DemoStep : TimeSpan.FromSeconds(1), demo ? DemoTickAsync : VlmTickAsync, _cts.Token);
+        Paused = false;
         Notify();
         return null;
     }
@@ -236,6 +249,56 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
             await js.TryInvokeVoidAsync("powatchFeed.undock");
     }
 
+    /// <summary>Snapshots the current on-device face &amp; body session aggregates into a storable DTO.</summary>
+    public SessionSummaryDto? BuildSummary()
+    {
+        var hasFaces = FaceTrends.SessionBeauty is not null || FaceTrends.SessionAge is not null || FaceTrends.FacesHistory.Count > 0 || FacesLabelled > 0;
+        var hasBodies = Bodies.ObservedSeconds >= 1 || Bodies.PostureScore is not null || Bodies.MeanEnergy is not null;
+        if (!hasFaces && !hasBodies) return null;
+
+        FaceSummaryDto? faces = hasFaces ? new FaceSummaryDto
+        {
+            MeanBeauty = FaceTrends.SessionBeauty is { } mb ? Math.Round(mb, 1) : null,
+            BeautyLow = FaceTrends.BeautyRange?.Low,
+            BeautyHigh = FaceTrends.BeautyRange?.High,
+            MeanAge = FaceTrends.SessionAge is { } ma ? Math.Round(ma, 1) : null,
+            AgeLow = FaceTrends.AgeRange?.Low,
+            AgeHigh = FaceTrends.AgeRange?.High,
+            MaxFacesAtOnce = FaceTrends.FacesHistory.Count > 0 ? (int)Math.Round(FaceTrends.FacesHistory.Max()) : 0,
+            FacesLabelled = FacesLabelled,
+            MaleShare = FaceTrends.SessionSexSplit?.Male,
+            FemaleShare = FaceTrends.SessionSexSplit?.Female,
+            BeautyHistory = [.. FaceTrends.BeautyHistory],
+            AgeHistory = [.. FaceTrends.AgeHistory]
+        } : null;
+
+        BodySummaryDto? bodies = hasBodies ? new BodySummaryDto
+        {
+            ObservedSeconds = Math.Round(Bodies.ObservedSeconds, 1),
+            PostureScore = Bodies.PostureScore is { } ps ? Math.Round(ps, 1) : null,
+            UprightSeconds = Math.Round(Bodies.UprightSeconds, 1),
+            SlumpedSeconds = Math.Round(Bodies.SlumpedSeconds, 1),
+            LongestSlumpSeconds = Math.Round(Bodies.LongestSlumpSeconds, 1),
+            MeanEnergy = Bodies.MeanEnergy is { } me ? Math.Round(me, 3) : null,
+            FullBodySeen = Bodies.FullBodySeen,
+            ArmBalance = Bodies.ArmBalance is { } ab ? Math.Round(ab, 3) : null,
+            LegBalance = Bodies.LegBalance is { } lb ? Math.Round(lb, 3) : null,
+            ShoulderTilt = Bodies.ShoulderTilt is { } st ? Math.Round(st, 1) : null,
+            OpenSeconds = Math.Round(Bodies.OpenSeconds, 1),
+            ActivitySeconds = Bodies.ActivitySeconds.ToDictionary(kv => kv.Key.ToString(), kv => Math.Round(kv.Value, 1)),
+            CueSeconds = Bodies.CueSeconds.ToDictionary(kv => kv.Key.ToString(), kv => Math.Round(kv.Value, 1)),
+            EnergyHistory = [.. Bodies.EnergyHistory.Select(v => Math.Round(v, 3))]
+        } : null;
+
+        return new SessionSummaryDto { Faces = faces, Bodies = bodies };
+    }
+
+    private async Task SaveSummaryAsync()
+    {
+        if (Live.Session is not { } session || BuildSummary() is not { } summary) return;
+        await api.SaveSessionSummaryAsync(session.Id, summary);
+    }
+
     /// <summary>Stops the session and leaves its recap in <see cref="Recap"/>, whichever control stopped it.</summary>
     public async Task StopAsync()
     {
@@ -243,6 +306,10 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         await _cts.CancelAsync();
         _cts.Dispose();
         _cts = null;
+        Paused = false;
+
+        // Capture the final session-level on-device aggregates before tearing down face/body trackers.
+        var finalSummary = BuildSummary();
 
         await js.TryInvokeVoidAsync("powatchPixels.stop");
         await js.TryInvokeVoidAsync("powatchAudio.stop");
@@ -268,6 +335,9 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
         await SendOutboxAsync();
         if (Live.Session is { } session)
         {
+            if (finalSummary is not null)
+                await api.SaveSessionSummaryAsync(session.Id, finalSummary);
+
             // Offline or refused: keep the page-exit guard so leaving still ends the session server-side.
             if (await api.StopSessionAsync(session.Id) is { } stopped)
             {

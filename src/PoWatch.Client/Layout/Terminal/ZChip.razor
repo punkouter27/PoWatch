@@ -1,19 +1,34 @@
-@* How far today sits from your usual, in standard deviations. Flagged at |z| ≥ 2. *@
+@* How far today sits from your usual, in plain words (with optional multiplier) and standard deviations in tooltip. Flagged at |z| ≥ 2. *@
 <span class="@CssClass" title="@Tooltip">@Summary</span>
 
 @code {
     [Parameter] public double? Z { get; set; }
+    [Parameter] public double? Today { get; set; }
+    [Parameter] public double? Mean { get; set; }
 
     /// <summary>The flag threshold, shared with panels that light up when one of their numbers is unusual.</summary>
     public static bool IsUnusual(double? z) => z is { } v && Math.Abs(v) >= 2;
 
-    private string Summary => Z switch
+    private string Summary
     {
-        null => "Building history",
-        >= 2 => "Higher than usual",
-        <= -2 => "Lower than usual",
-        _ => "Within usual range"
-    };
+        get
+        {
+            if (Z is null) return "Building history";
+            if (Z >= 2)
+            {
+                if (Today is { } t && Mean is > 0.001 and var m && t / m >= 1.4)
+                    return FormattableString.Invariant($"{t / m:0.0}× busier than usual");
+                return "Higher than usual";
+            }
+            if (Z <= -2)
+            {
+                if (Today is { } t && Mean is > 0.001 and var m && t / m <= 0.6)
+                    return "Much quieter than usual";
+                return "Lower than usual";
+            }
+            return "Within usual range";
+        }
+    }
 
     // Round first: a value like -0.04 would otherwise format as "-+0.0" (the sign survives rounding).
     private string Text => Z is { } z

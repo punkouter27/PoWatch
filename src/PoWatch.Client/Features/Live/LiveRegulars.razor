@@ -1,5 +1,6 @@
-@* Who PoWatch knows and has seen this session: the regulars recognised by look, and whether they are in
-   the frame right now. *@
+@* Who PoWatch knows and has seen this session: anonymous regulars recognised by look, sorted with active
+   visitors pinned at the top, showing an anonymous appearance colour swatch, last-seen freshness, session
+   dwell, all-time pattern hints, and click-to-highlight across Camera and Narration. *@
 @inject SensingSession Sensing
 
 <TerminalPanel Title="Regulars" Class="cell-regulars" Test="live-regulars" Flush="true">
@@ -13,16 +14,76 @@
                 new("Peak together", L.PeakConcurrency.ToString(CultureInfo.InvariantCulture), "The most tracked at once this session"),
             ])" />
         }
-        <WhoList Rows="@Rows()" Label="Regulars seen this session" Test="regulars-list" Empty="Nobody known has been seen this session." />
+        @{ var ordered = OrderedRegulars(); }
+        @if (ordered.Count == 0)
+        {
+            <p class="term-empty" data-test="regulars-list-empty">Nobody known has been seen this session.</p>
+        }
+        else
+        {
+            <ul class="live-who regulars-list" aria-label="Regulars seen this session" data-test="regulars-list">
+                @foreach (var r in ordered)
+                {
+                    var here = Here(r.Id);
+                    var selected = SelectedRegularId == r.Id;
+                    var swatch = L.RegularColor(r.Id);
+                    var sessionSec = L.RegularSessionSeconds(r.Id);
+                    <li @key="r.Id" class="regular-row @(selected ? "is-selected" : null)">
+                        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain regular-pick"
+                                      Click="() => OnSelectRegular.InvokeAsync(r)"
+                                      title="Click to highlight on Camera and filter Narration">
+                            <span class="regular-id">
+                                @if (swatch is not null)
+                                {
+                                    <i class="regular-swatch" style="background: @swatch" aria-hidden="true"></i>
+                                }
+                                @if (here)
+                                {
+                                    <span class="regular-live-dot" aria-hidden="true"></span>
+                                }
+                                <b>@r.DisplayName</b>
+                            </span>
+                            <span class="regular-meta">
+                                @StatusNote(r, here, sessionSec)
+                                @if (r.Visits > 0)
+                                {
+                                    <small class="regular-history">@r.Visits visits · @DisplayText.Duration(r.DwellSeconds) all-time</small>
+                                }
+                            </span>
+                        </RadzenButton>
+                    </li>
+                }
+            </ul>
+        }
     </ChildContent>
 </TerminalPanel>
 
 @code {
+    [Parameter] public string? SelectedRegularId { get; set; }
+    [Parameter] public EventCallback<RegularDto?> OnSelectRegular { get; set; }
+
     private LiveSensingState L => Sensing.Live;
 
-    private List<WhoList.Row> Rows() =>
-        L.Regulars.Select(r => new WhoList.Row(r.DisplayName, Here(r.Id) ? "HERE NOW" : "SEEN")).ToList();
+    private List<RegularDto> OrderedRegulars() =>
+        L.Regulars
+            .OrderByDescending(r => Here(r.Id))
+            .ThenByDescending(r => L.RegularLastSeen(r.Id) ?? r.LastSeenUtc)
+            .ToList();
 
     private bool Here(string regularId) =>
         L.Tracks.Any(t => L.RegularFor(t.TrackId)?.Id == regularId);
+
+    private string StatusNote(RegularDto regular, bool here, double sessionSeconds)
+    {
+        if (here)
+        {
+            var track = L.Tracks.FirstOrDefault(t => L.RegularFor(t.TrackId)?.Id == regular.Id);
+            var stay = track is not null ? DisplayText.Duration((DateTimeOffset.UtcNow - track.FirstSeenUtc).TotalSeconds) : null;
+            return stay is not null ? $"HERE NOW · {stay}" : "HERE NOW";
+        }
+        var last = L.RegularLastSeen(regular.Id) ?? regular.LastSeenUtc;
+        var ago = Math.Max(0, (DateTimeOffset.UtcNow - last).TotalSeconds);
+        var agoText = ago < 10 ? "just left" : $"last seen {DisplayText.Duration(ago)} ago";
+        return sessionSeconds >= 1 ? $"{agoText} · {DisplayText.Duration(sessionSeconds)} this session" : agoText;
+    }
 }

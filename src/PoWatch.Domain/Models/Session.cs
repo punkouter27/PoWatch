@@ -13,6 +13,9 @@ public sealed record Session
     public required string TimeZoneId { get; init; }
     public DateTimeOffset LastActivityUtc { get; init; }
 
+    /// <summary>Optional JSON blob of session-level on-device aggregates (faces, body activity, cues) for Journal reports.</summary>
+    public string? SummaryJson { get; init; }
+
     public bool IsRunning => EndedUtc is null;
 
     public TimeZoneInfo TimeZone => TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId);
@@ -41,6 +44,9 @@ public sealed record Session
 
         return this with { EndedUtc = endedUtc };
     }
+
+    /// <summary>Attaches or updates the session's captured aggregate summary JSON.</summary>
+    public Session WithSummary(string? summaryJson) => this with { SummaryJson = summaryJson };
 
     /// <summary>How long the session has run, up to <paramref name="nowUtc"/> if it is still running.</summary>
     public TimeSpan Duration(DateTimeOffset nowUtc) => (EndedUtc ?? nowUtc) - StartedUtc;

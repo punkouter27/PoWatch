@@ -1,6 +1,10 @@
+using System.Text.Json;
 using Microsoft.Extensions.Caching.Hybrid;
+using PoWatch.Api.Hosting;
 using PoWatch.Api.Security;
+using PoWatch.Application.Contracts;
 using PoWatch.Application.Features.Stats;
+using PoWatch.Shared.Models;
 
 namespace PoWatch.Api.Features.Stats;
 
@@ -42,12 +46,19 @@ internal static class StatsEndpoints
         Map(group, "pipeline", (s, u, w, ct) => s.PipelineAsync(u, w, ct));
 
         // Everything the families know about a range in one file; the Live grid shows only the headlines.
-        group.MapGet("/all", async (string? range, string? tz, Guid? sessionId, string? date, UserId u, StatsQueryService s, CancellationToken ct) =>
+        group.MapGet("/all", async (string? range, string? tz, Guid? sessionId, string? date, UserId u, StatsQueryService s, ISessionRepository sessions, CancellationToken ct) =>
             {
                 var (error, w, _) = await WindowAsync(u, range, tz, sessionId, date, s, ct);
                 if (w is null) return error!;
 
                 var raw = await s.RawAsync(u, w, ct);
+                SessionSummaryDto? sessionSummary = null;
+                if (sessionId is { } id && await sessions.GetAsync(u, id, ct) is { SummaryJson.Length: > 0 } sess)
+                {
+                    try { sessionSummary = JsonSerializer.Deserialize(sess.SummaryJson, ApiJson.Default.SessionSummaryDto); }
+                    catch (JsonException) { }
+                }
+
                 return Results.Ok(new
                 {
                     presence = await s.PresenceAsync(u, w, ct),
@@ -56,6 +67,7 @@ internal static class StatsEndpoints
                     patterns = await s.PatternsAsync(u, w, ct),
                     environment = await s.EnvironmentAsync(u, w, ct),
                     pipeline = await s.PipelineAsync(u, w, ct),
+                    sessionSummary,
                     // Session, today or one day: the stored record itself. Longer ranges have only the rollups above.
                     ticks = raw?.Ticks,
                     events = raw?.Events.Select(e => new { e.SessionId, e.AtUtc, Kind = e.Kind.ToString(), e.TrackId, e.Class, Edge = e.Edge.ToString(), e.Text, e.Score, e.DwellSeconds, e.RegularId, e.ImagePath }),

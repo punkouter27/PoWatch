@@ -1,14 +1,24 @@
-@* Live's headline numbers for the range beside your usual day, and how far today sits from it (σ).
-   Head counts (now, peak, visits) are In frame's; the third headline number, activity, has its own panel. *@
+@* Live's headline numbers for the range beside your usual day, and how far today sits from it.
+   Includes plain-language anomaly chips, a weekday vs. all-days baseline toggle, a countdown before
+   visits/hour settles, a visual rhythm match meter, and oriented 24-hour markers. *@
 
 <TerminalPanel Title="Key metrics" Class="@(Unusual ? "cell-metrics panel-alert" : "cell-metrics")" Test="live-metrics" Flush="true">
-    <Aside>@(Unusual ? "UNUSUAL · " : null)@Range.ToUpperInvariant() vs USUAL</Aside>
+    <Aside>
+        <span>@(Unusual ? "UNUSUAL · " : null)@Range.ToUpperInvariant() vs @(SameWeekday ? DateTime.Now.ToString("ddd", CultureInfo.InvariantCulture).ToUpperInvariant() : "USUAL")</span>
+        @if (HasWeekdayBaseline)
+        {
+            <span class="space-switch" role="group" aria-label="Baseline comparison">
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(SameWeekday ? "pw-plain" : "pw-plain on")" aria-pressed="@(SameWeekday ? "false" : "true")" Click="() => _sameWeekday = false" data-test="baseline-all">ALL</RadzenButton>
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="@(SameWeekday ? "pw-plain on" : "pw-plain")" aria-pressed="@(SameWeekday ? "true" : "false")" Click="() => _sameWeekday = true" data-test="baseline-weekday">@DateTime.Now.ToString("ddd", CultureInfo.InvariantCulture).ToUpperInvariant()</RadzenButton>
+            </span>
+        }
+    </Aside>
     <ChildContent>
         <div class="metric-cards">
             <RadzenCard class="metric-card" data-test="metric-occupancy">
                 <StatCell Label="Occupancy" Value="@DisplayText.Percent(Presence?.Occupancy)"
                           Hint="@($"Usual {DisplayText.Percent(Anomaly("occupancy")?.Mean)}")" Test="stats-occupancy">
-                    <ZChip Z="@Anomaly("occupancy")?.Z" />
+                    <ZChip Z="@Anomaly("occupancy")?.Z" Today="@Presence?.Occupancy" Mean="@Anomaly("occupancy")?.Mean" />
                 </StatCell>
                 <Sparkline Values="@OccupancyTrend" Max="1" Label="Occupancy over the session" />
             </RadzenCard>
@@ -17,23 +27,42 @@
                 <RadzenCard class="metric-card">
                     <StatCell Label="Visits per hour" Value="@DisplayText.Number(Presence?.VisitsPerHour, "0.0")"
                               Hint="@($"Usual {DisplayText.Number(Anomaly("visits/hour")?.Mean, "0.0")}")">
-                        <ZChip Z="@Anomaly("visits/hour")?.Z" />
+                        <ZChip Z="@Anomaly("visits/hour")?.Z" Today="@Presence?.VisitsPerHour" Mean="@Anomaly("visits/hour")?.Mean" />
                     </StatCell>
                     <Sparkline Values="@VisitsTrend" Cyan="true" Label="Visits over the session" />
                 </RadzenCard>
             }
-            @if (Patterns is { TodayProfile.Count: 24, UsualProfile.Count: 24 } day && day.UsualProfile.Any(v => v > 0))
+            else if (Presence is not null)
+            {
+                var minsLeft = Math.Max(1, (int)Math.Ceiling((600 - Presence.SecondsObserved) / 60.0));
+                <RadzenCard class="metric-card metric-card--muted" data-test="metric-visits-pending">
+                    <StatCell Label="Visits per hour" Value="—"
+                              Hint="@($"Settling · ready in {minsLeft}m")" />
+                </RadzenCard>
+            }
+            @if (Patterns is { TodayProfile.Count: 24 } day && ActiveBaseline is { Count: 24 } baseline && baseline.Any(v => v > 0))
             {
                 <RadzenCard class="metric-card" data-test="metric-day-shape">
-                    <StatCell Label="Today vs usual" Value="@($"{DateTime.Now.Hour:00}:00")"
-                              Hint="Occupancy by hour; the faint line is your usual day" />
-                    <Sparkline Values="@day.TodayProfile.Take(DateTime.Now.Hour + 1).ToList()" Baseline="@day.UsualProfile" Slots="24"
-                               Label="Today's occupancy by hour over your usual day" />
+                    <StatCell Label="@(SameWeekday ? $"Today vs {DateTime.Now:dddd}" : "Today vs usual")" Value="@($"{DateTime.Now.Hour:00}:00")"
+                              Hint="Hourly occupancy; faint line is baseline, vertical mark is now" />
+                    <Sparkline Values="@day.TodayProfile.Take(DateTime.Now.Hour + 1).ToList()" Baseline="@baseline" Slots="24"
+                               NowSlot="@DateTime.Now.Hour" AxisLabels="@DayAxis"
+                               Label="Today's occupancy by hour over your baseline day" />
                 </RadzenCard>
             }
         </div>
+        @if (Patterns?.RhythmScore is { } r)
+        {
+            var matchPct = Math.Clamp((int)Math.Round(((r + 1) / 2.0) * 100), 0, 100);
+            <div class="meter-row" data-test="rhythm-meter" title="How closely today's hour-by-hour curve matches your usual day">
+                <span class="live-heat-label">RHYTHM</span>
+                <div class="meter-track" role="img" aria-label="@($"{matchPct}% match to usual day")">
+                    <span class="meter-fill @(r >= 0.6 ? "meter-fill--good" : r >= 0.2 ? "meter-fill--warn" : "meter-fill--low")" style="width: @matchPct%"></span>
+                </div>
+                <span class="meter-val">@matchPct% match (@RhythmWord(r))</span>
+            </div>
+        }
         <FactRow Test="metric-patterns" Facts="@([
-            new("Rhythm", Rhythm, "How closely today's hour-by-hour curve follows your usual day: +1.00 is textbook, 0 unrelated, below 0 upside down"),
             new("Next busy", Patterns?.NextBusyHour is { } hour ? $"{hour:00}:00" : null, "The next hour that is usually busiest, from the last 28 days"),
             new("4-week trend", Trend, "How occupancy has been moving per day over the last 28 days"),
         ])" />
@@ -41,6 +70,9 @@
 </TerminalPanel>
 
 @code {
+    private static readonly string[] DayAxis = ["00:00", "12:00", "23:00"];
+    private bool _sameWeekday;
+
     /// <summary>Visits an hour from a few minutes (342/h after 55 s) says nothing; the row waits for ten.</summary>
     private bool RateTooEarly => Presence is null || Presence.SecondsObserved < 600;
 
@@ -50,15 +82,16 @@
     [Parameter] public IReadOnlyList<double> OccupancyTrend { get; set; } = [];
     [Parameter] public IReadOnlyList<double> VisitsTrend { get; set; } = [];
 
+    private bool HasWeekdayBaseline => Patterns is { HourByWeekday.Count: 7 } p && p.HourByWeekday[(int)DateTime.Now.DayOfWeek].Count == 24 && p.HourByWeekday[(int)DateTime.Now.DayOfWeek].Any(v => v > 0);
+    private bool SameWeekday => _sameWeekday && HasWeekdayBaseline;
+    private IReadOnlyList<double>? ActiveBaseline => SameWeekday ? Patterns?.HourByWeekday[(int)DateTime.Now.DayOfWeek] : Patterns?.UsualProfile;
+
     private AnomalyDto? Anomaly(string metric) => Patterns?.Anomalies.FirstOrDefault(a => a.Metric == metric);
 
     /// <summary>Occupancy, or visits once the rate is shown, is 2σ or more from usual: the panel lights up.</summary>
     private bool Unusual => ZChip.IsUnusual(Anomaly("occupancy")?.Z) || (!RateTooEarly && ZChip.IsUnusual(Anomaly("visits/hour")?.Z));
 
-    /// <summary>"+0.82 typical": today's curve against the usual one; null until today has a shape.</summary>
-    private string? Rhythm => Patterns?.RhythmScore is { } r
-        ? string.Create(CultureInfo.InvariantCulture, $"{r:+0.00;-0.00} {(r >= 0.8 ? "typical" : r >= 0.4 ? "loose" : r >= 0 ? "off-beat" : "flipped")}")
-        : null;
+    private static string RhythmWord(double r) => r >= 0.8 ? "typical" : r >= 0.4 ? "loose" : r >= 0 ? "off-beat" : "flipped";
 
     /// <summary>"↑ 0.4 pts/day" in occupancy percentage points; flat under 0.05.</summary>
     private string? Trend => Patterns is not { Calendar.Count: >= 7 } p

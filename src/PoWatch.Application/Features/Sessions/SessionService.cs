@@ -33,6 +33,16 @@ public sealed class SessionService(ISessionRepository sessions, TimeProvider tim
         return stopped;
     }
 
+    /// <summary>Saves the session's captured aggregate summary JSON. Null when the session is not found.</summary>
+    public async Task<Session?> SaveSummaryAsync(string userId, Guid sessionId, string summaryJson, CancellationToken cancellationToken)
+    {
+        var session = await sessions.GetAsync(userId, sessionId, cancellationToken);
+        if (session is null) return null;
+        var updated = session.WithSummary(summaryJson);
+        await sessions.UpsertAsync(updated, cancellationToken);
+        return updated;
+    }
+
     public async Task<Session?> GetAsync(string userId, Guid sessionId, CancellationToken cancellationToken)
     {
         var session = await sessions.GetAsync(userId, sessionId, cancellationToken);

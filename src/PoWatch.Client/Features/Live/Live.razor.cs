@@ -29,6 +29,13 @@ public sealed partial class Live
     private bool _demoEffects;
     private bool _effectsMounted;
     private bool _peopleHeat;
+    private int _pickedCell = -1;
+    private bool _showBoxes = true;
+    private bool _showFaces = true;
+    private bool _showPose = true;
+    private bool _cameraExpanded;
+    private string _narrationSearch = string.Empty;
+    private string? _selectedRegularId;
     private IReadOnlyList<double> _occupancyTrend = [];
     private IReadOnlyList<double> _visitsTrend = [];
     private DotNetObjectReference<Live>? _self;
@@ -131,6 +138,48 @@ public sealed partial class Live
     }
 
     private void ToggleDemoEffects() => _demoEffects = !_demoEffects;
+
+    private void PickSpaceCell(int index) => _pickedCell = _pickedCell == index ? -1 : index;
+
+    private void TogglePause() => Sensing.SetPaused(!Sensing.Paused);
+
+    private async Task ToggleFaceOverlayAsync()
+    {
+        _showFaces = !_showFaces;
+        await JS.TryInvokeVoidAsync("powatchFaces.setVisible", _showFaces);
+    }
+
+    private async Task TogglePoseOverlayAsync()
+    {
+        _showPose = !_showPose;
+        await JS.TryInvokeVoidAsync("powatchBodies.setVisible", _showPose);
+    }
+
+    private async Task ToggleCameraExpandAsync()
+    {
+        _cameraExpanded = !_cameraExpanded;
+        _layoutChanged = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnNarrationSearchChanged(string query) => _narrationSearch = query;
+
+    private void PickWord(string word) =>
+        _narrationSearch = string.Equals(_narrationSearch, word, StringComparison.OrdinalIgnoreCase) ? string.Empty : word;
+
+    private void SelectRegular(RegularDto? regular)
+    {
+        if (regular is null || _selectedRegularId == regular.Id)
+        {
+            _selectedRegularId = null;
+            _narrationSearch = string.Empty;
+        }
+        else
+        {
+            _selectedRegularId = regular.Id;
+            _narrationSearch = regular.DisplayName;
+        }
+    }
 
     private async Task StartAsync(bool demo)
     {

@@ -1,16 +1,20 @@
 @* Under Live's camera: what the session saw, said and heard, and who came and went, as one feed of lines,
-   newest first, under a minimap of the whole session. While recording it is the browser's own narration (LiveSensingState); for a session that
-   has stopped it is what the server kept of it (the replay's events). *@
+   newest first, with live keyword search, collapsed consecutive repeats, icon badges, inline thumbnails,
+   and an explicit paused-scroll banner. *@
 @inject SensingSession Sensing
 @inject PoWatchApiClient Api
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
 <div class="live-lines" data-test="live-narration">
-    @{ var all = Lines().ToList(); var lines = all.Where(e => TimelineEntry.Passes(e, _filter)).ToList(); }
+    @{
+        var all = Lines().ToList();
+        var filtered = all.Where(e => TimelineEntry.Passes(e, _filter) && MatchesSearch(e)).ToList();
+        var collapsed = CollapseRepeats(filtered);
+    }
     <div class="live-lines-head">
         <span class="term-stat-hint">@Status</span>
-        <TranscriptLink Entries="@lines" Title="@TranscriptTitle" FileName="@TranscriptFile" />
+        <TranscriptLink Entries="@filtered" Title="@TranscriptTitle" FileName="@TranscriptFile" />
     </div>
     <FactRow Test="narration-facts" Facts="@([
         new("Per minute", PerMinute(all), "Lines written per minute over the session"),
@@ -20,23 +24,35 @@
         new("Comings", Count(all, "enter", "exit"), "Arrivals and departures"),
         new("Longest quiet", QuietGap(all), "The longest wait between two lines"),
     ])" />
-    <TimelineFilters @bind-Value="_filter" TestPrefix="narration" Label="Filter narration" />
+    <div class="narration-controls">
+        <TimelineFilters @bind-Value="_filter" TestPrefix="narration" Label="Filter narration" />
+        <div class="narration-search">
+            <RadzenTextBox class="pw-plain narration-search-input" Value="@SearchQuery"
+                           Placeholder="Search narration…" aria-label="Search narration"
+                           @oninput="OnSearchInput" data-test="narration-search" />
+            @if (!string.IsNullOrEmpty(SearchQuery))
+            {
+                <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain narration-search-clear"
+                              Click="ClearSearchAsync" title="Clear search" aria-label="Clear search" data-test="narration-search-clear">×</RadzenButton>
+            }
+        </div>
+    </div>
     @if (Sensing.Live.LastError is { } error && Recording)
     {
         <p class="live-error" role="status">@error</p>
     }
-    @if (lines.Count == 0)
+    @if (collapsed.Count == 0)
     {
-        <p class="term-empty" data-test="narration-empty">@(all.Count > 0 ? "No events of this kind yet." : Empty)</p>
+        <p class="term-empty" data-test="narration-empty">@(all.Count > 0 ? "No matching events yet." : Empty)</p>
     }
     else
     {
-        <SessionMinimap Lines="@lines" List="@_list" Start="@(Started ?? lines[^1].AtUtc)" End="@(Recording ? DateTimeOffset.UtcNow : _endedUtc ?? lines[0].AtUtc)" Live="@Recording" OnPick="@LightAsync" />
-        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button narration-new" data-narration-new hidden>New events ↑</RadzenButton>
-        <ol class="moment-list" data-test="narration-lines" @ref="_list" @key="_filter">
-            @foreach (var entry in lines)
+        <SessionMinimap Lines="@filtered" List="@_list" Start="@(Started ?? filtered[^1].AtUtc)" End="@(Recording ? DateTimeOffset.UtcNow : _endedUtc ?? filtered[0].AtUtc)" Live="@Recording" OnPick="@LightAsync" />
+        <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="pw-plain term-button narration-new" data-narration-new hidden>Scroll paused · Jump to latest ↑</RadzenButton>
+        <ol class="moment-list" data-test="narration-lines" @ref="_list" @key="@($"{_filter}:{SearchQuery}")">
+            @foreach (var (entry, count) in collapsed)
             {
-                <MomentLine @key="entry" Entry="@entry" Lit="@(ReferenceEquals(entry, _lit))" />
+                <MomentLine @key="entry" Entry="@entry" RepeatCount="@count" Lit="@(ReferenceEquals(entry, _lit))" />
             }
         </ol>
     }
@@ -45,6 +61,10 @@
 @code {
     /// <summary>The session Live is about (Guid.Empty before the first one).</summary>
     [Parameter] public Guid SessionId { get; set; }
+
+    /// <summary>Live keyword filter (also set when clicking a word in Room insights or a regular in Regulars).</summary>
+    [Parameter] public string SearchQuery { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SearchQueryChanged { get; set; }
 
     private Guid _loaded;
     private DateTimeOffset? _startedUtc;
@@ -76,6 +96,41 @@
         : SessionId == Guid.Empty
             ? "Press Start: everything the camera sees and the microphone hears is written here."
             : "Nothing was written down in this session.";
+
+    private Task OnSearchInput(ChangeEventArgs e) => SearchQueryChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+
+    private Task ClearSearchAsync() => SearchQueryChanged.InvokeAsync(string.Empty);
+
+    private bool MatchesSearch(TimelineEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(SearchQuery)) return true;
+        var q = SearchQuery.Trim();
+        return entry.Sentence.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || entry.Text.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || (entry.Who?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    /// <summary>Collapses consecutive identical captions within 3 minutes into one line with a ×N repeat count.</summary>
+    private static List<(TimelineEntry Entry, int Count)> CollapseRepeats(List<TimelineEntry> entries)
+    {
+        var result = new List<(TimelineEntry Entry, int Count)>(entries.Count);
+        foreach (var entry in entries)
+        {
+            if (result.Count > 0
+                && entry.Kind == "caption"
+                && result[^1].Entry.Kind == "caption"
+                && string.Equals(result[^1].Entry.Text, entry.Text, StringComparison.OrdinalIgnoreCase)
+                && Math.Abs((result[^1].Entry.AtUtc - entry.AtUtc).TotalMinutes) <= 3)
+            {
+                result[^1] = (result[^1].Entry, result[^1].Count + 1);
+            }
+            else
+            {
+                result.Add((entry, 1));
+            }
+        }
+        return result;
+    }
 
     private static string? Count(List<TimelineEntry> lines, params string[] kinds) =>
         lines.Count == 0 ? null : lines.Count(e => kinds.Contains(e.Kind)).ToString(CultureInfo.InvariantCulture);

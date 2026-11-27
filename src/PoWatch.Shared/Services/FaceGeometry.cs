@@ -4,7 +4,7 @@ namespace PoWatch.Shared.Services;
 /// How one face scores against the classical canons of proportion. <see cref="Beauty"/> is the
 /// composite, 0–100; <see cref="Symmetry"/> and <see cref="Canons"/> are its two halves, both 0–1.
 /// </summary>
-public readonly record struct FaceScore(double Beauty, double Symmetry, double Canons);
+public readonly record struct FaceScore(double Beauty, double Symmetry, double Canons, double Golden = 0, double Thirds = 0, double Fifths = 0);
 
 /// <summary>
 /// Traditional beauty, read as geometry. This is the classical canon — symmetry, facial thirds, the
@@ -72,12 +72,16 @@ public static class FaceGeometry
         if (faceHeight <= 0) return null;
 
         var symmetry = Symmetry(landmarks, faceWidth);
-        var canons = (0.45 * GoldenProportions(landmarks, faceWidth))
-                     + (0.30 * LowerThirds(landmarks))
-                     + (0.25 * RuleOfFifths(landmarks, faceWidth));
+        var golden = GoldenProportions(landmarks, faceWidth);
+        var thirds = LowerThirds(landmarks);
+        var fifths = RuleOfFifths(landmarks, faceWidth);
+        var canons = (0.45 * golden)
+                     + (0.30 * thirds)
+                     + (0.25 * fifths);
 
         var beauty = Math.Clamp((0.35 * symmetry) + (0.65 * canons), 0, 1) * 100;
-        return new FaceScore(Math.Round(beauty, 1), Math.Round(symmetry, 3), Math.Round(canons, 3));
+        return new FaceScore(Math.Round(beauty, 1), Math.Round(symmetry, 3), Math.Round(canons, 3),
+            Math.Round(golden, 3), Math.Round(thirds, 3), Math.Round(fifths, 3));
     }
 
     /// <summary>

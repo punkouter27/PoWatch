@@ -138,6 +138,7 @@ internal static class StatsEntityMapper
             ["TimeZoneId"] = session.TimeZoneId
         };
         if (session.EndedUtc is { } ended) entity["EndedUtc"] = ended;
+        if (!string.IsNullOrEmpty(session.SummaryJson)) entity["SummaryJson"] = session.SummaryJson;
         return entity;
     }
 
@@ -151,7 +152,8 @@ internal static class StatsEntityMapper
             StartedUtc = startedUtc,
             EndedUtc = e.GetDateTimeOffset("EndedUtc"),
             TimeZoneId = e.GetString("TimeZoneId"),
-            LastActivityUtc = e.GetDateTimeOffset("LastActivityUtc") ?? startedUtc
+            LastActivityUtc = e.GetDateTimeOffset("LastActivityUtc") ?? startedUtc,
+            SummaryJson = e.GetString("SummaryJson")
         };
     }
 

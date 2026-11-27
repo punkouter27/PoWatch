@@ -20,4 +20,7 @@ public sealed record RecapDto
 
     /// <summary>template, or the server model's provider name — who wrote the paragraph.</summary>
     public string Source { get; init; } = "template";
+
+    /// <summary>Optional session-level face and body aggregates for session recaps and PDFs.</summary>
+    public SessionSummaryDto? SessionSummary { get; init; }
 }
