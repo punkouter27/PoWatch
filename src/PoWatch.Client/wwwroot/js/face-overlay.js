@@ -3,8 +3,11 @@
 // (a slot number per face) and hands .NET two things, both kept in memory for the session only
 // (SensingSession.Faces, docs/adr/0001-* and 0002-*):
 //   - every half second, each face's 478 points, which .NET scores for traditional beauty;
-//   - every 1.5 s, one face's reading from face-reader-worker.js (age band, presentation, and a
-//     descriptor for its temporary "Person N" label), read from a crop cut around its landmarks.
+//   - every 1.5 s, one face's reading from face-reader-worker.js (age band, presentation, emotion mix,
+//     and a descriptor for its temporary "Person N" label), read from a crop cut around its landmarks;
+//   - blinks counted on every landmarker frame (5 a second, so short blinks are not missed between
+//     the half-second hand-overs), and for the experimental heart rate the mean colour of the forehead
+//     and cheeks about 15 times a second. Only the colour means go to .NET, never pixels.
 // .NET hands back each face's label, and this paints one chip per face on the hairline (Person 1,
 // Person 2 …), so the picture itself says who is who. Nothing is stored or posted to the server.
 //
@@ -28,6 +31,15 @@
   // Faint on purpose: the picture stays the picture, and the points only say "your face is being read".
   const DOT_RADIUS = 1;
   const DOT_COLOR = 'rgba(94, 234, 212, 0.25)';
+  // MediaPipe's eyeBlink weight above this is a closed eye; a closed-after-open frame is one blink.
+  const BLINK_CLOSED = 0.45;
+  // Skin colour samples for the heart rate: ~15 a second, from three small patches per face.
+  const PULSE_EVERY_MS = 66;
+  const PULSE_PATCH = 8;
+  const PULSE_MIN_PX = 4;
+  // Forehead (between landmarks 108/337 across, 10 down to 9) and cheek centres (50, 280).
+  const FOREHEAD_L = 108, FOREHEAD_R = 337, FOREHEAD_TOP = 10, FOREHEAD_BOTTOM = 9;
+  const CHEEK_L = 50, CHEEK_R = 280, FACE_L = 234, FACE_R = 454;
 
   let _worker = null;
   let _reader = null;
@@ -39,10 +51,12 @@
   let _readPausedUntil = 0;
   let _timer = null;
   let _readTimer = null;
+  let _pulseTimer = null;
+  let _pulseCtx = null;
   let _lastSent = 0;
   let _exports = null;
   let _nextSlot = 1;
-  /** The faces in view: { slot, cx, cy, points, reads }. */
+  /** The faces in view: { slot, cx, cy, points, reads, blinks, closed, pulse }. */
   let _slots = [];
   /** Each face's temporary label, by slot, as .NET last handed it over. */
   let _labels = new Map();
@@ -215,8 +229,63 @@
         if (d < bestDistance) { best = i; bestDistance = d; }
       });
       const known = best >= 0 ? free.splice(best, 1)[0] : null;
-      return { slot: known?.slot ?? _nextSlot++, reads: known?.reads ?? 0, cx, cy, points };
+      return {
+        slot: known?.slot ?? _nextSlot++,
+        reads: known?.reads ?? 0,
+        blinks: known?.blinks ?? 0,
+        closed: known?.closed ?? false,
+        pulse: known?.pulse ?? [],
+        cx, cy, points,
+      };
     });
+  }
+
+  /** Counts a blink on each face whose eyes closed this frame after being open the last. */
+  function countBlinks() {
+    _slots.forEach((face, i) => {
+      const blink = _blendshapes[i]?.[2];
+      if (blink == null) return;
+      const closed = blink > BLINK_CLOSED;
+      if (closed && !face.closed) face.blinks++;
+      face.closed = closed;
+    });
+  }
+
+  /**
+   * Adds one [seconds, r, g, b] sample per face: the mean colour of its forehead and both cheeks, each
+   * patch shrunk to PULSE_PATCH pixels square by the browser (which averages it) on one small canvas.
+   */
+  function samplePulse() {
+    if (!_video || !_slots.length || _video.readyState < 2 || !_video.videoWidth) return;
+    const vw = _video.videoWidth, vh = _video.videoHeight;
+    if (!_pulseCtx) {
+      const canvas = new OffscreenCanvas(PULSE_PATCH * 3, PULSE_PATCH);
+      _pulseCtx = canvas.getContext('2d', { willReadFrequently: true });
+    }
+    const at = performance.now() / 1000;
+    for (const face of _slots) {
+      const p = face.points;
+      if (p.length < 478) continue;
+      const faceW = Math.abs(p[FACE_R][0] - p[FACE_L][0]) * vw;
+      const cheek = faceW * 0.12;
+      const patches = [
+        [Math.min(p[FOREHEAD_L][0], p[FOREHEAD_R][0]) * vw, p[FOREHEAD_TOP][1] * vh,
+          Math.abs(p[FOREHEAD_R][0] - p[FOREHEAD_L][0]) * vw, (p[FOREHEAD_BOTTOM][1] - p[FOREHEAD_TOP][1]) * vh],
+        [(p[CHEEK_L][0] * vw) - (cheek / 2), (p[CHEEK_L][1] * vh) - (cheek / 2), cheek, cheek],
+        [(p[CHEEK_R][0] * vw) - (cheek / 2), (p[CHEEK_R][1] * vh) - (cheek / 2), cheek, cheek],
+      ];
+      let r = 0, g = 0, b = 0, n = 0;
+      patches.forEach(([sx, sy, sw, sh], k) => {
+        if (sw < PULSE_MIN_PX || sh < PULSE_MIN_PX || sx < 0 || sy < 0 || sx + sw > vw || sy + sh > vh) return;
+        _pulseCtx.drawImage(_video, sx, sy, sw, sh, k * PULSE_PATCH, 0, PULSE_PATCH, PULSE_PATCH);
+        const data = _pulseCtx.getImageData(k * PULSE_PATCH, 0, PULSE_PATCH, PULSE_PATCH).data;
+        for (let i = 0; i < data.length; i += 4) { r += data[i]; g += data[i + 1]; b += data[i + 2]; n++; }
+      });
+      if (n === 0) continue;
+      face.pulse.push(at, r / n, g / n, b / n);
+      // Never more than ~15 s waiting if .NET is not taking them.
+      if (face.pulse.length > 4 * 240) face.pulse.splice(0, face.pulse.length - (4 * 240));
+    }
   }
 
   /** Every slot's points to .NET: x, then y in units of the frame's width, 478 per face. */
@@ -235,12 +304,27 @@
       const exp = (await dotnetExports()).PoWatch.Client.Services.SensingSession;
       exp.OnFaceLandmarks(slots, meshes);
       if (_blendshapes.length === _slots.length && _slots.length > 0) {
-        const bs = new Float64Array(_slots.length * 5);
+        // Five blendshape weights, then the blinks counted on this face so far.
+        const bs = new Float64Array(_slots.length * 6);
         for (let i = 0; i < _slots.length; i++) {
           const row = _blendshapes[i] ?? [0, 0, 0, 0, 0];
-          for (let j = 0; j < 5; j++) bs[(i * 5) + j] = row[j] ?? 0;
+          for (let j = 0; j < 5; j++) bs[(i * 6) + j] = row[j] ?? 0;
+          bs[(i * 6) + 5] = _slots[i].blinks;
         }
         exp.OnFaceBlendshapes(slots, bs);
+      }
+      const counts = new Float64Array(_slots.length);
+      const total = _slots.reduce((sum, s) => sum + s.pulse.length, 0);
+      if (total > 0) {
+        const samples = new Float64Array(total);
+        let k = 0;
+        _slots.forEach((s, i) => {
+          counts[i] = s.pulse.length / 4;
+          samples.set(s.pulse, k);
+          k += s.pulse.length;
+          s.pulse.length = 0;
+        });
+        exp.OnFacePulse(slots, counts, samples);
       }
     } catch (err) {
       console.warn('Face landmarks were not handed over:', err);
@@ -289,7 +373,8 @@
       const now = _slots.find((s) => s.slot === face.slot);
       if (now) now.reads++;
       (await dotnetExports()).PoWatch.Client.Services.SensingSession.OnFaceReading(
-        face.slot, new Float64Array(r.age), new Float64Array(r.presentation), new Float64Array(r.descriptor), thumb);
+        face.slot, new Float64Array(r.age), new Float64Array(r.presentation), new Float64Array(r.descriptor),
+        new Float64Array(r.emotion ?? []), thumb);
     } catch (err) {
       // A model that could not load is not asked again every 1.5 s; the Live models strip shows why.
       console.warn('Face reading failed:', err);
@@ -322,6 +407,7 @@
       _blendshapes = event.data.blendshapes ?? [];
       // Slot numbers first: both the points and their chips are drawn for the faces they now name.
       follow(faces);
+      countBlinks();
       draw();
       send();
     };
@@ -330,12 +416,14 @@
     _reader?.keep();
     _timer = setInterval(tick, EVERY_MS);
     _readTimer = setInterval(readOne, READ_EVERY_MS);
+    _pulseTimer = setInterval(samplePulse, PULSE_EVERY_MS);
     tick();
   }
 
   function stop() {
     if (_timer) { clearInterval(_timer); _timer = null; }
     if (_readTimer) { clearInterval(_readTimer); _readTimer = null; }
+    if (_pulseTimer) { clearInterval(_pulseTimer); _pulseTimer = null; }
     if (_worker) { _worker.terminate(); _worker = null; }
     // The face models stay loaded for a quick restart, then their worker is let go (worker-rpc.js).
     _reader?.releaseAfter(window.powatchWorkerRpc.IDLE_MS);

@@ -64,9 +64,15 @@ Sensing runs in the browser; the server only ingests 10-second ticks and serves 
   ~4 MB `.task` model is downloaded at run time. It is a module worker, so it must load the `_module_`
   wasm pair (`forVisionTasks(WASM, true)`); the classic pair fails every frame with "ModuleFactory not set."
   Every 1.5 s one face crop goes to `js/sensing/face-reader-worker.js` (CPU, ~190 MB on first use): age
-  band, presentation and a DINOv2 descriptor. Both reach `Client/Services/SensingSession.Faces.cs` as
-  `[JSExport]` typed arrays and live in `FaceReadings` for the session only (`FaceTrends` keeps its
-  5-second means of beauty, expected age and face count for the Faces panel's moving graphs); `MediaPipeFace` maps the
+  band, presentation and a DINOv2 descriptor, plus an emotion mix from `Xenova/facial_emotions_image_detection`
+  (~87 MB, loaded in the background after the others so it never holds them up). The overlay also counts
+  blinks on every landmarker frame and, for the experimental heart rate, samples the mean colour of the
+  forehead and cheeks ~15×/s (`OnFacePulse`; colour means only, never pixels), which `PulseEstimator`
+  turns into bpm (CHROM + peak search, no number when the peak is unclear). Both reach `Client/Services/SensingSession.Faces.cs` as
+  `[JSExport]` typed arrays and live in `FaceReadings` for the session only (`FaceTrends` keeps a `MetricTrend` per
+  metric — beauty, age, mood, smile, symmetry, proportions, blinks, face length/width, heart rate — with 5-second
+  means, session mean and range, and 1-minute sparkline points; the session means go into the Journal summary and
+  each person's all-time stats); `MediaPipeFace` maps the
   mesh to the 68 iBUG points `FaceGeometry` scores. The overlay also paints one chip per face on its hairline,
   naming it "Person 2" (a quiet "…" until the face models have read it): .NET pushes each face's label down
   (`powatchFaces.labels`) whenever it changes, and `FaceLabeler`'s descriptor match gives someone who comes

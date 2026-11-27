@@ -46,6 +46,13 @@ public static class RecapReportRenderer
         }
     }
 
+    /// <summary>"Smile 42 (30–61)" for a face metric the session read; nothing when it never was.</summary>
+    private static void AddMetric(List<string> parts, string label, MetricSummaryDto? metric, string unit)
+    {
+        if (metric is null) return;
+        parts.Add($"{label} {metric.Mean:0}{unit}" + (metric.Low is { } low && metric.High is { } high ? $" ({low:0}–{high:0})" : ""));
+    }
+
     private static byte[] RenderCardCore(RecapDto recap)
     {
         QuestPDF.Settings.License = LicenseType.Community;
@@ -136,6 +143,20 @@ public static class RecapReportRenderer
                         if (faces.MaleShare is { } m && faces.FemaleShare is { } f) faceParts.Add($"Presentation: {m:0}% M / {f:0}% F");
                         if (faceParts.Count > 0)
                             col.Item().Text("Faces: " + string.Join(" · ", faceParts)).FontSize(9.5f);
+
+                        var metricParts = new List<string>();
+                        if (faces.Mood is { } mood)
+                        {
+                            metricParts.Add($"Mood {mood.Mean:0}" + (faces.EmotionShares.Count > 0 ? $" (mostly {faces.EmotionShares.MaxBy(e => e.Value).Key})" : ""));
+                        }
+                        AddMetric(metricParts, "Smile", faces.Smile, "");
+                        AddMetric(metricParts, "Symmetry", faces.Symmetry, "%");
+                        AddMetric(metricParts, "Proportions", faces.Proportions, "%");
+                        AddMetric(metricParts, "Blinks", faces.BlinkRate, "/min");
+                        if (faces.FaceShape is { } shape) metricParts.Add($"Shape {shape}" + (faces.FaceShapeShare is { } fs ? $" ({fs:0}%)" : ""));
+                        AddMetric(metricParts, "Heart rate (experimental)", faces.HeartRate, " bpm");
+                        if (metricParts.Count > 0)
+                            col.Item().Text("Face metrics: " + string.Join(" · ", metricParts)).FontSize(9.5f);
                     }
                     if (summary.Bodies is { } bodies)
                     {

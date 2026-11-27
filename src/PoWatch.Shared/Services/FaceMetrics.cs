@@ -21,7 +21,8 @@ public readonly record struct FaceFrameMetrics(
     double MouthOpen,
     string DistanceBand,
     string FaceShape,
-    double[]? AlignedIbug68);
+    double[]? AlignedIbug68,
+    double LengthToWidth = 0);
 
 public static class FaceMetrics
 {
@@ -146,7 +147,8 @@ public static class FaceMetrics
             Math.Round(mouthOpen, 3),
             distanceBand,
             faceShape,
-            aligned);
+            aligned,
+            Math.Round(aspect, 3));
     }
 
     private static string ClassifyShape(double lengthToWidth, double foreheadRatio, double jawRatio)

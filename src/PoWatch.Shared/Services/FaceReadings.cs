@@ -2,8 +2,9 @@ namespace PoWatch.Shared.Services;
 
 /// <summary>
 /// What the camera reads from one face in view right now: pose-gated roll-aligned Beauty, quality-weighted
-/// Age &amp; Presentation, plus blink rate, eye fatigue, iris gaze attention, smile, concentration, talking,
-/// screen distance, and geometric face shape.
+/// Age &amp; Presentation, plus blink rate (last minute), eye fatigue, iris gaze attention, smile (last few
+/// seconds), concentration, talking, screen distance, geometric face shape, emotion mix and mood, and an
+/// experimental camera heart rate.
 /// </summary>
 public sealed record FaceReadout(
     int Slot,
@@ -29,8 +30,24 @@ public sealed record FaceReadout(
     double? TalkingShare = null,
     string? DistanceBand = null,
     string? FaceShape = null,
-    double? HeadTiltDeg = null)
+    double? HeadTiltDeg = null,
+    double? FaceRatio = null,
+    string? Emotion = null,
+    double? EmotionConfidence = null,
+    IReadOnlyList<double>? EmotionMix = null,
+    double? Mood = null,
+    double? HeartRateBpm = null)
 {
+    /// <summary>Mean of the φ, thirds and fifths proportion scores (0–1); null before any was read.</summary>
+    public double? Proportions
+    {
+        get
+        {
+            var parts = new[] { Golden, Thirds, Fifths }.OfType<double>().ToList();
+            return parts.Count == 0 ? null : Math.Round(parts.Average(), 3);
+        }
+    }
+
     public bool? Male => Presentation switch
     {
         "male" => true,
@@ -44,6 +61,20 @@ public sealed class FaceReadings
     public static readonly string[] AgeBands = ["0–2", "3–9", "10–19", "20–29", "30–39", "40–49", "50–59", "60–69", "70+"];
     public static readonly double[] AgeBandMiddles = [1, 6, 14.5, 24.5, 34.5, 44.5, 54.5, 64.5, 75];
     public static readonly string[] Presentations = ["female", "male"];
+
+    /// <summary>The emotion classifier's classes, in the order face-reader-worker.js sends them.</summary>
+    public static readonly string[] Emotions = ["happy", "neutral", "surprise", "sad", "angry", "fear", "disgust"];
+
+    /// <summary>How pleasant each emotion reads, -1 to 1, for the 0–100 mood score (50 is neutral).</summary>
+    private static readonly double[] EmotionValence = [1.0, 0.0, 0.2, -0.8, -1.0, -0.7, -0.9];
+
+    public const double EmotionSmoothing = 0.4;
+
+    /// <summary>Landmark frames (~2 per second) the blink rate is counted over: about a minute.</summary>
+    public const int BlinkWindowFrames = 120;
+
+    /// <summary>Frames before a blink rate is shown: about ten seconds.</summary>
+    public const int MinBlinkFrames = 20;
 
     public const double MinPresentationConfidence = 0.8;
     public const double DescriptorMatchDistance = 0.2;
@@ -104,17 +135,57 @@ public sealed class FaceReadings
         foreach (var gone in _faces.Keys.Where(slot => !seen.Contains(slot)).ToList()) _faces.Remove(gone);
     }
 
+    /// <summary>
+    /// Per slot [smile, browDown, blink, jawOpen, eyeWide] and optionally a sixth value: the blinks
+    /// face-overlay.js has counted on this face so far, from every landmarker frame.
+    /// </summary>
     public void OnBlendshapes(IReadOnlyList<double> slots, IReadOnlyList<double> values)
     {
-        for (var i = 0; i < slots.Count && (i * 5) + 4 < values.Count; i++)
+        ArgumentNullException.ThrowIfNull(slots);
+        ArgumentNullException.ThrowIfNull(values);
+        if (slots.Count == 0) return;
+        var stride = values.Count / slots.Count;
+        if (stride < 5) return;
+        for (var i = 0; i < slots.Count; i++)
         {
-            var slot = (int)slots[i];
-            if (_faces.TryGetValue(slot, out var face))
-                face.ObserveBlendshapes(values[i * 5], values[(i * 5) + 1], values[(i * 5) + 2], values[(i * 5) + 3], values[(i * 5) + 4]);
+            var at = i * stride;
+            if (_faces.TryGetValue((int)slots[i], out var face))
+            {
+                face.ObserveBlendshapes(values[at], values[at + 1], values[at + 2], values[at + 3], values[at + 4],
+                    stride >= 6 ? values[at + 5] : null);
+            }
         }
     }
 
-    public bool OnReading(int slot, IReadOnlyList<double> age, IReadOnlyList<double> presentation, IReadOnlyList<float> descriptor)
+    /// <summary>
+    /// Skin colour samples for the heart rate: per slot a count, then that many [seconds, r, g, b]
+    /// samples, all slots' samples one after another.
+    /// </summary>
+    public void OnPulse(IReadOnlyList<double> slots, IReadOnlyList<double> counts, IReadOnlyList<double> samples)
+    {
+        ArgumentNullException.ThrowIfNull(slots);
+        ArgumentNullException.ThrowIfNull(counts);
+        ArgumentNullException.ThrowIfNull(samples);
+        var at = 0;
+        for (var i = 0; i < slots.Count && i < counts.Count; i++)
+        {
+            var count = (int)counts[i];
+            if (count < 0 || at + (count * 4) > samples.Count) return;
+            if (_faces.TryGetValue((int)slots[i], out var face))
+            {
+                for (var k = 0; k < count; k++)
+                {
+                    var o = at + (k * 4);
+                    face.Pulse.Add(samples[o], samples[o + 1], samples[o + 2], samples[o + 3]);
+                }
+                if (count > 0) face.Pulse.Estimate();
+            }
+            at += count * 4;
+        }
+    }
+
+    public bool OnReading(int slot, IReadOnlyList<double> age, IReadOnlyList<double> presentation, IReadOnlyList<float> descriptor,
+        IReadOnlyList<double>? emotion = null)
     {
         ArgumentNullException.ThrowIfNull(age);
         ArgumentNullException.ThrowIfNull(presentation);
@@ -128,6 +199,7 @@ public sealed class FaceReadings
         face.Age.Add(age, weight);
         face.Presentation.Add(presentation, weight);
         face.RecordExpectedAge(age);
+        if (emotion is not null) face.ObserveEmotion(emotion);
 
         if (face.Label is null)
         {
@@ -147,13 +219,17 @@ public sealed class FaceReadings
     {
         private readonly Queue<double> _mouthWindow = new();
         private readonly List<double> _ageEstimates = [];
+        private readonly Queue<int> _blinkWindow = new();
+        private double[]? _emotion;
+        private int? _countedBlinks;
+        private double? _smileNow;
+        private double? _ratio;
         private int _frames;
         private int _lookingFrames;
         private int _closedFrames;
         private int _talkingFrames;
         private int _blinks;
         private bool _wasClosed;
-        private double _smileSum;
         private double _concSum;
 
         public string? Label { get; set; }
@@ -172,6 +248,10 @@ public sealed class FaceReadings
 
         public WeightedProbabilities Age { get; } = new(AgeBands.Length);
         public WeightedProbabilities Presentation { get; } = new(Presentations.Length);
+        public PulseEstimator Pulse { get; } = new();
+
+        /// <summary>Blinks so far: face-overlay.js's count from every landmarker frame when it sends one, else this side's.</summary>
+        private int BlinkCount => _countedBlinks ?? _blinks;
 
         public void ObserveMetrics(FaceFrameMetrics m)
         {
@@ -185,7 +265,10 @@ public sealed class FaceReadings
             if (m.EyesClosed) _closedFrames++;
             if (m.EyesClosed && !_wasClosed) _blinks++;
             _wasClosed = m.EyesClosed;
-            _smileSum += m.SmileScore;
+            _blinkWindow.Enqueue(BlinkCount);
+            if (_blinkWindow.Count > BlinkWindowFrames + 1) _blinkWindow.Dequeue();
+            _smileNow = _smileNow is { } smile ? smile + (0.3 * (m.SmileScore - smile)) : m.SmileScore;
+            if (m.LengthToWidth > 0) _ratio = m.LengthToWidth;
             _concSum += m.ConcentrationScore;
             _mouthWindow.Enqueue(m.MouthOpen);
             if (_mouthWindow.Count > 6) _mouthWindow.Dequeue();
@@ -198,15 +281,58 @@ public sealed class FaceReadings
             }
         }
 
-        public void ObserveBlendshapes(double smile, double browDown, double blink, double jawOpen, double eyeWide)
+        public void ObserveBlendshapes(double smile, double browDown, double blink, double jawOpen, double eyeWide, double? blinks = null)
         {
             if (_frames == 0) return;
-            // Blend MediaPipe's exact 52-weight ARKit blendshapes into the running smile & concentration averages.
-            _smileSum = (_smileSum * 0.75) + (Math.Clamp(smile * 100.0, 0, 100) * 0.25 * _frames);
+            if (blinks is { } counted && double.IsFinite(counted) && counted >= 0) _countedBlinks = (int)counted;
+            // MediaPipe's ARKit smile weight is the steadier read, so the current smile leans on it.
+            var weighted = Math.Clamp(smile * 100.0, 0, 100);
+            _smileNow = _smileNow is { } now ? now + (0.5 * (weighted - now)) : weighted;
             _concSum = (_concSum * 0.75) + (Math.Clamp(browDown * 100.0, 0, 100) * 0.25 * _frames);
             if (jawOpen > 0.55) QualityLabel = "Yawning";
             else if (eyeWide > 0.55) QualityLabel = "Surprised";
             _ = blink;
+        }
+
+        /// <summary>One reading of the emotion classifier, in <see cref="Emotions"/> order, smoothed into the face's mix.</summary>
+        public void ObserveEmotion(IReadOnlyList<double> probabilities)
+        {
+            if (probabilities.Count != Emotions.Length) return;
+            var total = 0.0;
+            foreach (var p in probabilities)
+            {
+                if (!double.IsFinite(p) || p < 0) return;
+                total += p;
+            }
+            if (total <= 0) return;
+            if (_emotion is null)
+            {
+                _emotion = [.. probabilities.Select(p => p / total)];
+                return;
+            }
+            for (var i = 0; i < _emotion.Length; i++)
+                _emotion[i] += EmotionSmoothing * ((probabilities[i] / total) - _emotion[i]);
+        }
+
+        private (string? Top, double? Confidence, double? Mood) ReadEmotion()
+        {
+            if (_emotion is null) return (null, null, null);
+            var best = 0;
+            var valence = 0.0;
+            for (var i = 0; i < _emotion.Length; i++)
+            {
+                if (_emotion[i] > _emotion[best]) best = i;
+                valence += _emotion[i] * EmotionValence[i];
+            }
+            return (Emotions[best], Math.Round(_emotion[best], 2), Math.Round(Math.Clamp(50 + (50 * valence), 0, 100), 0));
+        }
+
+        private double? BlinkRate()
+        {
+            var frames = _blinkWindow.Count - 1;
+            if (frames < MinBlinkFrames) return null;
+            // OnLandmarks fires at ~2 Hz (every 500 ms), so 120 frames ≈ 1 minute.
+            return Math.Round(Math.Max(0, _blinkWindow.Last() - _blinkWindow.Peek()) / (frames / 120.0), 1);
         }
 
         public void RecordExpectedAge(IReadOnlyList<double> probabilities)
@@ -239,8 +365,7 @@ public sealed class FaceReadings
         {
             var (age, ageP) = Age.Top();
             var (presentation, presentationP) = Presentation.Top();
-            // OnLandmarks fires at ~2 Hz (every 500 ms), so 120 frames ≈ 1 minute.
-            var blinkRate = _frames >= 6 ? Math.Round(_blinks / Math.Max(0.1, _frames / 120.0), 1) : (double?)null;
+            var (emotion, emotionP, mood) = ReadEmotion();
             return new FaceReadout(
                 slot,
                 Label,
@@ -257,15 +382,21 @@ public sealed class FaceReadings
                 Fifths,
                 QualityLabel,
                 _frames > 0 ? Math.Round((double)_lookingFrames / _frames, 2) : null,
-                _frames > 0 ? Math.Round(_smileSum / _frames, 0) : null,
+                _smileNow is { } smile ? Math.Round(smile, 0) : null,
                 _frames > 0 ? Math.Round(_concSum / _frames, 0) : null,
-                blinkRate,
+                BlinkRate(),
                 _frames > 0 ? Math.Round((double)_closedFrames / _frames, 3) : null,
                 IsTalking,
                 _frames > 0 ? Math.Round((double)_talkingFrames / _frames, 2) : null,
                 DistanceBand,
                 FaceShape,
-                HeadTiltDeg);
+                HeadTiltDeg,
+                _ratio,
+                emotion,
+                emotionP,
+                _emotion is null ? null : [.. _emotion.Select(p => Math.Round(p, 3))],
+                mood,
+                Pulse.Bpm);
         }
     }
 

@@ -49,6 +49,42 @@ public sealed class FaceSummaryDto
     public double? FemaleShare { get; init; }
     public List<double> BeautyHistory { get; init; } = [];
     public List<double> AgeHistory { get; init; } = [];
+
+    /// <summary>Mood from the emotion mix, 0–100 (50 neutral).</summary>
+    public MetricSummaryDto? Mood { get; init; }
+
+    /// <summary>Each emotion's share of the session's face-frames, 0–100, largest first.</summary>
+    public Dictionary<string, double> EmotionShares { get; init; } = [];
+
+    public MetricSummaryDto? Smile { get; init; }
+
+    /// <summary>Left/right symmetry, 0–100.</summary>
+    public MetricSummaryDto? Symmetry { get; init; }
+
+    /// <summary>Mean of the φ, thirds and fifths proportion scores, 0–100.</summary>
+    public MetricSummaryDto? Proportions { get; init; }
+
+    /// <summary>Blinks per minute.</summary>
+    public MetricSummaryDto? BlinkRate { get; init; }
+
+    /// <summary>The face shape read most often, and its share of face-frames (0–100).</summary>
+    public string? FaceShape { get; init; }
+    public double? FaceShapeShare { get; init; }
+
+    /// <summary>Face length over width, the measure behind the shape.</summary>
+    public MetricSummaryDto? FaceRatio { get; init; }
+
+    /// <summary>Experimental camera heart rate, beats per minute.</summary>
+    public MetricSummaryDto? HeartRate { get; init; }
+}
+
+/// <summary>One face metric over a session: its mean, lowest and highest 5-second stretch, and the stretches themselves.</summary>
+public sealed class MetricSummaryDto
+{
+    public double Mean { get; init; }
+    public double? Low { get; init; }
+    public double? High { get; init; }
+    public List<double> History { get; init; } = [];
 }
 
 public sealed class BodySummaryDto

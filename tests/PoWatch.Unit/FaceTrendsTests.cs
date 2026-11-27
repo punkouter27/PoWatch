@@ -11,7 +11,7 @@ public sealed class FaceTrendsTests
         Face(null, null) with { Slot = slot, Presentation = presentation, PresentationConfidence = 0.95 };
 
     [Fact]
-    public void A_stretch_becomes_one_point_of_its_mean_once_the_next_starts()
+    public void A_stretch_becomes_one_point_of_its_mean_over_every_face_once_the_next_starts()
     {
         var trends = new FaceTrends();
         trends.Observe([Face(50, 30)], 0);
@@ -23,22 +23,19 @@ public sealed class FaceTrendsTests
         Assert.Equal([55.0], trends.BeautyHistory);
         Assert.Equal([35.0], trends.AgeHistory);
         Assert.Equal([1.0], trends.FacesHistory);
+
+        // Two faces in one stretch average together and count as two.
+        var two = new FaceTrends();
+        two.Observe([Face(40, 20), Face(60, 50) with { Slot = 2 }], 0);
+        two.Observe([], FaceTrends.BinSeconds);
+
+        Assert.Equal([50.0], two.BeautyHistory);
+        Assert.Equal([35.0], two.AgeHistory);
+        Assert.Equal([2.0], two.FacesHistory);
     }
 
     [Fact]
-    public void Two_faces_average_together_and_count_as_two()
-    {
-        var trends = new FaceTrends();
-        trends.Observe([Face(40, 20), Face(60, 50) with { Slot = 2 }], 0);
-        trends.Observe([], FaceTrends.BinSeconds);
-
-        Assert.Equal([50.0], trends.BeautyHistory);
-        Assert.Equal([35.0], trends.AgeHistory);
-        Assert.Equal([2.0], trends.FacesHistory);
-    }
-
-    [Fact]
-    public void An_empty_stretch_skips_beauty_and_age_but_counts_zero_faces()
+    public void Empty_stretches_skip_beauty_and_age_and_the_session_mean_covers_the_rest()
     {
         var trends = new FaceTrends();
         trends.Observe([], 0);
@@ -48,15 +45,11 @@ public sealed class FaceTrendsTests
         Assert.Empty(trends.AgeHistory);
         Assert.Equal([0.0], trends.FacesHistory);
         Assert.Null(trends.SessionBeauty);
-    }
 
-    [Fact]
-    public void Session_means_and_ranges_cover_every_stretch()
-    {
-        var trends = new FaceTrends();
-        trends.Observe([Face(40, null)], 0);
-        trends.Observe([Face(70, null)], FaceTrends.BinSeconds);
-        trends.Observe([], FaceTrends.BinSeconds * 2);
+        // Session means and ranges cover every stretch that had a reading.
+        trends.Observe([Face(40, null)], FaceTrends.BinSeconds * 2);
+        trends.Observe([Face(70, null)], FaceTrends.BinSeconds * 3);
+        trends.Observe([], FaceTrends.BinSeconds * 4);
 
         Assert.Equal(55, trends.SessionBeauty);
         Assert.Equal((40.0, 70.0), trends.BeautyRange);

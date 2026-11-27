@@ -128,7 +128,7 @@
 
 @media (pointer: coarse) {
     .term-button, .term-header .term-button, .term-icon-button, .term-key, .term-menu-item,
-    .history-nav .term-button, .stats-toolbar .term-button,
+    .history-nav .term-button,
     .rule-row .term-icon-button, .rule-form .term-button, .away-bar .term-icon-button,
     .settings-search .term-button, .moment-filters .term-button, .history-share .term-button { min-height: 44px; }
     .term-icon-button, .rule-row .term-icon-button, .away-bar .term-icon-button { min-width: 44px; }

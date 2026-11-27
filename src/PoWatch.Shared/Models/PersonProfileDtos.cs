@@ -24,6 +24,12 @@ public sealed class PersonAppearanceStatsDto
     public double? FatigueShare { get; init; }
     public double? TalkingShare { get; init; }
     public string? DistanceBand { get; init; }
+    public double? MoodMean { get; init; }
+    public string? Emotion { get; init; }
+    public double? HeartRateMean { get; init; }
+
+    /// <summary>Mean of the φ, thirds and fifths means, 0–1.</summary>
+    public double? ProportionsMean { get; init; }
     public int FaceSamples { get; init; }
 
     public double? UprightScore { get; init; }
@@ -76,6 +82,9 @@ public sealed class ObservePersonRequestDto
     public double? FatigueShare { get; init; }
     public double? TalkingShare { get; init; }
     public string? DistanceBand { get; init; }
+    public double? Mood { get; init; }
+    public string? Emotion { get; init; }
+    public double? HeartRateBpm { get; init; }
 
     public double? UprightScore { get; init; }
     public double? MeanEnergy { get; init; }

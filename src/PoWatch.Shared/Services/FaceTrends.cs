@@ -1,16 +1,17 @@
 namespace PoWatch.Shared.Services;
 
 /// <summary>
-/// The faces in view over one session as moving averages: every <see cref="BinSeconds"/> the mean beauty
-/// and mean expected age of the faces seen in that stretch, the most faces at once, and how the scored
-/// faces split male/female as a percentage. Session-wide means and the lowest and highest stretch go
-/// with them. Aggregates only, in memory for the session, never stored or sent (ADR 0001). One instance
-/// per session: not thread-safe.
+/// The faces in view over one session as moving averages: every <see cref="BinSeconds"/> the mean of each
+/// face metric (beauty, age, mood, smile, symmetry, proportions, blink rate, face length/width, heart
+/// rate) over the faces seen in that stretch, the most faces at once, and how the scored faces split
+/// male/female as a percentage. Session-wide means, the lowest and highest stretch, the session's emotion
+/// mix and its most common face shape go with them. Aggregates only, in memory for the session (ADR 0001).
+/// One instance per session: not thread-safe.
 /// </summary>
 /// <remarks>
-/// Beauty, age and the sex split get a point only for stretches where a face was scored, so the lines
-/// skip the empty room rather than dropping to zero; the face count gets a point for every stretch with
-/// a frame. The sex split is a percentage of the faces scored in the stretch, not a count.
+/// Each metric gets a point only for stretches where a face had a reading for it, so the lines skip the
+/// empty room rather than dropping to zero; the face count gets a point for every stretch with a frame.
+/// The sex split is a percentage of the faces scored in the stretch, not a count.
 /// </remarks>
 public sealed class FaceTrends
 {
@@ -20,15 +21,12 @@ public sealed class FaceTrends
     /// <summary>Points kept per line: ten minutes at 5 s.</summary>
     public const int HistoryLength = 120;
 
-    private readonly List<double> _beauty = [];
-    private readonly List<double> _age = [];
     private readonly List<double> _faces = [];
     private readonly List<double> _male = [];
     private readonly List<double> _female = [];
-    private readonly Mean _binBeauty = new();
-    private readonly Mean _binAge = new();
-    private readonly Mean _allBeauty = new();
-    private readonly Mean _allAge = new();
+    private readonly double[] _emotionSum = new double[FaceReadings.Emotions.Length];
+    private readonly Dictionary<string, long> _shapes = new(StringComparer.Ordinal);
+    private long _emotionReadings;
     private double? _binStart;
     private int _binFrames;
     private int _binMostFaces;
@@ -37,18 +35,42 @@ public sealed class FaceTrends
     private long _allMale;
     private long _allFemale;
 
-    /// <summary>Mean beauty per stretch with a scored face, oldest first.</summary>
-    public IReadOnlyList<double> BeautyHistory => _beauty;
+    /// <summary>Classical beauty canon score, 0–100.</summary>
+    public MetricTrend Beauty { get; } = new();
 
-    /// <summary>1-minute average beauty, age, attention, smile &amp; blink series for per-minute live graphs.</summary>
-    public MinuteSeries BeautyMinutes { get; } = new();
-    public MinuteSeries AgeMinutes { get; } = new();
-    public MinuteSeries AttentionMinutes { get; } = new();
-    public MinuteSeries SmileMinutes { get; } = new();
-    public MinuteSeries BlinkRateMinutes { get; } = new();
+    /// <summary>Expected age in years.</summary>
+    public MetricTrend Age { get; } = new();
+
+    /// <summary>Mood from the emotion mix, 0–100 (50 neutral).</summary>
+    public MetricTrend Mood { get; } = new();
+
+    /// <summary>Smile over the last few seconds, 0–100.</summary>
+    public MetricTrend Smile { get; } = new();
+
+    /// <summary>Left/right landmark symmetry, 0–100.</summary>
+    public MetricTrend Symmetry { get; } = new();
+
+    /// <summary>Mean of the φ, thirds and fifths proportion scores, 0–100.</summary>
+    public MetricTrend Proportions { get; } = new();
+
+    /// <summary>Blinks per minute over the last minute.</summary>
+    public MetricTrend BlinkRate { get; } = new();
+
+    /// <summary>Face length over width, the measure behind the face shape.</summary>
+    public MetricTrend FaceRatio { get; } = new(3);
+
+    /// <summary>Experimental camera heart rate in beats per minute.</summary>
+    public MetricTrend HeartRate { get; } = new();
+
+    /// <summary>Mean beauty per stretch with a scored face, oldest first.</summary>
+    public IReadOnlyList<double> BeautyHistory => Beauty.History;
+
+    /// <summary>1-minute average beauty and age series for per-minute live graphs.</summary>
+    public MinuteSeries BeautyMinutes => Beauty.Minutes;
+    public MinuteSeries AgeMinutes => Age.Minutes;
 
     /// <summary>Mean expected age in years per stretch with an aged face, oldest first.</summary>
-    public IReadOnlyList<double> AgeHistory => _age;
+    public IReadOnlyList<double> AgeHistory => Age.History;
 
     /// <summary>The most faces at once per stretch, oldest first.</summary>
     public IReadOnlyList<double> FacesHistory => _faces;
@@ -65,16 +87,41 @@ public sealed class FaceTrends
             Math.Round(100.0 * _allFemale / (_allMale + _allFemale), 1));
 
     /// <summary>Mean beauty over every frame of every face this session; null before one was scored.</summary>
-    public double? SessionBeauty => _allBeauty.Value;
+    public double? SessionBeauty => Beauty.Mean;
 
     /// <summary>Mean expected age over every frame of every face this session; null before one was aged.</summary>
-    public double? SessionAge => _allAge.Value;
+    public double? SessionAge => Age.Mean;
 
     /// <summary>The lowest and highest stretch on the beauty line; null before the first point.</summary>
-    public (double Low, double High)? BeautyRange => _beauty.Count == 0 ? null : (_beauty.Min(), _beauty.Max());
+    public (double Low, double High)? BeautyRange => Beauty.Range;
 
     /// <summary>The youngest and oldest stretch on the age line; null before the first point.</summary>
-    public (double Low, double High)? AgeRange => _age.Count == 0 ? null : (_age.Min(), _age.Max());
+    public (double Low, double High)? AgeRange => Age.Range;
+
+    /// <summary>
+    /// Each emotion's share of every face-frame's mix this session, 0–100, largest first; empty before
+    /// the emotion model read anyone.
+    /// </summary>
+    public IReadOnlyList<(string Emotion, double Share)> EmotionShares =>
+        _emotionReadings == 0
+            ? []
+            : [.. FaceReadings.Emotions
+                .Select((name, i) => (name, Math.Round(100.0 * _emotionSum[i] / _emotionReadings, 1)))
+                .OrderByDescending(e => e.Item2)];
+
+    /// <summary>The face shape read most often this session and its share of face-frames, 0–100.</summary>
+    public (string Shape, double Share)? CommonShape
+    {
+        get
+        {
+            if (_shapes.Count == 0) return null;
+            var total = _shapes.Values.Sum();
+            var top = _shapes.OrderByDescending(p => p.Value).ThenBy(p => p.Key, StringComparer.Ordinal).First();
+            return (top.Key, Math.Round(100.0 * top.Value / total, 1));
+        }
+    }
+
+    private IEnumerable<MetricTrend> All => [Beauty, Age, Mood, Smile, Symmetry, Proportions, BlinkRate, FaceRatio, HeartRate];
 
     /// <summary>One frame's faces at <paramref name="seconds"/> since the session started (any steady clock).</summary>
     public void Observe(IReadOnlyList<FaceReadout> inView, double seconds)
@@ -90,21 +137,22 @@ public sealed class FaceTrends
 
         foreach (var face in inView)
         {
-            if (face.Beauty is { } beauty && double.IsFinite(beauty))
+            Beauty.Add(face.Beauty, seconds);
+            Age.Add(face.AgeYears, seconds);
+            Mood.Add(face.Mood, seconds);
+            Smile.Add(face.SmileScore, seconds);
+            Symmetry.Add(face.Symmetry * 100, seconds);
+            Proportions.Add(face.Proportions * 100, seconds);
+            BlinkRate.Add(face.BlinkRatePerMin, seconds);
+            FaceRatio.Add(face.FaceRatio, seconds);
+            HeartRate.Add(face.HeartRateBpm, seconds);
+            if (face.EmotionMix is { Count: var n } mix && n == _emotionSum.Length)
             {
-                _binBeauty.Add(beauty);
-                _allBeauty.Add(beauty);
-                BeautyMinutes.Add(beauty, seconds);
+                for (var i = 0; i < n; i++) _emotionSum[i] += mix[i];
+                _emotionReadings++;
             }
-            if (face.AgeYears is { } years && double.IsFinite(years))
-            {
-                _binAge.Add(years);
-                _allAge.Add(years);
-                AgeMinutes.Add(years, seconds);
-            }
-            if (face.AttentionShare is { } att && double.IsFinite(att)) AttentionMinutes.Add(att * 100, seconds);
-            if (face.SmileScore is { } smile && double.IsFinite(smile)) SmileMinutes.Add(smile, seconds);
-            if (face.BlinkRatePerMin is { } blink && double.IsFinite(blink)) BlinkRateMinutes.Add(blink, seconds);
+            if (!string.IsNullOrEmpty(face.FaceShape))
+                _shapes[face.FaceShape] = _shapes.GetValueOrDefault(face.FaceShape) + 1;
             if (face.Male is { } male)
             {
                 if (male) { _binMale++; _allMale++; }
@@ -119,15 +167,12 @@ public sealed class FaceTrends
     private void Close()
     {
         if (_binFrames > 0) Push(_faces, _binMostFaces);
-        if (_binBeauty.Value is { } beauty) Push(_beauty, beauty);
-        if (_binAge.Value is { } age) Push(_age, age);
+        foreach (var metric in All) metric.Close();
         if (_binMale + _binFemale > 0)
         {
             Push(_male, 100.0 * _binMale / (_binMale + _binFemale));
             Push(_female, 100.0 * _binFemale / (_binMale + _binFemale));
         }
-        _binBeauty.Clear();
-        _binAge.Clear();
         _binFrames = 0;
         _binMostFaces = 0;
         _binMale = 0;
@@ -138,21 +183,5 @@ public sealed class FaceTrends
     {
         line.Add(Math.Round(value, 1));
         if (line.Count > HistoryLength) line.RemoveAt(0);
-    }
-
-    private sealed class Mean
-    {
-        private double _sum;
-        private long _count;
-
-        public double? Value => _count == 0 ? null : _sum / _count;
-
-        public void Add(double value)
-        {
-            _sum += value;
-            _count++;
-        }
-
-        public void Clear() => (_sum, _count) = (0, 0);
     }
 }

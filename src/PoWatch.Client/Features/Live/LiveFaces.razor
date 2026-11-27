@@ -33,6 +33,20 @@
                                AverageLabel="@(T.AgeMinutes.Average is { } aa ? $"1m avg {aa:0} yrs" : null)"
                                Label="Mean estimated age per minute over this session" />
                 </RadzenCard>
+                @Card("Mood", Now(f => f.Mood, "0"), TopEmotionInView(), T.Mood, "0", 100, false, "", "face-mood-trend",
+                      "Mean mood per minute (emotion model; 50 is neutral)", MoodHint())
+                @Card("Smile", Now(f => f.SmileScore, "0"), null, T.Smile, "0", 100, true, "", "face-smile-trend",
+                      "Mean smile per minute over this session")
+                @Card("Symmetry", Now(f => f.Symmetry * 100, "0"), "%", T.Symmetry, "0", 100, false, "%", "face-symmetry-trend",
+                      "Mean left/right symmetry per minute over this session")
+                @Card("Proportions", Now(f => f.Proportions * 100, "0"), "%", T.Proportions, "0", 100, true, "%", "face-proportions-trend",
+                      "Mean φ, thirds and fifths fit per minute over this session")
+                @Card("Blinks", Now(f => f.BlinkRatePerMin, "0"), "/min", T.BlinkRate, "0", null, false, "/min", "face-blink-trend",
+                      "Mean blinks per minute over this session")
+                @Card("Face shape", ShapeInView(), null, T.FaceRatio, "0.00", null, true, " L/W", "face-shape-trend",
+                      "Mean face length/width per minute over this session", ShapeHint())
+                @Card("Heart rate · exp", Now(f => f.HeartRateBpm, "0"), "bpm", T.HeartRate, "0", null, false, " bpm", "face-pulse-trend",
+                      "Mean camera heart rate per minute (experimental)", T.HeartRate.Mean is null ? "Experimental · hold still in good light" : null)
             </div>
             <FactRow Test="faces-facts" Facts="@([
                 new("In view", Sensing.Faces.Count.ToString(CultureInfo.InvariantCulture), "Faces the landmarker sees right now"),
@@ -76,7 +90,9 @@
                             </div>
                             <div class="face-metrics-strip" data-test="face-extra-metrics">
                                 @if (face.AttentionShare is { } att) { <span>Focus <b>@($"{att:P0}")</b></span> }
+                                @if (face.Emotion is { } emo) { <span>Mood <b>@emo</b></span> }
                                 @if (face.SmileScore is { } sm) { <span>Smile <b>@($"{sm:0}")</b></span> }
+                                @if (face.HeartRateBpm is { } bpm) { <span>Pulse <b>@($"{bpm:0}")</b></span> }
                                 @if (face.ConcentrationScore is { } cc) { <span>Focus brow <b>@($"{cc:0}")</b></span> }
                                 @if (face.BlinkRatePerMin is { } br) { <span>Blinks <b>@($"{br:0}/m")</b></span> }
                                 @if (face.FatigueShare is { } ft && ft >= 0.05) { <span>Fatigue <b>@($"{ft:P0}")</b></span> }
@@ -149,7 +165,7 @@
                 </div>
             }
         }
-        <p class="term-stat-hint">Beauty is the classical canon (symmetry, thirds, fifths, φ) read from landmarks. Age &amp; presentation are model estimates. Session aggregates may be saved to your Journal; raw face descriptors never leave this device.</p>
+        <p class="term-stat-hint">Beauty is the classical canon (symmetry, thirds, fifths, φ) read from landmarks. Age, presentation &amp; mood are model estimates and can be biased by lighting, makeup and ethnicity. Heart rate is experimental (skin colour changes; needs good light and a still head). Session aggregates may be saved to your Journal; raw face descriptors never leave this device.</p>
     </ChildContent>
 </TerminalPanel>
 
@@ -176,6 +192,46 @@
     {
         var values = Sensing.Faces.Select(read).OfType<double>().ToList();
         return values.Count == 0 ? "—" : values.Average().ToString(format, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// One trend card in the Beauty/Age style: the faces in view now, the session mean and range (or
+    /// <paramref name="hint"/>), and the per-minute sparkline with its average line.
+    /// </summary>
+    private RenderFragment Card(string label, string value, string? unit, MetricTrend trend, string format, double? max,
+        bool cyan, string avgUnit, string test, string description, string? hint = null) =>
+        @<RadzenCard class="metric-card">
+            <StatCell Label="@label" Value="@value" Unit="@unit" Hint="@(hint ?? Span(trend.Mean, trend.Range, format))" Test="@test" />
+            <Sparkline Values="@trend.Minutes.Points" Max="@max" Cyan="@cyan"
+                       Average="@trend.Minutes.Average"
+                       AverageLabel="@(trend.Minutes.Average is { } avg ? $"1m avg {avg.ToString(format, CultureInfo.InvariantCulture)}{avgUnit}" : null)"
+                       Label="@description" />
+        </RadzenCard>;
+
+    /// <summary>The emotion most faces in view show right now; null before the emotion model read anyone.</summary>
+    private string? TopEmotionInView() =>
+        Sensing.Faces.Select(f => f.Emotion).OfType<string>().GroupBy(e => e).OrderByDescending(g => g.Count()).FirstOrDefault()?.Key;
+
+    /// <summary>"Session 58 · mostly happy 64%"; the emotion model's own wait text before it has read anyone.</summary>
+    private string MoodHint()
+    {
+        var ic = CultureInfo.InvariantCulture;
+        if (T.Mood.Mean is not { } mean) return "Waiting for the emotion model";
+        var text = $"Session {mean.ToString("0", ic)}";
+        return T.EmotionShares.Count > 0 ? $"{text} · mostly {T.EmotionShares[0].Emotion} {T.EmotionShares[0].Share.ToString("0", ic)}%" : text;
+    }
+
+    /// <summary>The face shape most faces in view show right now; "—" when none was read.</summary>
+    private string ShapeInView() =>
+        Sensing.Faces.Select(f => f.FaceShape).OfType<string>().GroupBy(s => s).OrderByDescending(g => g.Count()).FirstOrDefault()?.Key ?? "—";
+
+    /// <summary>"Mostly Oval 72% · L/W 1.32"; waiting text before the first face.</summary>
+    private string ShapeHint()
+    {
+        var ic = CultureInfo.InvariantCulture;
+        if (T.CommonShape is not { } common) return "Waiting for a face";
+        var text = $"Mostly {common.Shape} {common.Share.ToString("0", ic)}%";
+        return T.FaceRatio.Mean is { } ratio ? $"{text} · L/W {ratio.ToString("0.00", ic)}" : text;
     }
 
     /// <summary>"Session 54 · range 49–61"; waiting text before the first point.</summary>
@@ -243,6 +299,10 @@
         if (s.BeautyMean is { } bm)
             parts.Add(string.Create(ic, $"beauty {bm:0}") + (s.BeautyLow is { } bl && s.BeautyHigh is { } bh ? string.Create(ic, $" ({bl:0}–{bh:0})") : ""));
         if (s.AgeMean is { } am) parts.Add(string.Create(ic, $"age {am:0}"));
+        if (s.MoodMean is { } md) parts.Add(string.Create(ic, $"mood {md:0}") + (s.Emotion is { } em ? $" ({em})" : ""));
+        if (s.SymmetryMean is { } sy) parts.Add(string.Create(ic, $"symmetry {sy:P0}"));
+        if (s.ProportionsMean is { } pr) parts.Add(string.Create(ic, $"proportions {pr:P0}"));
+        if (s.HeartRateMean is { } hr) parts.Add(string.Create(ic, $"{hr:0} bpm"));
         if (s.FaceShape is { } sh) parts.Add(sh);
         if (s.AttentionShare is { } at) parts.Add(string.Create(ic, $"focus {at:P0}"));
         if (s.SmileMean is { } sm) parts.Add(string.Create(ic, $"smile {sm:0}"));

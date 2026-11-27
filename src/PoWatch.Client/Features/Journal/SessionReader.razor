@@ -143,6 +143,21 @@ else
                                         {
                                             <Sparkline Values="@faces.BeautyHistory" Max="100" Average="@faces.MeanBeauty" Label="Mean beauty over the session" />
                                         }
+                                        <FactRow Test="analysis-face-metrics" Facts="@([
+                                            new("Mood", Mean(faces.Mood, "0"), faces.EmotionShares.Count > 0 ? $"Mostly {faces.EmotionShares.MaxBy(e => e.Value).Key}" : null),
+                                            new("Smile", Mean(faces.Smile, "0"), Range(faces.Smile, "0")),
+                                            new("Symmetry", Mean(faces.Symmetry, "0", "%"), Range(faces.Symmetry, "0")),
+                                            new("Proportions", Mean(faces.Proportions, "0", "%"), Range(faces.Proportions, "0")),
+                                        ])" />
+                                        <FactRow Facts="@([
+                                            new("Blinks", Mean(faces.BlinkRate, "0", "/min"), Range(faces.BlinkRate, "0")),
+                                            new("Shape", faces.FaceShape, faces.FaceShapeShare is { } fs ? $"{fs:0}% of frames" + (faces.FaceRatio is { } fr ? $" · L/W {fr.Mean:0.00}" : "") : null),
+                                            new("Heart rate", Mean(faces.HeartRate, "0", " bpm"), faces.HeartRate is null ? null : "Experimental"),
+                                        ])" />
+                                        @if (faces.Mood?.History is { Count: > 1 } moodLine)
+                                        {
+                                            <Sparkline Values="@moodLine" Max="100" Average="@faces.Mood.Mean" Cyan="true" Label="Mean mood over the session" />
+                                        }
                                     </section>
                                 }
 
@@ -229,6 +244,16 @@ else
             _moments = moments.Result;
         }
     }
+
+    /// <summary>A face metric's session mean with its unit; null (fact hidden) when it was never read.</summary>
+    private static string? Mean(MetricSummaryDto? metric, string format, string unit = "") =>
+        metric is null ? null : metric.Mean.ToString(format, CultureInfo.InvariantCulture) + unit;
+
+    /// <summary>"Range 40–72" tooltip for a face metric; null before it had a stretch.</summary>
+    private static string? Range(MetricSummaryDto? metric, string format) =>
+        metric is { Low: { } low, High: { } high }
+            ? $"Range {low.ToString(format, CultureInfo.InvariantCulture)}–{high.ToString(format, CultureInfo.InvariantCulture)}"
+            : null;
 
     private static string Heading(SessionDto session)
     {

@@ -35,6 +35,11 @@ public sealed record PersonProfileStats
     public double TalkingSum { get; init; }
     public int TalkingCount { get; init; }
     public string? DistanceBand { get; init; }
+    public double MoodSum { get; init; }
+    public int MoodCount { get; init; }
+    public string? Emotion { get; init; }
+    public double HeartRateSum { get; init; }
+    public int HeartRateCount { get; init; }
 
     public int BodySamples { get; init; }
     public double UprightSum { get; init; }

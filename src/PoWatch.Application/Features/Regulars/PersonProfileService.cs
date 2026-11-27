@@ -168,6 +168,11 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
         TalkingSum = a.TalkingSum + b.TalkingSum,
         TalkingCount = a.TalkingCount + b.TalkingCount,
         DistanceBand = a.DistanceBand ?? b.DistanceBand,
+        MoodSum = a.MoodSum + b.MoodSum,
+        MoodCount = a.MoodCount + b.MoodCount,
+        Emotion = a.Emotion ?? b.Emotion,
+        HeartRateSum = a.HeartRateSum + b.HeartRateSum,
+        HeartRateCount = a.HeartRateCount + b.HeartRateCount,
         BodySamples = a.BodySamples + b.BodySamples,
         UprightSum = a.UprightSum + b.UprightSum,
         UprightCount = a.UprightCount + b.UprightCount,
@@ -185,7 +190,7 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
 
     private static PersonProfileStats Fold(PersonProfileStats s, ObservePersonRequestDto r)
     {
-        var hasFace = r.Beauty is not null || r.AgeYears is not null || r.Symmetry is not null;
+        var hasFace = r.Beauty is not null || r.AgeYears is not null || r.Symmetry is not null || r.Mood is not null;
         var hasBody = r.UprightScore is not null || r.MeanEnergy is not null || r.OpenPostureShare is not null
             || r.ArmBalance is not null || r.LegBalance is not null || r.ShoulderTilt is not null;
 
@@ -222,6 +227,11 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
             TalkingSum = s.TalkingSum + (r.TalkingShare ?? 0),
             TalkingCount = s.TalkingCount + (r.TalkingShare is not null ? 1 : 0),
             DistanceBand = !string.IsNullOrWhiteSpace(r.DistanceBand) ? r.DistanceBand : s.DistanceBand,
+            MoodSum = s.MoodSum + (r.Mood ?? 0),
+            MoodCount = s.MoodCount + (r.Mood is not null ? 1 : 0),
+            Emotion = !string.IsNullOrWhiteSpace(r.Emotion) ? r.Emotion : s.Emotion,
+            HeartRateSum = s.HeartRateSum + (r.HeartRateBpm ?? 0),
+            HeartRateCount = s.HeartRateCount + (r.HeartRateBpm is not null ? 1 : 0),
             BodySamples = s.BodySamples + (hasBody ? 1 : 0),
             UprightSum = s.UprightSum + (r.UprightScore ?? 0),
             UprightCount = s.UprightCount + (r.UprightScore is not null ? 1 : 0),
@@ -236,6 +246,16 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
             ShoulderTiltSum = s.ShoulderTiltSum + (r.ShoulderTilt ?? 0),
             ShoulderTiltCount = s.ShoulderTiltCount + (r.ShoulderTilt is not null ? 1 : 0),
         };
+    }
+
+    /// <summary>Mean of whichever of the φ, thirds and fifths means exist, 0–1.</summary>
+    private static double? Proportions(PersonProfileStats s)
+    {
+        var parts = new List<double>(3);
+        if (s.GoldenCount > 0) parts.Add(s.GoldenSum / s.GoldenCount);
+        if (s.ThirdsCount > 0) parts.Add(s.ThirdsSum / s.ThirdsCount);
+        if (s.FifthsCount > 0) parts.Add(s.FifthsSum / s.FifthsCount);
+        return parts.Count == 0 ? null : Math.Round(parts.Average(), 3);
     }
 
     public static PersonProfileDto ToDto(PersonProfile p)
@@ -271,6 +291,10 @@ public sealed class PersonProfileService(IPersonProfileStore store, TimeProvider
                 FatigueShare = s.FatigueCount > 0 ? Math.Round(s.FatigueSum / s.FatigueCount, 3) : null,
                 TalkingShare = s.TalkingCount > 0 ? Math.Round(s.TalkingSum / s.TalkingCount, 2) : null,
                 DistanceBand = s.DistanceBand,
+                MoodMean = s.MoodCount > 0 ? Math.Round(s.MoodSum / s.MoodCount, 0) : null,
+                Emotion = s.Emotion,
+                HeartRateMean = s.HeartRateCount > 0 ? Math.Round(s.HeartRateSum / s.HeartRateCount, 0) : null,
+                ProportionsMean = Proportions(s),
                 FaceSamples = s.FaceSamples,
                 UprightScore = s.UprightCount > 0 ? Math.Round(s.UprightSum / s.UprightCount, 1) : null,
                 MeanEnergy = s.EnergyCount > 0 ? Math.Round(s.EnergySum / s.EnergyCount, 3) : null,

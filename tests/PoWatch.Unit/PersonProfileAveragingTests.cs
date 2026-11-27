@@ -28,15 +28,37 @@ public sealed class PersonProfileAveragingTests
     }
 
     [Fact]
-    public async Task A_reading_without_a_beauty_score_does_not_pull_beauty_down()
+    public async Task A_reading_without_a_value_does_not_pull_its_mean_down()
     {
         var service = new PersonProfileService(new MemoryStore(), TimeProvider.System);
-        await service.ObserveAsync(User, Reading(Me, beauty: 60, age: 30), default);
-        await service.ObserveAsync(User, Reading(Me, beauty: null, age: 50), default);
+        await service.ObserveAsync(User, new ObservePersonRequestDto
+        {
+            SessionId = Guid.NewGuid(),
+            Descriptor = Me,
+            Beauty = 60,
+            AgeYears = 30,
+            Mood = 80,
+            Emotion = "happy",
+            HeartRateBpm = 70,
+            Golden = 0.9,
+            Thirds = 0.7
+        }, default);
+        await service.ObserveAsync(User, new ObservePersonRequestDto
+        {
+            SessionId = Guid.NewGuid(),
+            Descriptor = Me,
+            AgeYears = 50,
+            Mood = 40,
+            Emotion = "neutral"
+        }, default);
 
         var person = Assert.Single(await service.ListAsync(User, default));
         Assert.Equal(60, person.Stats.BeautyMean);
         Assert.Equal(40, person.Stats.AgeMean);
+        Assert.Equal(60, person.Stats.MoodMean);
+        Assert.Equal("neutral", person.Stats.Emotion);
+        Assert.Equal(70, person.Stats.HeartRateMean);
+        Assert.Equal(0.8, person.Stats.ProportionsMean);
     }
 
     [Fact]
@@ -59,7 +81,10 @@ public sealed class PersonProfileAveragingTests
     {
         var legacy = new PersonProfile
         {
-            Id = "p-old", UserId = User, Number = 1, Descriptor = [1f, 0f, 0f, 0f],
+            Id = "p-old",
+            UserId = User,
+            Number = 1,
+            Descriptor = [1f, 0f, 0f, 0f],
             Stats = new PersonProfileStats { FaceSamples = 4, BeautySum = 200 }
         };
         Assert.Equal(50, PersonProfileService.ToDto(legacy).Stats.BeautyMean);

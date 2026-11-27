@@ -249,6 +249,17 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
             await js.TryInvokeVoidAsync("powatchFeed.undock");
     }
 
+    /// <summary>One metric's session mean, range and line for the Journal; null when it was never read.</summary>
+    private static MetricSummaryDto? Summarise(MetricTrend trend, int digits) => trend.Mean is { } mean
+        ? new MetricSummaryDto
+        {
+            Mean = Math.Round(mean, digits),
+            Low = trend.Range?.Low,
+            High = trend.Range?.High,
+            History = [.. trend.History]
+        }
+        : null;
+
     /// <summary>Snapshots the current on-device face &amp; body session aggregates into a storable DTO.</summary>
     public SessionSummaryDto? BuildSummary()
     {
@@ -269,7 +280,17 @@ public sealed partial class SensingSession(PoWatchApiClient api, IJSRuntime js, 
             MaleShare = FaceTrends.SessionSexSplit?.Male,
             FemaleShare = FaceTrends.SessionSexSplit?.Female,
             BeautyHistory = [.. FaceTrends.BeautyHistory],
-            AgeHistory = [.. FaceTrends.AgeHistory]
+            AgeHistory = [.. FaceTrends.AgeHistory],
+            Mood = Summarise(FaceTrends.Mood, 1),
+            EmotionShares = FaceTrends.EmotionShares.ToDictionary(e => e.Emotion, e => e.Share),
+            Smile = Summarise(FaceTrends.Smile, 1),
+            Symmetry = Summarise(FaceTrends.Symmetry, 1),
+            Proportions = Summarise(FaceTrends.Proportions, 1),
+            BlinkRate = Summarise(FaceTrends.BlinkRate, 1),
+            FaceShape = FaceTrends.CommonShape?.Shape,
+            FaceShapeShare = FaceTrends.CommonShape?.Share,
+            FaceRatio = Summarise(FaceTrends.FaceRatio, 3),
+            HeartRate = Summarise(FaceTrends.HeartRate, 0)
         } : null;
 
         BodySummaryDto? bodies = hasBodies ? new BodySummaryDto

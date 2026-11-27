@@ -109,7 +109,7 @@ public sealed partial class SensingSession
         session.Notify();
     }
 
-    /// <summary>MediaPipe 52-weight blendshape summary [smile, brow, blink, jawOpen, eyeWide] per face slot.</summary>
+    /// <summary>MediaPipe blendshape summary [smile, brow, blink, jawOpen, eyeWide, blinks counted so far] per face slot.</summary>
     [JSExport]
     [SupportedOSPlatform("browser")]
     internal static void OnFaceBlendshapes(
@@ -120,6 +120,18 @@ public sealed partial class SensingSession
         session._faces.OnBlendshapes(slots, values);
     }
 
+    /// <summary>Forehead and cheek colour samples for the experimental heart rate (<see cref="FaceReadings.OnPulse"/>).</summary>
+    [JSExport]
+    [SupportedOSPlatform("browser")]
+    internal static void OnFacePulse(
+        [JSMarshalAs<JSType.Array<JSType.Number>>] double[] slots,
+        [JSMarshalAs<JSType.Array<JSType.Number>>] double[] counts,
+        [JSMarshalAs<JSType.Array<JSType.Number>>] double[] samples)
+    {
+        if (s_faces is not { IsRunning: true, Paused: false } session) return;
+        session._faces.OnPulse(slots, counts, samples);
+    }
+
     /// <summary>The face models' reading of one slot's face (<see cref="FaceReadings.OnReading"/>).</summary>
     [JSExport]
     [SupportedOSPlatform("browser")]
@@ -128,12 +140,13 @@ public sealed partial class SensingSession
         [JSMarshalAs<JSType.Array<JSType.Number>>] double[] age,
         [JSMarshalAs<JSType.Array<JSType.Number>>] double[] presentation,
         [JSMarshalAs<JSType.Array<JSType.Number>>] double[] descriptor,
+        [JSMarshalAs<JSType.Array<JSType.Number>>] double[] emotion,
         string? thumbnail)
     {
         if (s_faces is not { IsRunning: true, Paused: false } session) return;
         var slotId = (int)slot;
         var desc = Array.ConvertAll(descriptor, v => (float)v);
-        if (!session._faces.OnReading(slotId, age, presentation, desc)) return;
+        if (!session._faces.OnReading(slotId, age, presentation, desc, emotion.Length > 0 ? emotion : null)) return;
         session.PushFaceLabels(session._faces.InView);
         session.Notify();
 
@@ -172,6 +185,9 @@ public sealed partial class SensingSession
             FatigueShare = face.FatigueShare,
             TalkingShare = face.TalkingShare,
             DistanceBand = face.DistanceBand,
+            Mood = face.Mood,
+            Emotion = face.Emotion,
+            HeartRateBpm = face.HeartRateBpm,
             UprightScore = singleBody ? Bodies.PostureScore : null,
             MeanEnergy = singleBody ? Bodies.MeanEnergy : null,
             OpenPostureShare = singleBody && Bodies.ObservedSeconds >= 5 ? Bodies.OpenSeconds / Bodies.ObservedSeconds : null,

@@ -116,10 +116,14 @@
                         <FactRow Facts="@([
                             new("Beauty", person.Stats.BeautyMean is { } bm ? $"{bm:0}" : null, person.Stats.BeautyLow is { } bl && person.Stats.BeautyHigh is { } bh ? $"Range {bl:0}–{bh:0}" : null),
                             new("Age", person.Stats.AgeMean is { } am ? $"{am:0} yrs" : person.Stats.AgeBand),
+                            new("Mood", person.Stats.MoodMean is { } md ? $"{md:0}" : null, person.Stats.Emotion is { } em ? $"Last read {em}" : null),
+                            new("Symmetry", person.Stats.SymmetryMean is { } sy ? $"{sy:P0}" : null),
+                            new("Proportions", person.Stats.ProportionsMean is { } pr ? $"{pr:P0}" : null, "Mean of φ, thirds and fifths fit"),
                             new("Shape", person.Stats.FaceShape),
                             new("Focus", person.Stats.AttentionShare is { } att ? $"{att:P0}" : null),
                             new("Smile", person.Stats.SmileMean is { } sm ? $"{sm:0}" : null),
                             new("Blinks/m", person.Stats.BlinkRateMean is { } br ? $"{br:0}" : null),
+                            new("Heart rate", person.Stats.HeartRateMean is { } hr ? $"{hr:0} bpm" : null, "Experimental camera reading"),
                             new("Upright", person.Stats.UprightScore is { } up ? $"{up:0}%" : null),
                             new("Open", person.Stats.OpenPostureShare is { } op ? $"{op:P0}" : null),
                         ])" />
