@@ -20,7 +20,10 @@
                           Hint="@($"Usual {DisplayText.Percent(Anomaly("occupancy")?.Mean)}")" Test="stats-occupancy">
                     <ZChip Z="@Anomaly("occupancy")?.Z" Today="@Presence?.Occupancy" Mean="@Anomaly("occupancy")?.Mean" />
                 </StatCell>
-                <Sparkline Values="@OccupancyTrend" Max="1" Label="Occupancy over the session" />
+                <Sparkline Values="@OccupancyTrend" Max="1"
+                           Average="@(OccupancyTrend.Count > 0 ? OccupancyTrend.Average() : null)"
+                           AverageLabel="@(OccupancyTrend.Count > 0 ? $"1m avg {OccupancyTrend.Average():P0}" : null)"
+                           Label="Occupancy per minute over the session" />
             </RadzenCard>
             @if (!RateTooEarly)
             {
@@ -29,7 +32,10 @@
                               Hint="@($"Usual {DisplayText.Number(Anomaly("visits/hour")?.Mean, "0.0")}")">
                         <ZChip Z="@Anomaly("visits/hour")?.Z" Today="@Presence?.VisitsPerHour" Mean="@Anomaly("visits/hour")?.Mean" />
                     </StatCell>
-                    <Sparkline Values="@VisitsTrend" Cyan="true" Label="Visits over the session" />
+                    <Sparkline Values="@VisitsTrend" Cyan="true"
+                               Average="@(VisitsTrend.Count > 0 ? VisitsTrend.Average() : null)"
+                               AverageLabel="@(VisitsTrend.Count > 0 ? $"1m avg {VisitsTrend.Average():0.0}" : null)"
+                               Label="Visits per minute over the session" />
                 </RadzenCard>
             }
             else if (Presence is not null)

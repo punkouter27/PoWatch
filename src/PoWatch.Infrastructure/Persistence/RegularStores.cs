@@ -61,3 +61,55 @@ public sealed class AzureRegularStore(AzureStorageClients clients, IOptions<Azur
         DwellSeconds = e.GetDouble("DwellSeconds") ?? 0
     };
 }
+
+/// <summary>
+/// Face-matched anonymous person profiles stored in RegularsTable under partition "{UserKey}|face"
+/// so Delete My Data automatically purges them with zero extra Azure tables.
+/// </summary>
+public sealed class AzurePersonProfileStore(AzureStorageClients clients, IOptions<AzureStorageOptions> options) : IPersonProfileStore
+{
+    private readonly TableClient _table = clients.TableService.GetTableClient(options.Value.RegularsTable);
+
+    private static string Partition(string userId) => $"{StatsEntityMapper.UserKey(userId)}|face";
+
+    public async Task<IReadOnlyList<PersonProfile>> ListAsync(string userId, CancellationToken cancellationToken)
+    {
+        var partition = Partition(userId);
+        var list = new List<PersonProfile>();
+        await foreach (var entity in _table.QueryAsync<TableEntity>(e => e.PartitionKey == partition, cancellationToken: cancellationToken))
+            list.Add(ToProfile(entity));
+        return list;
+    }
+
+    public async Task UpsertAsync(PersonProfile profile, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        var entity = new TableEntity(Partition(profile.UserId), profile.Id)
+        {
+            ["UserId"] = profile.UserId,
+            ["Number"] = profile.Number,
+            ["Descriptor"] = StatsEntityMapper.Pack(profile.Descriptor),
+            ["DescriptorCount"] = profile.DescriptorCount,
+            ["SessionsSeen"] = profile.SessionsSeen,
+            ["LastSessionId"] = profile.LastSessionId,
+            ["FirstSeenUtc"] = profile.FirstSeenUtc,
+            ["LastSeenUtc"] = profile.LastSeenUtc,
+            ["StatsJson"] = StatsEntityMapper.ToJson(profile.Stats)
+        };
+        await _table.UpsertEntityAsync(entity, TableUpdateMode.Replace, cancellationToken);
+    }
+
+    private static PersonProfile ToProfile(TableEntity e) => new()
+    {
+        Id = e.RowKey,
+        UserId = e.GetString("UserId"),
+        Number = e.GetInt32("Number") ?? 1,
+        Descriptor = StatsEntityMapper.Unpack(e.GetBinary("Descriptor")),
+        DescriptorCount = e.GetInt32("DescriptorCount") ?? 1,
+        SessionsSeen = e.GetInt32("SessionsSeen") ?? 1,
+        LastSessionId = e.GetGuid("LastSessionId") ?? Guid.Empty,
+        FirstSeenUtc = e.GetDateTimeOffset("FirstSeenUtc") ?? DateTimeOffset.UtcNow,
+        LastSeenUtc = e.GetDateTimeOffset("LastSeenUtc") ?? DateTimeOffset.UtcNow,
+        Stats = StatsEntityMapper.Json<PersonProfileStats>(e, "StatsJson") ?? new PersonProfileStats()
+    };
+}

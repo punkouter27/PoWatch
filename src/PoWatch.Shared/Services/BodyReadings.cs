@@ -81,6 +81,10 @@ public sealed class BodyReadings
     /// <summary>Mean limb energy (0–1) per <see cref="EnergyBinSeconds"/> while someone was in view, oldest first.</summary>
     public IReadOnlyList<double> EnergyHistory => _energyHistory;
 
+    /// <summary>1-minute average limb energy and uprightness series for per-minute live graphs.</summary>
+    public MinuteSeries EnergyMinutes { get; } = new();
+    public MinuteSeries UprightMinutes { get; } = new();
+
     /// <summary>Mean limb energy over the session; null before anyone was in view.</summary>
     public double? MeanEnergy { get; private set; }
 
@@ -122,7 +126,13 @@ public sealed class BodyReadings
         }
         foreach (var gone in _bodies.Keys.Where(k => !seen.Contains(k)).ToList()) _bodies.Remove(gone);
 
-        if (energies.Count > 0 && step > 0) AddEnergy(energies.Average(), step);
+        if (energies.Count > 0 && step > 0)
+        {
+            var avgEnergy = energies.Average();
+            AddEnergy(avgEnergy, step);
+            EnergyMinutes.Add(avgEnergy, seconds);
+        }
+        if (PostureScore is { } score) UprightMinutes.Add(score, seconds);
     }
 
     /// <returns>The body's energy when it could be measured.</returns>

@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddSingleton<IRollupStore, AzureRollupStore>();
         services.AddSingleton<ISnapshotStore, AzureSnapshotStore>();
         services.AddSingleton<IRegularStore, AzureRegularStore>();
+        services.AddSingleton<IPersonProfileStore, AzurePersonProfileStore>();
         services.AddSingleton<IUserDataStore, AzureUserDataStore>();
         services.AddSingleton<IProfileStore, AzureProfileStore>();
         services.AddSingleton<IShareStore, AzureShareStore>();

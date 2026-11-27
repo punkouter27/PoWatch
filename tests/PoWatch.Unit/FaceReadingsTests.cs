@@ -24,42 +24,26 @@ public sealed class FaceReadingsTests
     private static readonly double[] Unsure = [0.6, 0.4];
 
     [Fact]
-    public void The_table_names_68_distinct_face_vertices()
+    public void MediaPipe_iBUG68_mapping_and_scoring_match()
     {
         Assert.Equal(FaceGeometry.Points, MediaPipeFace.Ibug68.Length);
         Assert.Equal(MediaPipeFace.Ibug68.Length, MediaPipeFace.Ibug68.Distinct().Count());
         // 468–477 are the irises, which no iBUG point is.
         Assert.All(MediaPipeFace.Ibug68, v => Assert.InRange(v, 0, 467));
-    }
 
-    [Fact]
-    public void Points_on_the_midline_come_from_the_meshs_midline()
-    {
-        // The mesh's own midline vertices: chin, nose bridge to base, and the lips' centres.
         int[] midline = [152, 168, 197, 5, 4, 2, 0, 17, 13, 14];
         foreach (var ibug in new[] { 8, 27, 28, 29, 30, 33, 51, 57, 62, 66 })
             Assert.Contains(MediaPipeFace.Ibug68[ibug], midline);
-    }
 
-    [Fact]
-    public void Corners_land_where_the_mesh_has_them()
-    {
-        // Eye corners and mouth corners, the points the canons lean on most.
         Assert.Equal(33, MediaPipeFace.Ibug68[36]);
         Assert.Equal(133, MediaPipeFace.Ibug68[39]);
         Assert.Equal(362, MediaPipeFace.Ibug68[42]);
         Assert.Equal(263, MediaPipeFace.Ibug68[45]);
         Assert.Equal(61, MediaPipeFace.Ibug68[48]);
         Assert.Equal(291, MediaPipeFace.Ibug68[54]);
-    }
 
-    [Fact]
-    public void A_mesh_scores_as_its_68_points_do()
-    {
         var direct = FaceGeometry.Read(FaceGeometryTests.Face())!.Value;
-
         var viaMesh = FaceGeometry.Read(MediaPipeFace.ToIbug68(Mesh())!)!.Value;
-
         Assert.Equal(direct, viaMesh);
         Assert.Null(MediaPipeFace.ToIbug68(new double[FaceReadings.MeshValues - 1]));
     }
@@ -107,13 +91,12 @@ public sealed class FaceReadingsTests
     }
 
     [Fact]
-    public void A_reading_gives_a_label_an_age_band_and_a_presentation()
+    public void Reading_aggregates_age_presentation_and_ignores_invalid_widths()
     {
+        // First reading sets label, age band, presentation.
         var faces = new FaceReadings();
         faces.OnLandmarks([1], Mesh());
-
         Assert.True(faces.OnReading(1, Thirties, SureFemale, [1, 0]));
-
         var face = Assert.Single(faces.InView);
         Assert.Equal("Person 1", face.Label);
         Assert.Equal("30–39", face.AgeBand);
@@ -121,45 +104,25 @@ public sealed class FaceReadingsTests
         Assert.Equal("female", face.Presentation);
         Assert.Equal(1, face.Readings);
         Assert.True(faces.HasRead);
-    }
 
-    [Fact]
-    public void An_unsure_presentation_is_not_named()
-    {
-        var faces = new FaceReadings();
-        faces.OnLandmarks([1], Mesh());
-
-        faces.OnReading(1, Thirties, Unsure, [1, 0]);
-
-        var face = faces.InView[0];
-        Assert.Null(face.Presentation);
-        Assert.Equal(0.6, face.PresentationConfidence);
-    }
-
-    [Fact]
-    public void Age_is_the_mean_over_readings()
-    {
-        var faces = new FaceReadings();
-        faces.OnLandmarks([1], Mesh());
-
-        faces.OnReading(1, Thirties, SureFemale, [1, 0]);
+        // Averaged over readings: 20–29 averages 0.5 against 30–39's 0.4.
         faces.OnReading(1, [0, 0, 0, 0.9, 0.1, 0, 0, 0, 0], SureFemale, [1, 0]);
-
-        // 20–29 averages 0.5 against 30–39's 0.4.
         Assert.Equal("20–29", faces.InView[0].AgeBand);
         Assert.Equal(0.5, faces.InView[0].AgeConfidence);
-    }
 
-    [Fact]
-    public void A_reading_of_the_wrong_width_is_ignored()
-    {
-        var faces = new FaceReadings();
-        faces.OnLandmarks([1], Mesh());
+        // Unsure presentation is left unnamed.
+        var unsure = new FaceReadings();
+        unsure.OnLandmarks([1], Mesh());
+        unsure.OnReading(1, Thirties, Unsure, [1, 0]);
+        Assert.Null(unsure.InView[0].Presentation);
+        Assert.Equal(0.6, unsure.InView[0].PresentationConfidence);
 
-        faces.OnReading(1, [1, 0], [0.5, 0.25, 0.25], [1, 0]);
-
-        Assert.Null(faces.InView[0].AgeBand);
-        Assert.Equal(0, faces.InView[0].PresentationConfidence);
+        // Wrong-width probability vectors are ignored.
+        var bad = new FaceReadings();
+        bad.OnLandmarks([1], Mesh());
+        bad.OnReading(1, [1, 0], [0.5, 0.25, 0.25], [1, 0]);
+        Assert.Null(bad.InView[0].AgeBand);
+        Assert.Equal(0, bad.InView[0].PresentationConfidence);
     }
 
     [Fact]
@@ -222,22 +185,15 @@ public sealed class FaceReadingsTests
     }
 
     [Fact]
-    public void A_labeler_can_be_tighter_than_the_default()
+    public void Labeler_threshold_and_learn_rules()
     {
-        var labeler = new FaceLabeler(0.1);
-        labeler.Observe([1, 0]);
+        var tight = new FaceLabeler(0.1);
+        tight.Observe([1, 0]);
+        Assert.Equal("Person 2", tight.Observe([0.71f, 0.71f])!.Value.Label);
+        Assert.Equal(0.1, tight.Threshold);
 
-        // About 0.29 apart: one person under the default 0.35, two under 0.1.
-        Assert.Equal("Person 2", labeler.Observe([0.71f, 0.71f])!.Value.Label);
-        Assert.Equal(0.1, labeler.Threshold);
-    }
-
-    [Fact]
-    public void Learn_folds_into_a_known_label_only()
-    {
         var labeler = new FaceLabeler();
         labeler.Observe([1, 0]);
-
         Assert.True(labeler.Learn("Person 1", [0, 1]));
         Assert.False(labeler.Learn("Person 9", [0, 1]));
         Assert.False(labeler.Learn("Person 1", [0, 0]));

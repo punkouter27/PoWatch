@@ -46,6 +46,12 @@ public sealed class LiveSensingState
     public double Motion { get; private set; }
     public IReadOnlyList<double> MotionHistory => _motion;
 
+    /// <summary>1-minute average series for time-varying numeric metrics.</summary>
+    public MinuteSeries MotionMinutes { get; } = new();
+    public MinuteSeries LightMinutes { get; } = new();
+    public MinuteSeries SoundMinutes { get; } = new();
+    public MinuteSeries PeopleMinutes { get; } = new();
+
     /// <summary>The room's mean brightness in [0, 1] from the latest pixel sample (null before the first).</summary>
     public double? Light { get; private set; }
     public IReadOnlyList<double> LightHistory => _light;
@@ -90,7 +96,11 @@ public sealed class LiveSensingState
         Narrate(new TimelineEntry(atUtc, "sound", label));
     }
 
-    public void RecordSoundLevel(double mean) => SoundLevel = Math.Clamp(mean, 0, 1);
+    public void RecordSoundLevel(double mean)
+    {
+        SoundLevel = Math.Clamp(mean, 0, 1);
+        SoundMinutes.Add(SoundLevel, DateTimeOffset.UtcNow);
+    }
 
     public void RecordMoment(DateTimeOffset atUtc, string reason, string? imageUrl = null)
     {
@@ -115,6 +125,8 @@ public sealed class LiveSensingState
         Light = sample.Luminance;
         Push(_motion, sample.Motion);
         Push(_light, sample.Luminance);
+        MotionMinutes.Add(sample.Motion, nowUtc);
+        LightMinutes.Add(sample.Luminance, nowUtc);
         if (sample.Grid.Count == _heat.Length)
         {
             for (var i = 0; i < _heat.Length; i++) _heat[i] = (0.85f * _heat[i]) + (0.15f * sample.Grid[i]);
@@ -126,6 +138,7 @@ public sealed class LiveSensingState
         ClassesNow = frame.CountsByLabel;
         Tracks = frame.Active;
         PeopleNow = frame.CountsByLabel.GetValueOrDefault("person");
+        PeopleMinutes.Add(PeopleNow, nowUtc);
         AnimalsNow = frame.CountsByLabel.Where(kv => kv.Key != "person" && CentroidTracker.IsPresence(kv.Key)).Sum(kv => kv.Value);
         PeakConcurrency = Math.Max(PeakConcurrency, PeopleNow + AnimalsNow);
 

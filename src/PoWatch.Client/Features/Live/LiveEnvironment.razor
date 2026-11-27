@@ -24,6 +24,12 @@
                             <div class="mic-level" title="Live microphone level" aria-hidden="true">
                                 <span style="width: @((int)Math.Round(L.SoundLevel * 100))%"></span>
                             </div>
+                            @if (L.SoundMinutes.Average is { } sAvg)
+                            {
+                                <Sparkline Values="@L.SoundMinutes.Points" Max="1" Average="@sAvg"
+                                           AverageLabel="@($"1m avg {sAvg:P0}")"
+                                           Label="Ambient sound level per minute" />
+                            }
                         }
                     </div>
                 }
@@ -31,8 +37,12 @@
         }
         @if (LightSeries() is { Count: > 1 } lightCurve)
         {
+            var lightAvg = Sensing.IsRunning ? L.LightMinutes.Average : lightCurve.Average();
             <div class="env-light-spark" data-test="env-light-curve">
-                <Sparkline Values="@lightCurve" Max="1" Cyan="true" Label="Room brightness over this session" />
+                <Sparkline Values="@lightCurve" Max="1" Cyan="true"
+                           Average="@lightAvg"
+                           AverageLabel="@(lightAvg is { } la ? $"1m avg {la:P0} light" : null)"
+                           Label="Room brightness per minute over this session" />
             </div>
         }
         @if (Data is { } env)
@@ -88,7 +98,7 @@
 
     private IReadOnlyList<double> LightSeries()
     {
-        if (Sensing.IsRunning && L.LightHistory.Count > 1) return L.LightHistory;
+        if (Sensing.IsRunning && L.LightMinutes.Points.Count > 1) return L.LightMinutes.Points;
         return Data?.LightCurve.Select(p => p.Luminance).ToList() ?? [];
     }
 

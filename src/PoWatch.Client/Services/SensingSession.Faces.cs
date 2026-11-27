@@ -1,17 +1,21 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
+using PoWatch.Shared.Models;
 using PoWatch.Shared.Services;
 
 namespace PoWatch.Client.Services;
 
 /// <summary>
 /// What the camera reads from the faces in front of it (face-overlay.js): landmarks scored for
-/// traditional beauty, and the face models' age band, presentation and temporary label. All of it is
-/// held in <see cref="FaceReadings"/> for this session only, and never batched, stored or sent.
+/// traditional beauty, age band, presentation, and cross-session matching against Azure Table Storage
+/// (<c>POST /api/people/observe</c>) so returning people keep their anonymous "Person N" label and
+/// bring their historical face &amp; body appearance stats into the new session.
 /// </summary>
 public sealed partial class SensingSession
 {
+    private static readonly TimeSpan PersonSyncEvery = TimeSpan.FromSeconds(15);
+
     /// <summary>The session the face overlay's readings go to ([JSExport] methods are static).</summary>
     private static SensingSession? s_faces;
 
@@ -19,9 +23,18 @@ public sealed partial class SensingSession
     private FaceTrends _faceTrends = new();
     private long _facesStarted = Stopwatch.GetTimestamp();
     private string _faceLabelKey = string.Empty;
+    private readonly Dictionary<int, PersonProfileDto> _personBySlot = [];
+    private readonly HashSet<int> _returningSlots = [];
+    private readonly Dictionary<int, DateTimeOffset> _lastPersonSync = [];
 
     /// <summary>The faces in view right now, in slot order.</summary>
     public IReadOnlyList<FaceReadout> Faces => _faces.InView;
+
+    /// <summary>Matched persistent anonymous person profile for a face slot, if matched in Azure Table Storage.</summary>
+    public PersonProfileDto? PersonProfileFor(int slot) => _personBySlot.GetValueOrDefault(slot);
+
+    /// <summary>True when this face slot matched a person seen in a previous session.</summary>
+    public bool IsReturningPerson(int slot) => _returningSlots.Contains(slot);
 
     /// <summary>Mean beauty, age and face count over this session, in 5-second stretches.</summary>
     public FaceTrends FaceTrends => _faceTrends;
@@ -39,6 +52,9 @@ public sealed partial class SensingSession
         _faceTrends = new FaceTrends();
         _facesStarted = Stopwatch.GetTimestamp();
         _faceLabelKey = string.Empty;
+        _personBySlot.Clear();
+        _returningSlots.Clear();
+        _lastPersonSync.Clear();
         s_faces = this;
     }
 
@@ -48,21 +64,24 @@ public sealed partial class SensingSession
         _faces = new FaceReadings();
         _faceTrends = new FaceTrends();
         _faceLabelKey = string.Empty;
+        _personBySlot.Clear();
+        _returningSlots.Clear();
+        _lastPersonSync.Clear();
     }
 
     /// <summary>
-    /// Hands face-overlay.js the label of every face in view, so each person in the picture wears their
-    /// number and two of them are never confused. Pushed only when the labels change; the overlay drops a
-    /// chip by itself when its face leaves.
+    /// Hands face-overlay.js the label of every face in view, preferring the persistent cross-session
+    /// "Person N" label when matched in Azure Table Storage.
     /// </summary>
     private void PushFaceLabels(IReadOnlyList<FaceReadout> faces)
     {
-        var key = string.Join(',', faces.Select(f => $"{f.Slot}:{f.Label}"));
+        var resolved = faces.Select(f => (f.Slot, Name: _personBySlot.GetValueOrDefault(f.Slot)?.DisplayName ?? f.Label ?? string.Empty)).ToList();
+        var key = string.Join(',', resolved.Select(f => $"{f.Slot}:{f.Name}"));
         if (key == _faceLabelKey) return;
         _faceLabelKey = key;
         _ = js.TryInvokeVoidAsync("powatchFaces.labels",
-            faces.Select(f => (double)f.Slot).ToArray(),
-            faces.Select(f => f.Label ?? string.Empty).ToArray());
+            resolved.Select(f => (double)f.Slot).ToArray(),
+            resolved.Select(f => f.Name).ToArray());
     }
 
     /// <summary>
@@ -75,9 +94,16 @@ public sealed partial class SensingSession
         [JSMarshalAs<JSType.Array<JSType.Number>>] double[] slots,
         [JSMarshalAs<JSType.Array<JSType.Number>>] double[] meshes)
     {
-        if (s_faces is not { IsRunning: true } session) return;
+        if (s_faces is not { IsRunning: true, Paused: false } session) return;
         session._faces.OnLandmarks(slots, meshes);
         var faces = session._faces.InView;
+        var activeSlots = faces.Select(f => f.Slot).ToHashSet();
+        foreach (var gone in session._personBySlot.Keys.Where(s => !activeSlots.Contains(s)).ToList())
+        {
+            session._personBySlot.Remove(gone);
+            session._returningSlots.Remove(gone);
+            session._lastPersonSync.Remove(gone);
+        }
         session._faceTrends.Observe(faces, Stopwatch.GetElapsedTime(session._facesStarted).TotalSeconds);
         session.PushFaceLabels(faces);
         session.Notify();
@@ -92,10 +118,54 @@ public sealed partial class SensingSession
         [JSMarshalAs<JSType.Array<JSType.Number>>] double[] presentation,
         [JSMarshalAs<JSType.Array<JSType.Number>>] double[] descriptor)
     {
-        if (s_faces is not { IsRunning: true } session) return;
-        if (!session._faces.OnReading((int)slot, age, presentation, Array.ConvertAll(descriptor, v => (float)v))) return;
-        // A reading can name the face for the first time: who wears which number on the picture changes.
+        if (s_faces is not { IsRunning: true, Paused: false } session) return;
+        var slotId = (int)slot;
+        var desc = Array.ConvertAll(descriptor, v => (float)v);
+        if (!session._faces.OnReading(slotId, age, presentation, desc)) return;
         session.PushFaceLabels(session._faces.InView);
         session.Notify();
+
+        var now = DateTimeOffset.UtcNow;
+        if (!session._lastPersonSync.TryGetValue(slotId, out var last) || now - last >= PersonSyncEvery)
+        {
+            session._lastPersonSync[slotId] = now;
+            _ = session.SyncPersonProfileAsync(slotId, desc);
+        }
+    }
+
+    private async Task SyncPersonProfileAsync(int slot, float[] descriptor)
+    {
+        var face = _faces.InView.FirstOrDefault(f => f.Slot == slot);
+        if (face is null || Live.Session is not { } session) return;
+
+        var singleBody = Bodies.InView.Count == 1;
+        var request = new ObservePersonRequestDto
+        {
+            SessionId = session.Id,
+            Descriptor = [.. descriptor],
+            Beauty = face.Beauty,
+            Symmetry = face.Symmetry,
+            Golden = face.Golden,
+            Thirds = face.Thirds,
+            Fifths = face.Fifths,
+            AgeYears = face.AgeYears,
+            AgeBand = face.AgeBand,
+            Presentation = face.Presentation,
+            UprightScore = singleBody ? Bodies.PostureScore : null,
+            MeanEnergy = singleBody ? Bodies.MeanEnergy : null,
+            OpenPostureShare = singleBody && Bodies.ObservedSeconds >= 5 ? Bodies.OpenSeconds / Bodies.ObservedSeconds : null,
+            ArmBalance = singleBody ? Bodies.ArmBalance : null,
+            LegBalance = singleBody ? Bodies.LegBalance : null,
+            ShoulderTilt = singleBody ? Bodies.ShoulderTilt : null
+        };
+
+        var result = await api.ObservePersonAsync(request);
+        if (result is null || !IsRunning) return;
+
+        _personBySlot[slot] = result.Person;
+        if (result.ReturningFromPreviousSession || result.Person.SessionsSeen > 1)
+            _returningSlots.Add(slot);
+        PushFaceLabels(_faces.InView);
+        Notify();
     }
 }

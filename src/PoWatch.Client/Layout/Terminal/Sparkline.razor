@@ -1,12 +1,15 @@
-@* A tiny inline SVG trend line. Cheap enough to put one in every table row, which a chart control is not.
-   An optional Baseline draws faintly behind it on the same scale (today over a usual day), NowSlot marks
-   the current position with a vertical hairline, and AxisLabels adds start/mid/end labels beneath. *@
+@* A tiny inline SVG trend line. Supports an optional faint Baseline (e.g. usual day), a dashed Average
+   reference line with an inline label, a vertical NowSlot hairline, and AxisLabels beneath. *@
 <div class="term-spark-wrap">
     <svg class="term-spark @(Cyan ? "term-spark--cyan" : string.Empty)" viewBox="0 0 100 28" preserveAspectRatio="none"
          role="img" aria-label="@Label">
         @if (_baseline.Length > 0)
         {
             <polyline class="term-spark-base" points="@_baseline" />
+        }
+        @if (_avgY is { } avgY)
+        {
+            <line class="term-spark-avg" x1="0" y1="@avgY" x2="100" y2="@avgY" />
         }
         @if (_nowX is { } x)
         {
@@ -17,6 +20,10 @@
             <polyline points="@_points" />
         }
     </svg>
+    @if (!string.IsNullOrEmpty(AverageLabel))
+    {
+        <span class="term-spark-avg-label">@AverageLabel</span>
+    }
     @if (AxisLabels is { Length: > 0 })
     {
         <div class="term-spark-axis" aria-hidden="true">
@@ -32,6 +39,7 @@
     private string _points = string.Empty;
     private string _baseline = string.Empty;
     private string? _nowX;
+    private string? _avgY;
 
     [Parameter, EditorRequired] public IReadOnlyList<double> Values { get; set; } = [];
 
@@ -40,6 +48,12 @@
 
     /// <summary>A second series drawn faintly behind Values, on the same scale.</summary>
     [Parameter] public IReadOnlyList<double>? Baseline { get; set; }
+
+    /// <summary>Optional average value drawn as a dashed horizontal reference line.</summary>
+    [Parameter] public double? Average { get; set; }
+
+    /// <summary>Optional compact text shown under the graph (e.g. "1m avg 61").</summary>
+    [Parameter] public string? AverageLabel { get; set; }
 
     /// <summary>How many points span the full width; Values' own count when null. Set it to draw a partial day.</summary>
     [Parameter] public int? Slots { get; set; }
@@ -55,13 +69,16 @@
 
     protected override void OnParametersSet()
     {
-        var max = Max ?? Math.Max(Values.DefaultIfEmpty().Max(), Baseline?.DefaultIfEmpty().Max() ?? 0);
+        var max = Max ?? Math.Max(Math.Max(Values.DefaultIfEmpty().Max(), Baseline?.DefaultIfEmpty().Max() ?? 0), Average ?? 0);
         if (max <= 0) max = 1;
         var slots = Slots ?? Values.Count;
         _points = Line(Values, slots, max);
         _baseline = Baseline is null ? string.Empty : Line(Baseline, Slots ?? Baseline.Count, max);
         _nowX = NowSlot is { } n && slots >= 2
             ? FormattableString.Invariant($"{Math.Clamp(n, 0, slots - 1) * (100.0 / (slots - 1)):0.##}")
+            : null;
+        _avgY = Average is { } avg && double.IsFinite(avg)
+            ? FormattableString.Invariant($"{27 - (Math.Clamp(avg / max, 0, 1) * 26):0.##}")
             : null;
     }
 

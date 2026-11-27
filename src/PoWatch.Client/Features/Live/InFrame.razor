@@ -23,6 +23,14 @@
                 new("Empty for", stay.LongestEmptySeconds >= 1 ? DisplayText.Duration(stay.LongestEmptySeconds) : null, "The longest stretch with nobody in frame"),
             ])" />
         }
+        @if (Sensing.IsRunning && L.PeopleMinutes.Average is { } peopleAvg)
+        {
+            <div class="inframe-people-spark" data-test="inframe-people-spark">
+                <Sparkline Values="@L.PeopleMinutes.Points" Average="@peopleAvg"
+                           AverageLabel="@($"1m avg {peopleAvg:0.0} people")"
+                           Label="People in frame per minute" />
+            </div>
+        }
         @if (L.Tracks.Count > 0)
         {
             <WhoList Rows="@WhoIsHere()" Label="Tracked right now" />
@@ -106,6 +114,14 @@
                 </div>
                 <span class="meter-val">@rounded% · @grade@(Sensing.Bodies.SlumpedSeconds >= 1 ? $" (slumped {DisplayText.Duration(Sensing.Bodies.SlumpedSeconds)})" : null)</span>
             </div>
+            @if (Sensing.Bodies.UprightMinutes.Average is { } upAvg)
+            {
+                <div class="inframe-people-spark" data-test="upright-spark">
+                    <Sparkline Values="@Sensing.Bodies.UprightMinutes.Points" Max="100" Average="@upAvg"
+                               AverageLabel="@($"1m avg {upAvg:0}% upright")"
+                               Label="Upright posture percentage per minute" />
+                </div>
+            }
         }
         @* When each thing was around, not just whether it ever was: one line per presence class. *@
         @if (Sensing.IsRunning && Sparks() is { Count: > 0 } sparks)

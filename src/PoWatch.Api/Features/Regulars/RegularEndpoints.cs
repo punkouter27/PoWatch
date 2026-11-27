@@ -43,6 +43,23 @@ internal static class RegularEndpoints
             .WithName("ObserveRegular")
             .WithSummary("Recognise a tracked person, pet or object by its look, or start a new regular (Person 4); regulars are never named.");
 
+        var people = app.MapGroup("/api/people").WithTags("People").RequireAuthorization();
+
+        people.MapGet("/", async (UserId userId, PersonProfileService service, CancellationToken ct) =>
+                Results.Ok(await service.ListAsync(userId, ct)))
+            .WithName("ListPeople")
+            .WithSummary("Anonymous face-matched person profiles and their carried-over face & body appearance stats.");
+
+        people.MapPost("/observe", async (ObservePersonRequestDto request, UserId userId, PersonProfileService service, CancellationToken ct) =>
+            {
+                if (request.Descriptor.Count is < 2 or > 1024 || request.Descriptor.Any(v => !float.IsFinite(v)))
+                    return Results.BadRequest(new { message = "A finite face descriptor (2–1024 floats) is required." });
+
+                return Results.Ok(await service.ObserveAsync(userId, request, ct));
+            })
+            .WithName("ObservePerson")
+            .WithSummary("Match a face descriptor across sessions in Azure Table Storage and fold in face/body appearance stats.");
+
         return app;
     }
 }

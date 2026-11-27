@@ -115,6 +115,12 @@ public sealed class PoWatchApiClient(HttpClient httpClient)
     public Task<ObserveRegularResultDto?> ObserveRegularAsync(ObserveRegularRequestDto request, CancellationToken cancellationToken = default) =>
         ReadAsync(ct => httpClient.PostAsJsonAsync("api/regulars/observe", request, Json.ObserveRegularRequestDto, ct), Json.ObserveRegularResultDto, cancellationToken);
 
+    public async Task<IReadOnlyList<PersonProfileDto>> ListPeopleAsync(CancellationToken cancellationToken = default) =>
+        await ReadAsync(ct => httpClient.GetAsync("api/people", ct), Json.ListPersonProfileDto, cancellationToken) ?? [];
+
+    public Task<ObservePersonResultDto?> ObservePersonAsync(ObservePersonRequestDto request, CancellationToken cancellationToken = default) =>
+        ReadAsync(ct => httpClient.PostAsJsonAsync("api/people/observe", request, Json.ObservePersonRequestDto, ct), Json.ObservePersonResultDto, cancellationToken);
+
     public Task<PresenceStatsDto?> GetPresenceAsync(StatsQuery query, CancellationToken cancellationToken = default) =>
         GetStatsAsync("presence", query, Json.PresenceStatsDto, cancellationToken);
 

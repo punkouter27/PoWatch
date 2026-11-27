@@ -50,7 +50,7 @@ public sealed class StatsE2ETests(ApiE2EFactory factory) : IClassFixture<ApiE2EF
 
         // The one-file export carries every family.
         var everything = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/api/stats/all?range=30d&tz=UTC");
-        Assert.Equal(["presence", "space", "objects", "patterns", "environment", "pipeline", "ticks", "events"], everything.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(["presence", "space", "objects", "patterns", "environment", "pipeline", "sessionSummary", "ticks", "events"], everything.EnumerateObject().Select(p => p.Name));
         Assert.Equal(month.Visits, everything.GetProperty("presence").GetProperty("visits").GetInt64());
         Assert.Equal(System.Text.Json.JsonValueKind.Null, everything.GetProperty("ticks").ValueKind);
 

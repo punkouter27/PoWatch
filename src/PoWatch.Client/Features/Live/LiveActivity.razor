@@ -13,7 +13,11 @@
                           Hint="@(Sensing.IsRunning ? $"Now · usual daily mean {DisplayText.Percent(Anomaly("motion")?.Mean)}" : "Available while observing")" Test="metric-motion">
                     <ZChip Z="@Anomaly("motion")?.Z" Today="@(Sensing.IsRunning ? L.Motion : null)" Mean="@Anomaly("motion")?.Mean" />
                 </StatCell>
-                <Sparkline Values="@L.MotionHistory" Baseline="@UsualMotionLine()" Label="Activity over the last minute with usual daily mean baseline" />
+                <Sparkline Values="@(Sensing.IsRunning && L.MotionMinutes.Points.Count > 1 ? L.MotionMinutes.Points : L.MotionHistory)"
+                           Baseline="@UsualMotionLine()"
+                           Average="@L.MotionMinutes.Average"
+                           AverageLabel="@(L.MotionMinutes.Average is { } ma ? $"1m avg {ma:P1}" : null)"
+                           Label="Activity per minute with average and usual daily mean" />
             </RadzenCard>
         </div>
         <FactRow Test="activity-facts" Facts="@([
@@ -31,9 +35,12 @@
             }
             @if (B.MeanEnergy is { } mean)
             {
-                <div class="live-census" data-test="body-energy" title="How much arms and legs move, measured against the body's own size, averaged every 5 seconds while someone is in view">
+                <div class="live-census" data-test="body-energy" title="How much arms and legs move, measured against the body's own size, averaged per minute while someone is in view">
                     <span class="live-heat-label">ENERGY</span>@EnergyWord(mean) · mean @mean.ToString("P0", CultureInfo.InvariantCulture)
-                    <Sparkline Values="@B.EnergyHistory" Max="1" Label="Limb energy over this session" />
+                    <Sparkline Values="@(B.EnergyMinutes.Points.Count > 1 ? B.EnergyMinutes.Points : B.EnergyHistory)" Max="1"
+                               Average="@mean"
+                               AverageLabel="@($"1m avg {mean:P0}")"
+                               Label="Limb energy per minute over this session" />
                 </div>
             }
             <ShareBar Label="Person-time by activity this session" Test="body-activity-bar" Legend="true"

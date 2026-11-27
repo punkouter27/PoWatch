@@ -10,20 +10,13 @@ namespace PoWatch.E2EUI;
 public sealed class PageContentE2ETests(PlaywrightFixture fixture)
 {
     [E2EFact]
-    public async Task The_live_page_shows_every_panel_around_the_camera_and_its_narration()
+    public async Task A_demo_session_fills_the_counters_and_stops_cleanly()
     {
-        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser);
+        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"demo-{Guid.NewGuid():N}");
 
         foreach (var panel in new[] { "live-camera", "live-narration", "live-metrics", "live-tracks", "live-motion-grid" })
             await Assertions.Expect(page.GetByTestId(panel)).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("start-camera")).ToBeVisibleAsync();
-        await page.AssertNoBlazorErrorAsync();
-    }
-
-    [E2EFact]
-    public async Task A_demo_session_fills_the_counters_and_stops_cleanly()
-    {
-        await using var page = await PoWatchPage.SignedInAsync(fixture.Browser, user: $"demo-{Guid.NewGuid():N}");
 
         await page.StartDemoAsync();
         await Assertions.Expect(page.GetByTestId("session-status")).ToContainTextAsync("OBSERVING");

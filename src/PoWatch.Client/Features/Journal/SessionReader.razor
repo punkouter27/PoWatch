@@ -1,8 +1,8 @@
 @using PoWatch.Shared.Services
 @inject PoWatchApiClient Api
 
-@* The reader for one session: the story, headline numbers, captured images alongside all stored session
-   analysis (space, room insights, and on-device face/body aggregates), then the minute-by-minute replay. *@
+@* Compact no-scrollbar desktop bento layout for one session: top toolbar + slim story/numbers header,
+   then a 2-column grid with Captured Images + Replay/Timeline on the left and full Stored Analysis on the right. *@
 @if (!_loaded)
 {
     <Skeleton Heights="@([240])" />
@@ -14,156 +14,160 @@ else if (_session is null)
 else
 {
     var tag = SessionDto.Tag(_session.Id);
-    <JournalToolbar Day="@DateOnly.FromDateTime(_session.StartedUtc.LocalDateTime)" Session="@_session" />
-    <TerminalPanel Title="@Heading(_session)" Class="reader story-card" Test="session-page">
-        <Aside>
-            <div class="reader-actions">
-            <span class="story-meta">@tag · @(_session.IsRunning ? "RECORDING" : DisplayText.Duration(_session.DurationSeconds))</span>
-            <a class="term-link" href="@($"?session={_session.Id}")" title="This session on Live">Live view →</a>
-            <a class="term-link" href="@StoryLinks.DayOf(_session)" title="That day's recap, replay and timeline">Day →</a>
-            <ExportMenu Test="session-export">
-                <a class="term-menu-item" href="@PoWatchApiClient.SessionRecapPdfUrl(_session.Id)" download="PoWatch-session-@(tag[1..]).pdf" onclick="return powatchFiles.save(event, this)" data-test="session-pdf"><span>Recap <i>the session, as a PDF</i></span><b>PDF</b></a>
-                <a class="term-menu-item" href="@PoWatchApiClient.AllStatsUrl(StatsQuery.For("session", _session.Id))" download="PoWatch-session-@(tag[1..]).json" data-test="session-json"><span>Everything stored <i>every tick, event and stat of the session</i></span><b>JSON</b></a>
-            </ExportMenu>
+    <div class="session-board">
+        <JournalToolbar Day="@DateOnly.FromDateTime(_session.StartedUtc.LocalDateTime)" Session="@_session" />
+
+        <TerminalPanel Title="@Heading(_session)" Class="reader story-card session-top" Test="session-page">
+            <Aside>
+                <div class="reader-actions">
+                    <span class="story-meta">@tag · @(_session.IsRunning ? "RECORDING" : DisplayText.Duration(_session.DurationSeconds))</span>
+                    <a class="term-link" href="@($"?session={_session.Id}")" title="This session on Live">Live view →</a>
+                    <a class="term-link" href="@StoryLinks.DayOf(_session)" title="That day's recap, replay and timeline">Day →</a>
+                    <ExportMenu Test="session-export">
+                        <a class="term-menu-item" href="@PoWatchApiClient.SessionRecapPdfUrl(_session.Id)" download="PoWatch-session-@(tag[1..]).pdf" onclick="return powatchFiles.save(event, this)" data-test="session-pdf"><span>Recap <i>the session, as a PDF</i></span><b>PDF</b></a>
+                        <a class="term-menu-item" href="@PoWatchApiClient.AllStatsUrl(StatsQuery.For("session", _session.Id))" download="PoWatch-session-@(tag[1..]).json" data-test="session-json"><span>Everything stored <i>every tick, event and stat of the session</i></span><b>JSON</b></a>
+                    </ExportMenu>
+                </div>
+            </Aside>
+            <ChildContent>
+                <div class="session-top-row">
+                    <div class="session-story-wrap">
+                        <SessionStory SessionId="@_session.Id" NewestFirst="true" />
+                    </div>
+                    @if (_presence is { } p)
+                    {
+                        <div class="term-stats reader-numbers session-numbers" data-test="session-numbers">
+                            <StatCell Label="Visits" Value="@p.Visits.ToString(CultureInfo.InvariantCulture)" />
+                            <StatCell Label="Occupancy" Value="@p.Occupancy.ToString("0%", CultureInfo.InvariantCulture)" />
+                            <StatCell Label="Peak at once" Value="@p.PeakConcurrency.ToString(CultureInfo.InvariantCulture)" />
+                            <StatCell Label="Seen" Value="@(_objects?.Classes.Count.ToString(CultureInfo.InvariantCulture) ?? "0")" Hint="@string.Join(", ", _objects?.Classes.Take(3).Select(c => c.Name) ?? [])" />
+                            <PostureCell Presence="@p" />
+                        </div>
+                    }
+                </div>
+            </ChildContent>
+        </TerminalPanel>
+
+        <div class="session-bento">
+            <div class="session-col">
+                @if (_moments.Count > 0)
+                {
+                    <TerminalPanel Title="Captured images" Class="reader session-panel" Test="session-images">
+                        <Aside>@_moments.Count MOMENTS</Aside>
+                        <ChildContent>
+                            <div class="session-gallery" data-test="session-gallery">
+                                @foreach (var moment in _moments.Take(4))
+                                {
+                                    <figure class="session-snap @(moment.ImageUrl is null ? "session-snap--text" : null)">
+                                        @if (moment.ImageUrl is { } url)
+                                        {
+                                            <a href="@url" target="_blank" rel="noopener" title="Open full-size snapshot">
+                                                <img src="@url" alt="Snapshot: @moment.Text" loading="lazy" />
+                                            </a>
+                                        }
+                                        <figcaption>
+                                            <time class="num">@moment.AtUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture)</time>
+                                            <span>@moment.Text</span>
+                                        </figcaption>
+                                    </figure>
+                                }
+                            </div>
+                        </ChildContent>
+                    </TerminalPanel>
+                }
+
+                <TerminalPanel Title="Replay and timeline" Class="reader session-panel session-panel--grow" Test="reader-timeline">
+                    <ChildContent>
+                        <TimelineReplay Day="@DateOnly.FromDateTime(_session.StartedUtc.LocalDateTime)" From="@_session.StartedUtc" To="@(_session.EndedUtc ?? DateTimeOffset.UtcNow)" />
+                    </ChildContent>
+                </TerminalPanel>
             </div>
-        </Aside>
-        <ChildContent>
-            <SessionStory SessionId="@_session.Id" NewestFirst="true" />
-            @if (_presence is { } p)
-            {
-                <div class="term-stats reader-numbers session-numbers" data-test="session-numbers">
-                    <StatCell Label="Visits" Value="@p.Visits.ToString(CultureInfo.InvariantCulture)" />
-                    <StatCell Label="Occupancy" Value="@p.Occupancy.ToString("0%", CultureInfo.InvariantCulture)" />
-                    <StatCell Label="Peak at once" Value="@p.PeakConcurrency.ToString(CultureInfo.InvariantCulture)" />
-                    <StatCell Label="Seen" Value="@(_objects?.Classes.Count.ToString(CultureInfo.InvariantCulture) ?? "0")" Hint="@string.Join(", ", _objects?.Classes.Take(4).Select(c => c.Name) ?? [])" />
-                    <PostureCell Presence="@p" />
-                </div>
-            }
-        </ChildContent>
-    </TerminalPanel>
 
-    @* Captured highlight images alongside the session's full captured data analysis. *@
-    @if (_moments.Count > 0)
-    {
-        <TerminalPanel Title="Captured images" Class="reader" Test="session-images">
-            <Aside>@_moments.Count MOMENTS</Aside>
-            <ChildContent>
-                <div class="session-gallery" data-test="session-gallery">
-                    @foreach (var moment in _moments)
-                    {
-                        <figure class="session-snap">
-                            @if (moment.ImageUrl is { } url)
-                            {
-                                <a href="@url" target="_blank" rel="noopener" title="Open full-size snapshot">
-                                    <img src="@url" alt="Snapshot: @moment.Text" loading="lazy" />
-                                </a>
-                            }
-                            <figcaption>
-                                <time class="num">@moment.AtUtc.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture)</time>
-                                <span>@moment.Text</span>
-                            </figcaption>
-                        </figure>
-                    }
-                </div>
-            </ChildContent>
-        </TerminalPanel>
-    }
+            <div class="session-col">
+                @if (_space is not null || _environment is not null || _session.Summary is not null)
+                {
+                    <TerminalPanel Title="Captured session analysis" Class="reader session-panel session-panel--grow" Test="session-analysis">
+                        <Aside>STORED DATA</Aside>
+                        <ChildContent>
+                            <div class="session-analysis-grid">
+                                @if (_space is { } space)
+                                {
+                                    <section class="analysis-block" data-test="analysis-space">
+                                        <h3>Space &amp; movement</h3>
+                                        <HeatGrid Values="@(space.PresenceHeat.Count > 0 ? space.PresenceHeat : space.MotionHeat)" Label="Session activity heat map" />
+                                        <FactRow Facts="@([
+                                            new("Hot spot", space.HottestCell >= 0 ? ColorNamer.ZoneName(space.HottestCell) : "—"),
+                                            new("Favourite", space.FavouriteSpotCell >= 0 ? ColorNamer.ZoneName(space.FavouriteSpotCell) : "—"),
+                                            new("Traffic", $"{space.Entries.Values.Sum()} in · {space.Exits.Values.Sum()} out"),
+                                        ])" />
+                                    </section>
+                                }
 
-    @if (_space is not null || _environment is not null || _session.Summary is not null)
-    {
-        <TerminalPanel Title="Captured session analysis" Class="reader" Test="session-analysis">
-            <Aside>STORED DATA</Aside>
-            <ChildContent>
-                <div class="session-analysis-grid">
-                    @if (_space is { } space)
-                    {
-                        <section class="analysis-block" data-test="analysis-space">
-                            <h3>Space &amp; movement</h3>
-                            <HeatGrid Values="@(space.PresenceHeat.Count > 0 ? space.PresenceHeat : space.MotionHeat)" Label="Session activity heat map" />
-                            <FactRow Facts="@([
-                                new("Hot spot", space.HottestCell >= 0 ? ColorNamer.ZoneName(space.HottestCell) : "—"),
-                                new("Favourite spot", space.FavouriteSpotCell >= 0 ? ColorNamer.ZoneName(space.FavouriteSpotCell) : "—"),
-                                new("Came in", space.Entries.Values.Sum().ToString(CultureInfo.InvariantCulture)),
-                                new("Went out", space.Exits.Values.Sum().ToString(CultureInfo.InvariantCulture)),
-                            ])" />
-                        </section>
-                    }
+                                @if (_environment is { } env)
+                                {
+                                    <section class="analysis-block" data-test="analysis-env">
+                                        <h3>Room &amp; captions</h3>
+                                        @if (env.LightCurve.Count > 1)
+                                        {
+                                            <Sparkline Values="@env.LightCurve.Select(l => l.Luminance).ToList()" Max="1"
+                                                       Average="@env.LightCurve.Average(l => l.Luminance)"
+                                                       AverageLabel="@($"avg {env.LightCurve.Average(l => l.Luminance):P0} light")"
+                                                       Label="Room brightness over the session" />
+                                        }
+                                        <FactRow Facts="@([
+                                            new("Switches", env.Switches.Count.ToString(CultureInfo.InvariantCulture)),
+                                            new("Captions", env.CaptionCount.ToString(CultureInfo.InvariantCulture)),
+                                        ])" />
+                                        <ShareBar Label="Room colour palette"
+                                                  Parts="@([.. env.Palette.Take(4).Select(c => new ShareBar.Part(ColorNamer.Describe(c.Rgb), c.Share, $"#{c.Rgb:x6}", $"{c.Share:P0}"))])" />
+                                        @if (env.WeirdestCaption is { } weird)
+                                        {
+                                            <p class="stats-weird">“@weird”</p>
+                                        }
+                                    </section>
+                                }
 
-                    @if (_environment is { } env)
-                    {
-                        <section class="analysis-block" data-test="analysis-env">
-                            <h3>Room &amp; captions</h3>
-                            @if (env.LightCurve.Count > 1)
-                            {
-                                <Sparkline Values="@env.LightCurve.Select(l => l.Luminance).ToList()" Max="1" Label="Room brightness over the session" />
-                            }
-                            <FactRow Facts="@([
-                                new("Light switches", env.Switches.Count.ToString(CultureInfo.InvariantCulture)),
-                                new("Captions", env.CaptionCount.ToString(CultureInfo.InvariantCulture)),
-                            ])" />
-                            <ShareBar Label="Room colour palette"
-                                      Parts="@([.. env.Palette.Select(c => new ShareBar.Part(ColorNamer.Describe(c.Rgb), c.Share, $"#{c.Rgb:x6}", $"{c.Share:P0}"))])" />
-                            @if (env.WeirdestCaption is { } weird)
-                            {
-                                <p class="stats-weird">“@weird”</p>
-                            }
-                        </section>
-                    }
+                                @if (_session.Summary?.Faces is { } faces)
+                                {
+                                    <section class="analysis-block" data-test="analysis-faces">
+                                        <h3>Faces (aggregates)</h3>
+                                        <FactRow Facts="@([
+                                            new("Beauty", faces.MeanBeauty is { } b ? $"{b:0}" : null, faces.BeautyLow is { } bl && faces.BeautyHigh is { } bh ? $"Range {bl:0}–{bh:0}" : null),
+                                            new("Age", faces.MeanAge is { } a ? $"{a:0} yrs" : null, faces.AgeLow is { } al && faces.AgeHigh is { } ah ? $"Range {al:0}–{ah:0}" : null),
+                                            new("Peak", faces.MaxFacesAtOnce > 0 ? faces.MaxFacesAtOnce.ToString(CultureInfo.InvariantCulture) : null),
+                                            new("Split", faces.MaleShare is { } m && faces.FemaleShare is { } f ? $"{m:0}% M / {f:0}% F" : null),
+                                        ])" />
+                                        @if (faces.BeautyHistory.Count > 1)
+                                        {
+                                            <Sparkline Values="@faces.BeautyHistory" Max="100" Average="@faces.MeanBeauty" Label="Mean beauty over the session" />
+                                        }
+                                    </section>
+                                }
 
-                    @if (_session.Summary?.Faces is { } faces)
-                    {
-                        <section class="analysis-block" data-test="analysis-faces">
-                            <h3>Faces (session aggregates)</h3>
-                            <FactRow Facts="@([
-                                new("Mean beauty", faces.MeanBeauty is { } b ? $"{b:0}" : null, faces.BeautyLow is { } bl && faces.BeautyHigh is { } bh ? $"Range {bl:0}–{bh:0}" : null),
-                                new("Mean age", faces.MeanAge is { } a ? $"{a:0} yrs" : null, faces.AgeLow is { } al && faces.AgeHigh is { } ah ? $"Range {al:0}–{ah:0}" : null),
-                                new("Peak at once", faces.MaxFacesAtOnce > 0 ? faces.MaxFacesAtOnce.ToString(CultureInfo.InvariantCulture) : null),
-                                new("Labelled", faces.FacesLabelled > 0 ? faces.FacesLabelled.ToString(CultureInfo.InvariantCulture) : null),
-                                new("Presentation", faces.MaleShare is { } m && faces.FemaleShare is { } f ? $"{m:0}% M / {f:0}% F" : null),
-                            ])" />
-                            @if (faces.BeautyHistory.Count > 1)
-                            {
-                                <Sparkline Values="@faces.BeautyHistory" Max="100" Label="Mean beauty over the session" />
-                            }
-                            @if (faces.AgeHistory.Count > 1)
-                            {
-                                <Sparkline Values="@faces.AgeHistory" Cyan="true" Label="Mean estimated age over the session" />
-                            }
-                        </section>
-                    }
-
-                    @if (_session.Summary?.Bodies is { } bodies)
-                    {
-                        <section class="analysis-block" data-test="analysis-bodies">
-                            <h3>Body &amp; posture</h3>
-                            <FactRow Facts="@([
-                                new("Upright", bodies.PostureScore is { } ps ? $"{ps:0}%" : null, bodies.SlumpedSeconds >= 1 ? $"Slumped {DisplayText.Duration(bodies.SlumpedSeconds)}" : null),
-                                new("Limb energy", bodies.MeanEnergy is { } me ? me.ToString("P0", CultureInfo.InvariantCulture) : null),
-                                new("Open posture", bodies.ObservedSeconds >= 1 ? (bodies.OpenSeconds / bodies.ObservedSeconds).ToString("P0", CultureInfo.InvariantCulture) : null),
-                                new("Arm L/R", bodies.ArmBalance is { } ab ? $"{ab * 100:0}/{(1 - ab) * 100:0}" : null),
-                                new("Shoulder tilt", bodies.ShoulderTilt is { } st ? (Math.Abs(st) < 1.5 ? "Level" : $"{(st > 0 ? "L" : "R")} {Math.Abs(st):0}°") : null),
-                            ])" />
-                            @if (bodies.EnergyHistory.Count > 1)
-                            {
-                                <Sparkline Values="@bodies.EnergyHistory" Max="1" Label="Limb energy over the session" />
-                            }
-                            @if (bodies.ActivitySeconds.Count > 0)
-                            {
-                                <ShareBar Label="Body activity breakdown"
-                                          Parts="@([.. bodies.ActivitySeconds.Where(kv => kv.Value >= 1).OrderByDescending(kv => kv.Value).Select(kv => new ShareBar.Part(kv.Key.ToLowerInvariant(), kv.Value, Note: DisplayText.Duration(kv.Value)))])" />
-                            }
-                        </section>
-                    }
-                </div>
-            </ChildContent>
-        </TerminalPanel>
-    }
-
-    <TerminalPanel Title="Replay and timeline" Class="reader" Test="reader-timeline">
-        <ChildContent>
-            <TimelineReplay Day="@DateOnly.FromDateTime(_session.StartedUtc.LocalDateTime)" From="@_session.StartedUtc" To="@(_session.EndedUtc ?? DateTimeOffset.UtcNow)" />
-        </ChildContent>
-    </TerminalPanel>
+                                @if (_session.Summary?.Bodies is { } bodies)
+                                {
+                                    <section class="analysis-block" data-test="analysis-bodies">
+                                        <h3>Body &amp; posture</h3>
+                                        <FactRow Facts="@([
+                                            new("Upright", bodies.PostureScore is { } ps ? $"{ps:0}%" : null),
+                                            new("Energy", bodies.MeanEnergy is { } me ? me.ToString("P0", CultureInfo.InvariantCulture) : null),
+                                            new("Open", bodies.ObservedSeconds >= 1 ? (bodies.OpenSeconds / bodies.ObservedSeconds).ToString("P0", CultureInfo.InvariantCulture) : null),
+                                            new("Arm L/R", bodies.ArmBalance is { } ab ? $"{ab * 100:0}/{(1 - ab) * 100:0}" : null),
+                                        ])" />
+                                        @if (bodies.ActivitySeconds.Count > 0)
+                                        {
+                                            <ShareBar Label="Body activity breakdown"
+                                                      Parts="@([.. bodies.ActivitySeconds.Where(kv => kv.Value >= 1).OrderByDescending(kv => kv.Value).Take(4).Select(kv => new ShareBar.Part(kv.Key.ToLowerInvariant(), kv.Value, Note: DisplayText.Duration(kv.Value)))])" />
+                                        }
+                                    </section>
+                                }
+                            </div>
+                        </ChildContent>
+                    </TerminalPanel>
+                }
+            </div>
+        </div>
+    </div>
 }
 
 @code {

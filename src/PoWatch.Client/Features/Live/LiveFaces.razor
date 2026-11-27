@@ -21,11 +21,17 @@
             <div class="metric-cards" data-test="face-trends">
                 <RadzenCard class="metric-card">
                     <StatCell Label="Beauty" Value="@Now(f => f.Beauty, "0")" Hint="@Span(T.SessionBeauty, T.BeautyRange, "0")" Test="face-beauty-trend" />
-                    <Sparkline Values="@T.BeautyHistory" Max="100" Label="Mean beauty of the faces in view over this session" />
+                    <Sparkline Values="@T.BeautyMinutes.Points" Max="100"
+                               Average="@T.BeautyMinutes.Average"
+                               AverageLabel="@(T.BeautyMinutes.Average is { } ba ? $"1m avg {ba:0}" : null)"
+                               Label="Mean beauty per minute over this session" />
                 </RadzenCard>
                 <RadzenCard class="metric-card">
                     <StatCell Label="Age" Value="@Now(f => f.AgeYears, "0")" Unit="yrs" Hint="@Span(T.SessionAge, T.AgeRange, "0")" Test="face-age-trend" />
-                    <Sparkline Values="@T.AgeHistory" Cyan="true" Label="Mean estimated age of the faces in view over this session" />
+                    <Sparkline Values="@T.AgeMinutes.Points" Cyan="true"
+                               Average="@T.AgeMinutes.Average"
+                               AverageLabel="@(T.AgeMinutes.Average is { } aa ? $"1m avg {aa:0} yrs" : null)"
+                               Label="Mean estimated age per minute over this session" />
                 </RadzenCard>
             </div>
             <FactRow Test="faces-facts" Facts="@([
@@ -45,9 +51,15 @@
                     {
                         var slot = face.Slot;
                         var expanded = _expandedSlot == slot;
+                        var profile = Sensing.PersonProfileFor(slot);
+                        var returning = Sensing.IsReturningPerson(slot);
                         <li @key="slot" class="face-row" @onmouseenter="() => HighlightAsync(slot)" @onmouseleave="() => HighlightAsync(null)">
                             <div class="face-row-head">
-                                <b>@(face.Label ?? "Reading…")</b>
+                                <b>@(profile?.DisplayName ?? face.Label ?? "Reading…")</b>
+                                @if (returning && profile is not null)
+                                {
+                                    <span class="face-returning-badge" title="Recognised from previous sessions in Azure Table Storage">Returning · @profile.SessionsSeen sessions</span>
+                                }
                                 <span>@Note(face)</span>
                                 @if (face.Symmetry is not null)
                                 {
@@ -58,6 +70,12 @@
                                     </RadzenButton>
                                 }
                             </div>
+                            @if (profile is { Stats: { } hs } && (hs.FaceSamples > 1 || hs.BodySamples > 0))
+                            {
+                                <div class="face-history" data-test="face-history">
+                                    <span>All-time: @HistoryLine(hs)</span>
+                                </div>
+                            }
                             @if (expanded && face.Symmetry is { } sym)
                             {
                                 <div class="face-breakdown" data-test="face-breakdown">
@@ -201,6 +219,19 @@
                 ? string.Create(ic, $"{presentation}-presenting ({face.PresentationConfidence * 100:0}%)")
                 : "presentation unclear");
         }
+        return string.Join(" · ", parts);
+    }
+
+    private static string HistoryLine(PersonAppearanceStatsDto s)
+    {
+        var ic = CultureInfo.InvariantCulture;
+        var parts = new List<string>();
+        if (s.BeautyMean is { } bm)
+            parts.Add(string.Create(ic, $"beauty {bm:0}") + (s.BeautyLow is { } bl && s.BeautyHigh is { } bh ? string.Create(ic, $" ({bl:0}–{bh:0})") : ""));
+        if (s.AgeMean is { } am) parts.Add(string.Create(ic, $"age {am:0}"));
+        if (s.UprightScore is { } up) parts.Add(string.Create(ic, $"upright {up:0}%"));
+        if (s.OpenPostureShare is { } op) parts.Add(string.Create(ic, $"open {op:P0}"));
+        if (s.ArmBalance is { } ab) parts.Add(string.Create(ic, $"arms {ab * 100:0}/{(1 - ab) * 100:0}"));
         return string.Join(" · ", parts);
     }
 }

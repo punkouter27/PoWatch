@@ -186,6 +186,7 @@ internal static class StatsEntityMapper
 [JsonSerializable(typeof(Dictionary<int, long>))]
 [JsonSerializable(typeof(IReadOnlyDictionary<FrameEdge, long>))]
 [JsonSerializable(typeof(Dictionary<FrameEdge, long>))]
+[JsonSerializable(typeof(PersonProfileStats))]
 internal sealed partial class StoreJson : JsonSerializerContext
 {
     public static JsonTypeInfo<T> Info<T>() =>

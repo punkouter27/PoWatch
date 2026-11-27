@@ -154,7 +154,9 @@
        and the second bar step out, and lists keep their first rows, so a 720-high laptop shows all nine
        panels with nothing behind a scrollbar. */
     @container cell (max-height: 200px) {
-        .cell-narration :is(.minimap, .moment-filters) { display: none; }
+        .cell-narration :is(.minimap, .moment-filters, .narration-controls) { display: none; }
+        .panel-subhead, .heat-edge, .heat-legend, .term-spark-avg-label, .term-spark-axis,
+        .inframe-people-spark, .env-light-spark { display: none; }
         .cell-metrics .metric-card.rz-card,
         .cell-activity .metric-card.rz-card { padding: 3px 6px; }
         .cell-metrics .metric-card .term-spark,
@@ -257,8 +259,11 @@
 /* ── Live panel enhancements (meters, overlays, balance, cues, search, regulars) ── */
 
 .term-spark-wrap { display: grid; gap: 2px; width: 100%; }
+.term-spark-avg { stroke: var(--term-muted); stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.7; }
+.term-spark-avg-label { font: 9px/1.1 var(--term-mono); color: var(--term-dim); font-variant-numeric: tabular-nums; }
 .term-spark-now { stroke: var(--term-amber); stroke-width: 1; stroke-dasharray: 2 2; opacity: 0.85; }
 .term-spark-axis { display: flex; justify-content: space-between; font: 9px/1 var(--term-mono); color: var(--term-dim); }
+.inframe-people-spark { padding: 2px 10px 4px; }
 
 .metric-card--muted { opacity: 0.72; }
 .panel-subhead { margin: 0; padding: 6px 10px 2px; font: 600 10px/1.2 var(--term-mono); letter-spacing: 0.08em; color: var(--term-dim); text-transform: uppercase; }
@@ -301,8 +306,12 @@
 
 .live-face-tag.is-highlighted { outline: 2px solid var(--term-amber); transform: translate(-50%, -100%) scale(1.08); z-index: 9; }
 
-.live-heat-frame { display: grid; gap: 2px; justify-items: center; }
+.live-heat-frame { display: grid; gap: 2px; justify-items: center; width: 100%; }
 .live-heat-mid { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px; width: 100%; }
+.live-heat-mid .live-heat { width: 100%; }
+.live-heat-mid .term-heat { width: 100%; max-width: 210px; margin-inline: auto; }
+.face-returning-badge { display: inline-block; padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--term-green) 18%, transparent); border: 1px solid var(--term-green); font: 10px/1.5 var(--term-mono); color: var(--term-text); }
+.face-history { font: 10px/1.3 var(--term-mono); color: var(--term-dim); }
 .heat-edge { font: 9px/1 var(--term-mono); letter-spacing: 0.08em; color: var(--term-dim); user-select: none; }
 .heat-legend { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; font: 10px var(--term-mono); color: var(--term-dim); }
 .heat-legend-bar { width: 64px; height: 6px; border-radius: 999px; background: linear-gradient(90deg, color-mix(in srgb, var(--term-accent) 18%, var(--term-panel-2)), var(--term-accent)); }
